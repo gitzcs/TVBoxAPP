@@ -405,6 +405,11 @@ public class ApiConfig {
                     String epg =livesOBJ.get("epg").getAsString();
                     Hawk.put(HawkConfig.EPG_URL,epg);
                 }
+                //直播播放器类型
+                if(livesOBJ.has("playerType")){
+                    String livePlayType =livesOBJ.get("playerType").getAsString();
+                    Hawk.put(HawkConfig.LIVE_PLAY_TYPE,livePlayType);
+                }
 
                 LiveChannelGroup liveChannelGroup = new LiveChannelGroup();
                 liveChannelGroup.setGroupName(url);
@@ -421,6 +426,11 @@ public class ApiConfig {
                         if(fengMiLives.has("epg")){
                             String epg =fengMiLives.get("epg").getAsString();
                             Hawk.put(HawkConfig.EPG_URL,epg);
+                        }
+                        //直播播放器类型
+                        if(livesOBJ.has("playerType")){
+                            String livePlayType =livesOBJ.get("playerType").getAsString();
+                            Hawk.put(HawkConfig.LIVE_PLAY_TYPE,livePlayType);
                         }
 
                         if(url.startsWith("http")){
