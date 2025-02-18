@@ -2,6 +2,9 @@ package com.github.tvbox.osc.util;
 
 import android.graphics.Bitmap;
 
+import androidx.annotation.NonNull;
+
+import com.github.tvbox.osc.api.ApiConfig;
 import com.github.tvbox.osc.base.App;
 import com.github.tvbox.osc.picasso.MyOkhttpDownLoader;
 import com.github.tvbox.osc.util.SSL.SSLSocketFactoryCompat;
@@ -13,8 +16,13 @@ import com.orhanobut.hawk.Hawk;
 import com.squareup.picasso.Picasso;
 
 import java.io.File;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.security.cert.CertificateException;
 import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.PriorityBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -24,6 +32,7 @@ import javax.net.ssl.SSLSocketFactory;
 import javax.net.ssl.X509TrustManager;
 
 import okhttp3.Cache;
+import okhttp3.Dns;
 import okhttp3.HttpUrl;
 import okhttp3.OkHttpClient;
 import okhttp3.dnsoverhttps.DnsOverHttps;
@@ -56,7 +65,8 @@ public class OkGoHelper {
         } catch (Throwable th) {
             th.printStackTrace();
         }
-        builder.dns(dnsOverHttps);
+
+        builder.dns(new CustomDns());
 
         ExoMediaSourceHelper.getInstance(App.getInstance()).setOkClient(builder.build());
     }
@@ -64,6 +74,9 @@ public class OkGoHelper {
     public static DnsOverHttps dnsOverHttps = null;
 
     public static ArrayList<String> dnsHttpsList = new ArrayList<>();
+
+    public static boolean is_doh = false;
+    public static Map<String,String> myHosts = null;
 
 
     public static String getDohUrl(int type) {
@@ -112,9 +125,37 @@ public class OkGoHelper {
         builder.cache(new Cache(new File(App.getInstance().getCacheDir().getAbsolutePath(), "dohcache"), 100 * 1024 * 1024));
         OkHttpClient dohClient = builder.build();
         String dohUrl = getDohUrl(Hawk.get(HawkConfig.DOH_URL, 0));
-        dnsOverHttps = new DnsOverHttps.Builder().client(dohClient).url(dohUrl.isEmpty() ? null : HttpUrl.get(dohUrl)).build();
+        if(!dohUrl.isEmpty())is_doh=true;
+        dnsOverHttps = new DnsOverHttps.Builder()
+                .client(dohClient)
+                .url(dohUrl.isEmpty()?null:HttpUrl.get(dohUrl))
+                .build();
     }
 
+    // 自定义 DNS 解析器，优先使用 DoH，失败时降级到系统 DNS
+    static class CustomDns implements Dns {
+        @NonNull
+        @Override
+        public List<InetAddress> lookup(@NonNull String hostname) throws UnknownHostException {
+            if(myHosts==null){
+                LOG.i("echo-exo-setHOSTS");
+                myHosts= ApiConfig.get().getMyHost();
+            }
+            if (is_doh && !hostname.equals("127.0.0.1")) {
+                if (!myHosts.isEmpty() && myHosts.containsKey(hostname)) {
+                    return dnsOverHttps.lookup(Objects.requireNonNull(myHosts.get(hostname)));
+                }else {
+                    return dnsOverHttps.lookup(hostname);
+                }
+            }else {
+                if (!myHosts.isEmpty() && myHosts.containsKey(hostname)) {
+                    return Dns.SYSTEM.lookup(Objects.requireNonNull(myHosts.get(hostname)));
+                }else {
+                    return Dns.SYSTEM.lookup(hostname);
+                }
+            }
+        }
+    }
 
     static OkHttpClient defaultClient = null;
     static OkHttpClient noRedirectClient = null;
@@ -149,7 +190,7 @@ public class OkGoHelper {
         builder.writeTimeout(DEFAULT_MILLISECONDS, TimeUnit.MILLISECONDS);
         builder.connectTimeout(DEFAULT_MILLISECONDS, TimeUnit.MILLISECONDS);
 
-        builder.dns(dnsOverHttps);
+        if(dnsOverHttps!=null)builder.dns(dnsOverHttps);
         try {
             setOkHttpSsl(builder);
         } catch (Throwable th) {
