@@ -15,6 +15,7 @@ import com.github.tvbox.osc.R;
 import com.github.tvbox.osc.api.ApiConfig;
 import com.github.tvbox.osc.bean.Movie;
 import com.github.tvbox.osc.picasso.RoundTransformation;
+import com.github.tvbox.osc.util.Base64Img;
 import com.github.tvbox.osc.util.DefaultConfig;
 import com.github.tvbox.osc.util.HawkConfig;
 import com.github.tvbox.osc.util.MD5;
@@ -62,9 +63,9 @@ public class HomeHotVodAdapter extends BaseQuickAdapter<Movie.Video, BaseViewHol
         //由于部分电视机使用glide报错
         if (!TextUtils.isEmpty(item.pic)) {
             item.pic=item.pic.trim();
-            if(isBase64Image(item.pic)){
+            if(Base64Img.isBase64Image(item.pic)){
                 // 如果是 Base64 图片，解码并设置
-                ivThumb.setImageBitmap(decodeBase64ToBitmap(item.pic));
+                ivThumb.setImageBitmap(Base64Img.decodeBase64ToBitmap(item.pic));
             }else {
                 Picasso.get()
                         .load(DefaultConfig.checkReplaceProxy(item.pic))
@@ -80,15 +81,5 @@ public class HomeHotVodAdapter extends BaseQuickAdapter<Movie.Video, BaseViewHol
         } else {
             ivThumb.setImageResource(R.drawable.img_loading_placeholder);
         }
-    }
-    private boolean isBase64Image(String picUrl) {
-        return picUrl.startsWith("data:image");
-    }
-
-    private Bitmap decodeBase64ToBitmap(String base64Str) {
-        // 去掉 Base64 数据的头部前缀，例如 "data:image/png;base64,"
-        String base64Data = base64Str.substring(base64Str.indexOf(",") + 1);
-        byte[] decodedBytes = Base64.decode(base64Data, Base64.DEFAULT);
-        return BitmapFactory.decodeByteArray(decodedBytes, 0, decodedBytes.length);
     }
 }
