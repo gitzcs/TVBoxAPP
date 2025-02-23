@@ -218,7 +218,11 @@ public class PlayActivity extends BaseActivity {
                 if(replay){
                     play(true);
                 }else {
-                    playUrl(webPlayUrl,webHeaderMap);
+                    if(webPlayUrl!=null && !webPlayUrl.isEmpty()) {
+                        playUrl(webPlayUrl,webHeaderMap);
+                    }else {
+                        play(false);
+                    }
                 }
             }
 
@@ -509,6 +513,7 @@ public class PlayActivity extends BaseActivity {
             try {
                 String url_encode;
                 url_encode=URLEncoder.encode(url,"UTF-8");
+                LOG.i("echo-BOM-------");
                 url = ControlManager.get().getAddress(true) + "proxy?go=bom&url="+ url_encode;
             }catch (UnsupportedEncodingException e) {
 
