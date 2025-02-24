@@ -204,10 +204,12 @@ public class OkGoHelper {
             if (isValidIpAddress(hostname)) {
                 return Collections.singletonList(InetAddress.getByName(hostname));
             }
-            if (map!=null && map.containsKey(hostname)) {
+            else if (map!=null && map.containsKey(hostname)) {
                 return Objects.requireNonNull(map.get(hostname));
             }
-            return  dnsOverHttps.lookup(hostname);
+            else {
+                return  dnsOverHttps.lookup(hostname);
+            }
         }
 
         public synchronized void mapHosts(Map<String,String> hosts) {
