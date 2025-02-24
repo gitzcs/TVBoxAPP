@@ -50,8 +50,8 @@ import xyz.doikki.videoplayer.exo.ExoMediaSourceHelper;
 public class OkGoHelper {
     public static final long DEFAULT_MILLISECONDS = 6500;      //默认的超时时间
 
-    // 示例 JSON 字符串
-    private static final String dnsConfigJson = "["
+    // 内置doh json
+    public static final String dnsConfigJson = "["
             + "{\"name\": \"腾讯\", \"url\": \"https://doh.pub/dns-query\"},"
             + "{\"name\": \"阿里\", \"url\": \"https://dns.alidns.com/dns-query\"},"
             + "{\"name\": \"360\", \"url\": \"https://doh.360.cn/dns-query\"}"
