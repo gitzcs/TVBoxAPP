@@ -116,6 +116,6 @@ dependencies {
 }
 
 tasks.withType(JavaCompile) {
-//    options.fork = true
+    options.fork = true
     options.forkOptions.jvmArgs << "--add-opens=java.base/java.io=ALL-UNNAMED"
 }
