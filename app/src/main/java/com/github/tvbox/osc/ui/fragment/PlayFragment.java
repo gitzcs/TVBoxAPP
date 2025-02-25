@@ -897,7 +897,8 @@ public class PlayFragment extends BaseLazyFragment {
                 play(false);
             }else {
                 //第一次重试直接带着原地址继续播放
-                playUrl(webPlayUrl, webHeaderMap);
+                play(false);
+//                playUrl(webPlayUrl, webHeaderMap);
             }
             autoRetryCount++;
             return true;
