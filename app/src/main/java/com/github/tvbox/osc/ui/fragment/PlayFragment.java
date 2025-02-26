@@ -95,8 +95,6 @@ import org.xwalk.core.XWalkWebResourceResponse;
 
 import java.io.ByteArrayInputStream;
 import java.io.File;
-import java.io.UnsupportedEncodingException;
-import java.net.URLEncoder;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
@@ -518,18 +516,8 @@ public class PlayFragment extends BaseLazyFragment {
     }
 
     void playUrl(String url, HashMap<String, String> headers) {
+        LOG.i("echo-playUrl:" + url);
         if(autoRetryCount==0)webPlayUrl=url;
-        LOG.i("playUrl:" + url);
-        if(autoRetryCount>0 && url.contains(".m3u8")){
-            // todo
-            try {
-                String url_encode;
-                url_encode=URLEncoder.encode(url,"UTF-8");
-                url = ControlManager.get().getAddress(true) + "proxy?go=bom&url="+ url_encode;
-            }catch (UnsupportedEncodingException e) {
-                e.printStackTrace();
-            }
-        }
         if (mActivity == null) return;
         if (!isAdded()) return;
         final String finalUrl = url;
@@ -670,7 +658,7 @@ public class PlayFragment extends BaseLazyFragment {
                                             break;
                                     }
                                     String filename = name + (name.toLowerCase().endsWith(ext) ? "" : ext);
-                                    url += "#" + URLEncoder.encode(filename);
+                                    url += "#" + mController.encodeUrl(filename);
                                 }
                                 playSubtitle = url;
                             } catch (Throwable th) {
@@ -719,8 +707,9 @@ public class PlayFragment extends BaseLazyFragment {
 //                        Toast.makeText(mContext, "获取播放信息错误1", Toast.LENGTH_SHORT).show();
                     }
                 } else {
+                    //获取播放信息错误后只需再重试一次
+                    autoRetryCount=1;
                     errorWithRetry("获取播放信息错误", true);
-//                    Toast.makeText(mContext, "获取播放信息错误", Toast.LENGTH_SHORT).show();
                 }
             }
         });
@@ -882,10 +871,7 @@ public class PlayFragment extends BaseLazyFragment {
     private long lastRetryTime = 0;  // 记录上次调用时间（毫秒）
     boolean autoRetry() {
         long currentTime = System.currentTimeMillis();
-        // 如果距离上次重试超过 10 秒（10000 毫秒），重置重试次数
-        if (currentTime - lastRetryTime > 10_000) {
-            autoRetryCount = 0;
-        }
+        if (currentTime - lastRetryTime > 10_000)autoRetryCount = 0;
         lastRetryTime = currentTime;  // 更新上次调用时间
         if (loadFoundVideoUrls != null && loadFoundVideoUrls.size() > 0) {
             autoRetryFromLoadFoundVideoUrls();
@@ -895,12 +881,22 @@ public class PlayFragment extends BaseLazyFragment {
             if(autoRetryCount==1){
                 //第二次重试时重新调用接口
                 play(false);
+                autoRetryCount++;
             }else {
+                //切换播放器不占用重试次数
+                if(mController.switchPlayer()){
+                    webPlayUrl=mController.getWebPlayUrlIfNeeded(webPlayUrl);
+                    autoRetryCount++;
+                }else {
+//                    Toast.makeText(mContext, "自动切换播放器重试", Toast.LENGTH_SHORT).show();
+                }
                 //第一次重试直接带着原地址继续播放
-                play(false);
-//                playUrl(webPlayUrl, webHeaderMap);
+                if(webPlayUrl!=null){
+                    playUrl(webPlayUrl, webHeaderMap);
+                }else {
+                    play(false);
+                }
             }
-            autoRetryCount++;
             return true;
         } else {
             autoRetryCount = 0;
@@ -1118,7 +1114,7 @@ public class PlayFragment extends BaseLazyFragment {
             } catch (Throwable e) {
                 e.printStackTrace();
             }
-            OkGo.<String>get(pb.getUrl() + encodeUrl(webUrl))
+            OkGo.<String>get(pb.getUrl() + mController.encodeUrl(webUrl))
                     .tag("json_jx")
                     .headers(reqHeaders)
                     .execute(new AbsCallback<String>() {
@@ -1290,14 +1286,6 @@ public class PlayFragment extends BaseLazyFragment {
                     }
                 }
             });
-        }
-    }
-
-    private String encodeUrl(String url) {
-        try {
-            return URLEncoder.encode(url, "UTF-8");
-        } catch (Exception e) {
-            return url;
         }
     }
 
