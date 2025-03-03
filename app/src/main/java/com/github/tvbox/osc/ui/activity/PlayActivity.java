@@ -218,7 +218,7 @@ public class PlayActivity extends BaseActivity {
                     play(true);
                 }else {
                     if(webPlayUrl!=null && !webPlayUrl.isEmpty()) {
-                        playUrl(webPlayUrl,webHeaderMap);
+                        goPlayUrl(webPlayUrl,webHeaderMap);
                     }else {
                         play(false);
                     }
@@ -500,6 +500,7 @@ public class PlayActivity extends BaseActivity {
                 @Override
                 public void run() {
                     if (finish) {
+                        setTip(err, false, true);
                         Toast.makeText(mContext, err, Toast.LENGTH_SHORT).show();
                         finish();
                     } else {
@@ -515,7 +516,7 @@ public class PlayActivity extends BaseActivity {
             goPlayUrl(url,headers);
             return;
         }
-        if (url.contains("://127.0.0.1/") || !url.contains(".m3u8")) {
+        if (url.startsWith("http://127.0.0.1") || !url.contains(".m3u8")) {
             goPlayUrl(url,headers);
             return;
         }
@@ -706,8 +707,6 @@ public class PlayActivity extends BaseActivity {
                     }
                 } else {
 //                    setTip("获取播放信息错误", false, true);
-//                    获取播放信息错误后只需再重试一次
-                    autoRetryCount=2;
                     errorWithRetry("获取播放信息错误", true);
                 }
             }
@@ -858,7 +857,7 @@ public class PlayActivity extends BaseActivity {
     boolean autoRetry() {
         long currentTime = System.currentTimeMillis();
         // 如果距离上次重试超过 10 秒（10000 毫秒），重置重试次数
-        if (autoRetryCount >0 && currentTime - lastRetryTime > 20_000) {
+        if (currentTime - lastRetryTime > 60_000) {
             LOG.i("echo-reset-autoRetryCount");
             autoRetryCount = 0;
         }

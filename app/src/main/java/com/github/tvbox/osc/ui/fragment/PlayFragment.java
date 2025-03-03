@@ -236,7 +236,7 @@ public class PlayFragment extends BaseLazyFragment {
                     play(true);
                 }else {
                     if(webPlayUrl!=null && !webPlayUrl.isEmpty()) {
-                        playUrl(webPlayUrl,webHeaderMap);
+                        goPlayUrl(webPlayUrl,webHeaderMap);
                     }else {
                         play(false);
                     }
@@ -510,6 +510,7 @@ public class PlayFragment extends BaseLazyFragment {
                 @Override
                 public void run() {
                     if (finish) {
+                        setTip(err, false, true);
                         Toast.makeText(mContext, err, Toast.LENGTH_SHORT).show();
                     } else {
                         setTip(err, false, true);
@@ -524,7 +525,7 @@ public class PlayFragment extends BaseLazyFragment {
             goPlayUrl(url,headers);
             return;
         }
-        if (url.contains("://127.0.0.1/") || !url.contains(".m3u8")) {
+        if (url.startsWith("http://127.0.0.1") || !url.contains(".m3u8")) {
             goPlayUrl(url,headers);
             return;
         }
@@ -722,7 +723,6 @@ public class PlayFragment extends BaseLazyFragment {
                     }
                 } else {
 //                    获取播放信息错误后只需再重试一次
-                    autoRetryCount=2;
                     errorWithRetry("获取播放信息错误", true);
                 }
             }
@@ -885,7 +885,7 @@ public class PlayFragment extends BaseLazyFragment {
     private long lastRetryTime = 0;  // 记录上次调用时间（毫秒）
     boolean autoRetry() {
         long currentTime = System.currentTimeMillis();
-        if (autoRetryCount>0 && currentTime - lastRetryTime > 20_000){
+        if (currentTime - lastRetryTime > 60_000){
             LOG.i("echo-reset-autoRetryCount");
             autoRetryCount = 0;
         }
