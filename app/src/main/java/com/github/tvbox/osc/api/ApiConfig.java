@@ -220,7 +220,7 @@ public class ApiConfig {
                                     if (response.body() == null) {
                                         result = "";
                                     }else {
-                                        result=response.body().string();
+                                        result = FindResult(response.body().string(), TempKey);
                                         if (liveApiUrl.startsWith("clan")) {
                                             result = clanContentFix(clanToAddress(liveApiUrl), result);
                                         }
@@ -248,7 +248,7 @@ public class ApiConfig {
 
 //        String finalApiUrl = apiUrl;
         String configUrl=configUrl(apiUrl);
-        String configKey = TempKey;
+//        String configKey = TempKey;
         OkGo.<String>get(configUrl)
                 .headers("User-Agent", userAgent)
                 .headers("Accept", requestAccept)
@@ -286,7 +286,7 @@ public class ApiConfig {
                         if (response.body() == null) {
                             result = "";
                         } else {
-                            result = FindResult(response.body().string(), configKey);
+                            result = FindResult(response.body().string(), TempKey);
                         }
 
                         if (apiUrl.startsWith("clan")) {
@@ -614,6 +614,7 @@ public class ApiConfig {
         initLiveSettings();
         if(infoJson.has("lives")){
             JsonArray lives_groups=infoJson.get("lives").getAsJsonArray();
+
             int live_group_index=Hawk.get(HawkConfig.LIVE_GROUP_INDEX,0);
             if(live_group_index>lives_groups.size()-1)Hawk.put(HawkConfig.LIVE_GROUP_INDEX,0);
             Hawk.put(HawkConfig.LIVE_GROUP_LIST,lives_groups);
@@ -759,10 +760,13 @@ public class ApiConfig {
                 String type= livesOBJ.get("type").getAsString();
                 if(type.equals("0")){
                     url = livesOBJ.get("url").getAsString();
-                    if(url.startsWith("http")){
-                        url = Base64.encodeToString(url.getBytes("UTF-8"), Base64.DEFAULT | Base64.URL_SAFE | Base64.NO_WRAP);
+                    if(!url.startsWith("http://127.0.0.1")){
+                        if(url.startsWith("http")){
+                            url = Base64.encodeToString(url.getBytes("UTF-8"), Base64.DEFAULT | Base64.URL_SAFE | Base64.NO_WRAP);
+                        }
+                        url ="http://127.0.0.1:9978/proxy?do=live&type=txt&ext="+url;
                     }
-                    url ="http://127.0.0.1:9978/proxy?do=live&type=txt&ext="+url;
+                    LOG.i("echo-url:"+url);
                 }else {
                     return;
                 }
