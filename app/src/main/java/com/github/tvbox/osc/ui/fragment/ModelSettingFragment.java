@@ -126,7 +126,6 @@ public class ModelSettingFragment extends BaseLazyFragment {
         tvPlay.setText(PlayerHelper.getPlayerName(Hawk.get(HawkConfig.PLAY_TYPE, 0)));
         tvRender.setText(PlayerHelper.getRenderName(Hawk.get(HawkConfig.PLAY_RENDER, 0)));
         tvIjkCachePlay.setText(Hawk.get(HawkConfig.IJK_CACHE_PLAY, false) ? "开启" : "关闭");
-        if("".equals(Hawk.get(HawkConfig.LIVE_API_URL,"")) && !Hawk.get(HawkConfig.API_URL,"").isEmpty())Hawk.put(HawkConfig.LIVE_API_URL,Hawk.get(HawkConfig.API_URL));
         findViewById(R.id.llDebug).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {

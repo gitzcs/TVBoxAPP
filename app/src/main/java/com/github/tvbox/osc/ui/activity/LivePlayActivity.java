@@ -1548,8 +1548,14 @@ public class LivePlayActivity extends BaseActivity {
             if(Hawk.get(HawkConfig.LIVE_GROUP_INDEX, 0)!=0){
                 Hawk.put(HawkConfig.LIVE_GROUP_INDEX, 0);
                 JsonArray live_groups=Hawk.get(HawkConfig.LIVE_GROUP_LIST,new JsonArray());
-                JsonObject livesOBJ = live_groups.get(0).getAsJsonObject();
-                ApiConfig.get().loadLiveApi(livesOBJ);
+                if(!live_groups.isEmpty()){
+                    JsonObject livesOBJ = live_groups.get(0).getAsJsonObject();
+                    ApiConfig.get().loadLiveApi(livesOBJ);
+                }else {
+                    Toast.makeText(App.getInstance(), "频道列表为空", Toast.LENGTH_SHORT).show();
+                    finish();
+                    return;
+                }
             }else {
                 Toast.makeText(App.getInstance(), "频道列表为空", Toast.LENGTH_SHORT).show();
                 finish();

@@ -447,7 +447,8 @@ public class ApiConfig {
         }
 
         // 直播源
-        if(apiUrl.equals(Hawk.get(HawkConfig.LIVE_API_URL,""))){
+        String live_api_url=Hawk.get(HawkConfig.LIVE_API_URL,"");
+        if(live_api_url.isEmpty() || apiUrl.equals(live_api_url)){
             LOG.i("echo-load-config_live");
             initLiveSettings();
             if(infoJson.has("lives")){
