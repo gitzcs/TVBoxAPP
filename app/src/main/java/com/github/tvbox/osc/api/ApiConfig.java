@@ -171,7 +171,7 @@ public class ApiConfig {
         String liveApiUrl = Hawk.get(HawkConfig.LIVE_API_URL, "");
         String liveApiConfigUrl=configUrl(liveApiUrl);
         if(!liveApiUrl.isEmpty() && !liveApiUrl.equals(apiUrl)){
-            if(liveApiUrl.contains(".txt") || liveApiUrl.contains(".m3u")){
+            if(liveApiUrl.contains(".txt") || liveApiUrl.contains(".m3u") || liveApiUrl.contains("=txt") || liveApiUrl.contains("=m3u")){
                 initLiveSettings();
                 defaultLiveObjString = defaultLiveObjString.replace("txt_m3u_url",liveApiConfigUrl);
                 parseLiveJson(liveApiUrl,defaultLiveObjString);

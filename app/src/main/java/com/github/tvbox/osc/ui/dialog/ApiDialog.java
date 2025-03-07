@@ -48,6 +48,7 @@ public class ApiDialog extends BaseDialog {
     public void refresh(RefreshEvent event) {
         if (event.type == RefreshEvent.TYPE_API_URL_CHANGE) {
             inputApi.setText((String) event.obj);
+            inputApiLive.setText((String) event.obj);
         }
     }
 
