@@ -79,9 +79,9 @@ public class ApiDialog extends BaseDialog {
                         inputApiLive.setText(newApi);
                         Hawk.put(HawkConfig.LIVE_API_URL, newApi);
                     }
-                    listener.onchange(newApi);
-                    dismiss();
                 }
+                listener.onchange(newApi);
+                dismiss();
             }
         });
         findViewById(R.id.inputSubmitLive).setOnClickListener(new View.OnClickListener() {
@@ -178,9 +178,9 @@ public class ApiDialog extends BaseDialog {
                             inputApiLive.setText(newApi);
                             Hawk.put(HawkConfig.LIVE_API_URL, newApi);
                         }
-                        listener.onchange(newApi);
-                        dismiss();
                     }
+                    listener.onchange(newApi);
+                    dismiss();
                     return true;
                 }
                 return false;
