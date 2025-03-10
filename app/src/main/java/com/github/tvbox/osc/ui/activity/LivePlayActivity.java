@@ -1784,8 +1784,12 @@ public class LivePlayActivity extends BaseActivity {
             }
             @Override
             public void onError(Response<String> response) {
-                Toast.makeText(App.getInstance(), "加载错误,自动回退到主页", Toast.LENGTH_SHORT).show();
-                Hawk.put(HawkConfig.LIVE_GROUP_INDEX, 0);
+                Toast.makeText(App.getInstance(), "加载错误,请重试", Toast.LENGTH_SHORT).show();
+                JsonArray live_groups=Hawk.get(HawkConfig.LIVE_GROUP_LIST,new JsonArray());
+                Hawk.put(HawkConfig.LIVE_GROUP_INDEX,Hawk.get(HawkConfig.LIVE_GROUP_INDEX,0)+1);
+                if(Hawk.get(HawkConfig.LIVE_GROUP_INDEX,0)>live_groups.size()-1){
+                    Hawk.put(HawkConfig.LIVE_GROUP_INDEX,0);
+                }
                 mHandler.post(new Runnable() {
                     @Override
                     public void run() {
