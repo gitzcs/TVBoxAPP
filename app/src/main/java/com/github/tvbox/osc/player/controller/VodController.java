@@ -61,9 +61,9 @@ import java.util.Date;
 import java.util.Map;
 
 import xyz.doikki.videoplayer.player.VideoView;
-import xyz.doikki.videoplayer.util.PlayerUtils;
 
 import static xyz.doikki.videoplayer.util.PlayerUtils.stringForTime;
+import static xyz.doikki.videoplayer.util.PlayerUtils.seconds2Time;
 
 public class VodController extends BaseController {
     public VodController(@NonNull @NotNull Context context) {
@@ -305,8 +305,6 @@ public class VodController extends BaseController {
         });
         mGridView.setAdapter(parseAdapter);
         parseAdapter.setNewData(ApiConfig.get().getParseBeanList());
-
-        mParseRoot.setVisibility(VISIBLE);
 
         mSeekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override
@@ -747,8 +745,8 @@ public class VodController extends BaseController {
             mPlayerIJKBtn.setVisibility(playerType == 1 ? VISIBLE : GONE);
             mPlayerScaleBtn.setText(PlayerHelper.getScaleName(mPlayerConfig.getInt("sc")));
             mPlayerSpeedBtn.setText("x" + mPlayerConfig.getDouble("sp"));
-            mPlayerTimeStartBtn.setText(PlayerUtils.stringForTime(mPlayerConfig.getInt("st") * 1000));
-            mPlayerTimeSkipBtn.setText(PlayerUtils.stringForTime(mPlayerConfig.getInt("et") * 1000));
+            mPlayerTimeStartBtn.setText(stringForTime(mPlayerConfig.getInt("st") * 1000));
+            mPlayerTimeSkipBtn.setText(stringForTime(mPlayerConfig.getInt("et") * 1000));
             mAudioTrackBtn.setVisibility((playerType == 1) ? VISIBLE : GONE);
         } catch (JSONException e) {
             e.printStackTrace();
@@ -820,9 +818,9 @@ public class VodController extends BaseController {
                 listener.playNext(true);
             }
         }
-        mCurrentTime.setText(PlayerUtils.stringForTime(position));
-        mTotalTime.setText(PlayerUtils.stringForTime(duration));
-        seekTime.setText((PlayerUtils.seconds2Time(position)) + " | " + (PlayerUtils.seconds2Time(duration))); //右上角进度条时间显示
+        mCurrentTime.setText(stringForTime(position));
+        mTotalTime.setText(stringForTime(duration));
+        seekTime.setText((seconds2Time(position)) + " | " + (seconds2Time(duration))); //右上角进度条时间显示
         if (duration > 0) {
             mSeekBar.setEnabled(true);
             int pos = (int) (position * 1.0 / duration * mSeekBar.getMax());
@@ -878,7 +876,7 @@ public class VodController extends BaseController {
         } else {
             mProgressIcon.setImageResource(R.drawable.icon_back);
         }
-        mProgressText.setText(PlayerUtils.stringForTime(seekTo) + " / " + PlayerUtils.stringForTime(duration));
+        mProgressText.setText(stringForTime(seekTo) + " / " + stringForTime(duration));
         mHandler.sendEmptyMessage(1000);
         mHandler.removeMessages(1001);
         mHandler.sendEmptyMessageDelayed(1001, 1000);
