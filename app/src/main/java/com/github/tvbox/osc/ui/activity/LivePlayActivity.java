@@ -642,7 +642,7 @@ public class LivePlayActivity extends BaseActivity {
             }
             tvSelectedChannel.setVisibility(View.INVISIBLE);
             tvSelectedChannel.setText("");
-            if(channelIndex>0){
+            if(channelIndex>=0){
                 playChannel(groupIndex, channelIndex, false);
             }else {
                 playChannel(currentChannelGroupIndex, currentLiveChannelIndex, false);
@@ -655,6 +655,8 @@ public class LivePlayActivity extends BaseActivity {
     private void numericKeyDown(int digit) {
         selectedChannelNumber = selectedChannelNumber * 10 + digit;
         tvSelectedChannel.setText(Integer.toString(selectedChannelNumber));
+        ll_right_top_loading.setVisibility(View.GONE);
+        ll_right_top_huikan.setVisibility(View.GONE);
         tvSelectedChannel.setVisibility(View.VISIBLE);
 
         mHandler.removeCallbacks(mPlaySelectedChannel);
@@ -1934,7 +1936,7 @@ public class LivePlayActivity extends BaseActivity {
         @Override
         public void run() {
             Date day=new Date();
-            SimpleDateFormat df = new SimpleDateFormat("HH:mm:ss");
+            SimpleDateFormat df = new SimpleDateFormat("hh:mm a");
             tvTime.setText(df.format(day));
             mHandler.postDelayed(this, 1000);
         }
