@@ -616,7 +616,7 @@ public class DetailActivity extends BaseActivity {
         GroupCount=(offset==3 || offset==6)?30:20;
         if(listSize>100 && listSize<=400)GroupCount=60;
         if(listSize>400)GroupCount=120;
-        if(listSize > GroupCount) {
+        if(listSize > 1) {
             tvSeriesSort.setText(isReverse(list)?"倒序":"正序");
             tvSeriesGroup.setVisibility(View.VISIBLE);
             int remainedOptionSize = listSize % GroupCount;
