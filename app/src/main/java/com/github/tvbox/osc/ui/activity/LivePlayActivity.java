@@ -970,8 +970,6 @@ public class LivePlayActivity extends BaseActivity {
             mVideoView.setUrl(currentLiveChannelItem.getUrl(),liveWebHeader());
             mVideoView.start();
         }
-//        liveChannelItemAdapter.setFocusedChannelIndex(currentLiveChannelIndex);
-        liveChannelItemAdapter.setSelectedChannelIndex(currentLiveChannelIndex);
         return true;
     }
 
@@ -1576,8 +1574,6 @@ public class LivePlayActivity extends BaseActivity {
                 if (position < 0) return;
                 liveChannelGroupAdapter.setFocusedGroupIndex(-1);
                 liveChannelItemAdapter.setFocusedChannelIndex(position);
-                mHandler.removeCallbacks(mHideChannelListRun);
-                mHandler.postDelayed(mHideChannelListRun, postTimeout);
             }
 
             @Override
@@ -1591,13 +1587,13 @@ public class LivePlayActivity extends BaseActivity {
             @Override
             public void onItemClick(BaseQuickAdapter adapter, View view, int position) {
                 FastClickCheckUtil.check(view);
+                liveChannelItemAdapter.setSelectedChannelIndex(position);
                 clickLiveChannel(position);
             }
         });
     }
 
     private void clickLiveChannel(int position) {
-        liveChannelItemAdapter.setSelectedChannelIndex(position);
         if (tvLeftChannelListLayout.getVisibility() == View.VISIBLE) {
             mHandler.removeCallbacks(mHideChannelListRun);
             mHandler.postDelayed(mHideChannelListRun, postTimeout);
