@@ -663,11 +663,14 @@ public class LivePlayActivity extends BaseActivity {
         mHandler.postDelayed(mPlaySelectedChannel, 2500);
     }
 
+    private final Handler mmHandler = new Handler();
+    private Runnable mLongPressRunnable;
+    private static final long LONG_PRESS_DELAY = 800;
     @Override
     public boolean dispatchKeyEvent(KeyEvent event) {
+        int keyCode = event.getKeyCode();
         if (event.getAction() == KeyEvent.ACTION_DOWN) {
-            int keyCode = event.getKeyCode();
-            if (keyCode == KeyEvent.KEYCODE_MENU) {
+            if (keyCode == KeyEvent.KEYCODE_MENU || keyCode == KeyEvent.KEYCODE_INFO || keyCode == KeyEvent.KEYCODE_HELP) {
                 showSettingGroup();
             } else if (!isListOrSettingLayoutVisible()) {
                 switch (keyCode) {
@@ -700,7 +703,6 @@ public class LivePlayActivity extends BaseActivity {
                     case KeyEvent.KEYCODE_DPAD_CENTER:
                     case KeyEvent.KEYCODE_ENTER:
                     case KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE:
-                        showChannelList();
                         break;
                     default:
                         if (keyCode >= KeyEvent.KEYCODE_0 && keyCode <= KeyEvent.KEYCODE_9) {
@@ -714,8 +716,38 @@ public class LivePlayActivity extends BaseActivity {
                 }
             }
         } else if (event.getAction() == KeyEvent.ACTION_UP) {
+            if (!isListOrSettingLayoutVisible()) {
+                if ((keyCode == KeyEvent.KEYCODE_DPAD_CENTER || keyCode == KeyEvent.KEYCODE_ENTER || keyCode == KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE) && event.getRepeatCount() == 0) {
+                    showChannelList();
+                }
+            }
         }
         return super.dispatchKeyEvent(event);
+    }
+
+    @Override
+    public boolean onKeyDown(int keyCode, KeyEvent event) {
+        if ((keyCode == KeyEvent.KEYCODE_DPAD_CENTER || keyCode == KeyEvent.KEYCODE_ENTER || keyCode == KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE) && event.getRepeatCount() == 0) {
+            mLongPressRunnable = new Runnable() {
+                @Override
+                public void run() {
+                    showSettingGroup(); //实现长按调出菜单
+                }
+            };
+            mmHandler.postDelayed(mLongPressRunnable, LONG_PRESS_DELAY);
+        }
+        return super.onKeyDown(keyCode, event);
+    }
+
+    @Override
+    public boolean onKeyUp(int keyCode, KeyEvent event) {
+        if (keyCode == KeyEvent.KEYCODE_DPAD_CENTER || keyCode == KeyEvent.KEYCODE_ENTER || keyCode == KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE) {
+            if (mLongPressRunnable != null) {
+                mmHandler.removeCallbacks(mLongPressRunnable);
+                mLongPressRunnable = null;
+            }
+        }
+        return super.onKeyUp(keyCode, event);
     }
 
     @Override
@@ -938,6 +970,8 @@ public class LivePlayActivity extends BaseActivity {
             mVideoView.setUrl(currentLiveChannelItem.getUrl(),liveWebHeader());
             mVideoView.start();
         }
+//        liveChannelItemAdapter.setFocusedChannelIndex(currentLiveChannelIndex);
+        liveChannelItemAdapter.setSelectedChannelIndex(currentLiveChannelIndex);
         return true;
     }
 
@@ -1564,11 +1598,11 @@ public class LivePlayActivity extends BaseActivity {
 
     private void clickLiveChannel(int position) {
         liveChannelItemAdapter.setSelectedChannelIndex(position);
-        playChannel(liveChannelGroupAdapter.getSelectedGroupIndex(), position, false);
         if (tvLeftChannelListLayout.getVisibility() == View.VISIBLE) {
             mHandler.removeCallbacks(mHideChannelListRun);
             mHandler.postDelayed(mHideChannelListRun, postTimeout);
         }
+        playChannel(liveChannelGroupAdapter.getSelectedGroupIndex(), position, false);
     }
 
     private void initSettingGroupView() {
