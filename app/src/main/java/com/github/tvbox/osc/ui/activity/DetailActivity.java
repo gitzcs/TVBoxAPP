@@ -460,9 +460,7 @@ public class DetailActivity extends BaseActivity {
             }
 
             @Override
-            public void onItemClick(TvRecyclerView parent, View itemView, int position) {
-                seriesAdapter.setNewData(new ArrayList<>());
-            }
+            public void onItemClick(TvRecyclerView parent, View itemView, int position) { }
         });
         seriesGroupAdapter.setOnItemClickListener(new BaseQuickAdapter.OnItemClickListener() {
             @Override
@@ -600,7 +598,7 @@ public class DetailActivity extends BaseActivity {
     }
     private boolean isReverse(List<VodInfo.VodSeries> list) {
         // 循环比较相邻元素
-        for (int i = 0; i < Math.min(list.size(),5); i++) {
+        for (int i = 0; i < 5; i++) {
             int current = extractNumber(list.get(i).name);
             int next = extractNumber(list.get(i + 1).name);
             if (current < next) return false;
@@ -613,19 +611,14 @@ public class DetailActivity extends BaseActivity {
     private void setSeriesGroupOptions(){
         List<VodInfo.VodSeries> list = vodInfo.seriesMap.get(vodInfo.playFlag);
         int listSize = list.size();
-        if(listSize>=2){
-            tvSeriesSort.setText(isReverse(list)?"倒序":"正序");
-            tvSeriesSort.setVisibility(View.VISIBLE);
-        }else {
-            tvSeriesSort.setVisibility(View.GONE);
-        }
         int offset = mGridViewLayoutMgr.getSpanCount();
         seriesGroupOptions.clear();
         GroupCount=(offset==3 || offset==6)?30:20;
         if(listSize>100 && listSize<=400)GroupCount=60;
         if(listSize>400)GroupCount=120;
         if(listSize > GroupCount) {
-            mSeriesGroupView.setVisibility(View.VISIBLE);
+            tvSeriesSort.setText(isReverse(list)?"倒序":"正序");
+            tvSeriesGroup.setVisibility(View.VISIBLE);
             int remainedOptionSize = listSize % GroupCount;
             int optionSize = listSize / GroupCount;
 
@@ -647,7 +640,7 @@ public class DetailActivity extends BaseActivity {
 
             seriesGroupAdapter.notifyDataSetChanged();
         }else {
-            mSeriesGroupView.setVisibility(View.GONE);
+            tvSeriesGroup.setVisibility(View.GONE);
         }
     }
 
@@ -766,7 +759,7 @@ public class DetailActivity extends BaseActivity {
                     } else {
                         mGridViewFlag.setVisibility(View.GONE);
                         mGridView.setVisibility(View.GONE);
-                        mSeriesGroupView.setVisibility(View.GONE);
+                        tvSeriesGroup.setVisibility(View.GONE);
                         tvPlay.setVisibility(View.GONE);
                         mEmptyPlayList.setVisibility(View.VISIBLE);
                     }
@@ -996,7 +989,7 @@ public class DetailActivity extends BaseActivity {
             toggleFullPreview();
             mGridView.requestFocus();
             List<VodInfo.VodSeries> list = vodInfo.seriesMap.get(vodInfo.playFlag);
-            mSeriesGroupView.setVisibility(list.size()>GroupCount ? View.VISIBLE : View.GONE);
+            tvSeriesGroup.setVisibility(list.size()>GroupCount ? View.VISIBLE : View.GONE);
             return;
         }
         if (seriesSelect) {
@@ -1037,7 +1030,7 @@ public class DetailActivity extends BaseActivity {
         llPlayerFragmentContainerBlock.setVisibility(fullWindows ? View.GONE : View.VISIBLE);
         mGridView.setVisibility(fullWindows ? View.GONE : View.VISIBLE);
         mGridViewFlag.setVisibility(fullWindows ? View.GONE : View.VISIBLE);
-        mSeriesGroupView.setVisibility(fullWindows ? View.GONE : View.VISIBLE);
+        tvSeriesGroup.setVisibility(fullWindows ? View.GONE : View.VISIBLE);
 
         //全屏下禁用详情页几个按键的焦点 防止上键跑过来
         tvPlay.setFocusable(!fullWindows);
