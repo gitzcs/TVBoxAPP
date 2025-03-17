@@ -74,9 +74,7 @@ public class UserFragment extends BaseLazyFragment implements View.OnClickListen
     }
 
     public UserFragment setArguments(List<Movie.Video> recVod) {
-        if(recVod!=null){
-            this.homeSourceRec = recVod.subList(0, Math.min(20, recVod.size()));
-        }
+        this.homeSourceRec = recVod;
         return this;
     }
 
