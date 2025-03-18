@@ -5,7 +5,6 @@
 
     //searchable:搜索开关	        0:关闭 1:启用
     //filterable:首页可选	        0:否 1:是
-    //changeable:换源开关	        0:关闭 1:启用
     //playerType:播放器类型	        0:系统 1:IJK 2:EXO
     //采集接口类型		        0:xml 1:json
     //parses解析类型		        0:嗅探,自带播放器 1:解析,返回直链\
