@@ -437,7 +437,7 @@ public class DetailActivity extends BaseActivity {
                     seriesAdapter.getData().get(vodInfo.playIndex).selected = true;
                     seriesAdapter.notifyItemChanged(vodInfo.playIndex);
                     //选集全屏 想选集不全屏的注释下面一行
-                    if (showPreview && !fullWindows && playFragment.getPlayer().isPlaying())toggleFullPreview();
+                    if (showPreview && !fullWindows && !reload && playFragment.getPlayer().isPlaying())toggleFullPreview();
                     if (!showPreview || reload) {
                         jumpToPlay();
                         firstReverse=false;
@@ -622,6 +622,7 @@ public class DetailActivity extends BaseActivity {
             seriesGroupAdapter.notifyDataSetChanged();
         }else {
             tvSeriesGroup.setVisibility(View.GONE);
+            mGridView.setNextFocusUpId(R.id.mGridViewFlag);
         }
     }
 
@@ -970,7 +971,8 @@ public class DetailActivity extends BaseActivity {
             toggleFullPreview();
             mGridView.requestFocus();
             List<VodInfo.VodSeries> list = vodInfo.seriesMap.get(vodInfo.playFlag);
-            tvSeriesGroup.setVisibility(list.size()>GroupCount ? View.VISIBLE : View.GONE);
+            tvSeriesGroup.setVisibility(list.size()>1 ? View.VISIBLE : View.GONE);
+            if(list.size()<=1)mGridView.setNextFocusUpId(R.id.mGridViewFlag);
             return;
         }
         if (seriesSelect) {
