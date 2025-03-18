@@ -417,6 +417,7 @@ public class DetailActivity extends BaseActivity {
                 FastClickCheckUtil.check(view);
                 if (vodInfo != null && vodInfo.seriesMap.get(vodInfo.playFlag).size() > 0) {
                     boolean reload = false;
+                    boolean isAllowFull = false;
                     for (int j = 0; j < vodInfo.seriesMap.get(vodInfo.playFlag).size(); j++) {
                         seriesAdapter.getData().get(j).selected = false;
                         seriesAdapter.notifyItemChanged(j);
@@ -432,12 +433,13 @@ public class DetailActivity extends BaseActivity {
                     //解决当前集不刷新的BUG
                     if (!preFlag.isEmpty() && !vodInfo.playFlag.equals(preFlag)) {
                         reload = true;
+                        isAllowFull = true;
                     }
 
                     seriesAdapter.getData().get(vodInfo.playIndex).selected = true;
                     seriesAdapter.notifyItemChanged(vodInfo.playIndex);
                     //选集全屏 想选集不全屏的注释下面一行
-                    if (showPreview && !fullWindows && !reload && playFragment.getPlayer().isPlaying())toggleFullPreview();
+                    if (showPreview && !fullWindows && !isAllowFull && playFragment.getPlayer().isPlaying())toggleFullPreview();
                     if (!showPreview || reload) {
                         jumpToPlay();
                         firstReverse=false;
