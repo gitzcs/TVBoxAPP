@@ -1,6 +1,9 @@
 <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<json接口示例>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+# TVBox
 
-{
+=== Source Code - Editing the app default settings ===
+
+    {
 	"spider": "./your.jar",
 	"wallpaper": "./api/img",
 	"sites": [],
@@ -11,7 +14,8 @@
 	],
 	"lives": [],
 	"rules": [],
-	"doh": [{
+	"doh": [
+		{
 			"name": "騰訊",
 			"url": "https://doh.pub/dns-query"
 		},
@@ -24,4 +28,4 @@
 			"url": "https://doh.360.cn/dns-query"
 		}
 	]
-}
+    }
