@@ -333,8 +333,8 @@ public class UserFragment extends BaseLazyFragment implements View.OnClickListen
     
         FastClickCheckUtil.check(v);
         if (v.getId() == R.id.tvLive) {
-            if(Hawk.get(HawkConfig.LIVE_API_URL,Hawk.get(HawkConfig.API_URL,"")).isEmpty()){
-                Toast.makeText(mContext, "直播配置未设置", Toast.LENGTH_SHORT).show();
+            if(Hawk.get(HawkConfig.LIVE_GROUP_LIST,new JsonArray()).isEmpty()){
+                Toast.makeText(mContext, "直播源为空", Toast.LENGTH_SHORT).show();
             }else {
                 jumpActivity(LivePlayActivity.class);
             }
