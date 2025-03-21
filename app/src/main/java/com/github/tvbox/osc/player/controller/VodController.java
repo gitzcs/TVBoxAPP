@@ -1029,9 +1029,22 @@ public class VodController extends BaseController {
         return super.onTouchEvent(e);
     }
 
+
+    private final Handler mmHandler = new Handler();
+    private Runnable mLongPressRunnable;
+    private static final long LONG_PRESS_DELAY = 800;
+    @Override
     public boolean onKeyDown(int keyCode, KeyEvent event) {
+        if (isBottomVisible()) return super.onKeyDown(keyCode, event);
         if ((keyCode == KeyEvent.KEYCODE_DPAD_UP) && event.getRepeatCount() == 0) {
-            speedPlayStart();
+            mLongPressRunnable = new Runnable() {
+                @Override
+                public void run() {
+                    speedPlayStart();
+                }
+            };
+            mmHandler.postDelayed(mLongPressRunnable, LONG_PRESS_DELAY);
+            return true;
         }
         return super.onKeyDown(keyCode, event);
     }
@@ -1039,6 +1052,10 @@ public class VodController extends BaseController {
     @Override
     public boolean onKeyUp(int keyCode, KeyEvent event) {
         if (keyCode == KeyEvent.KEYCODE_DPAD_UP) {
+            if (mLongPressRunnable != null) {
+                mmHandler.removeCallbacks(mLongPressRunnable);
+                mLongPressRunnable = null;
+            }
             speedPlayEnd();
         }
         return super.onKeyUp(keyCode, event);

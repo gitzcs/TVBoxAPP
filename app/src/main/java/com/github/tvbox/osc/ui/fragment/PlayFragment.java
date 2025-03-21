@@ -803,6 +803,24 @@ public class PlayFragment extends BaseLazyFragment {
         return false;
     }
 
+    public boolean onKeyDown(int keyCode, KeyEvent event) {
+        if (event !=null) {
+            if (mController.onKeyDown(keyCode,event)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public boolean onKeyUp(int keyCode, KeyEvent event) {
+        if (event !=null) {
+            if (mController.onKeyUp(keyCode,event)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     @Override
     public void onPause() {
         super.onPause();
