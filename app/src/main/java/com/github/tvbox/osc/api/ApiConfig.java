@@ -639,8 +639,12 @@ public class ApiConfig {
         bReader.close();
         parseLiveJson(apiUrl, sb.toString());
     }
+
+    private String liveSpider="";
     private void parseLiveJson(String apiUrl, String jsonStr) {
         JsonObject infoJson = gson.fromJson(jsonStr, JsonObject.class);
+        // spider
+        liveSpider = DefaultConfig.safeJsonString(infoJson, "spider", "");
         // 直播源
         initLiveSettings();
         if(infoJson.has("lives")){
@@ -789,13 +793,21 @@ public class ApiConfig {
                 }
             } else {
                 String type= livesOBJ.get("type").getAsString();
-                if(type.equals("0")){
+                if(type.equals("0") || type.equals("3")){
                     url = livesOBJ.get("url").getAsString();
                     if(!url.startsWith("http://127.0.0.1")){
                         if(url.startsWith("http")){
                             url = Base64.encodeToString(url.getBytes("UTF-8"), Base64.DEFAULT | Base64.URL_SAFE | Base64.NO_WRAP);
                         }
                         url ="http://127.0.0.1:9978/proxy?do=live&type=txt&ext="+url;
+                    }
+                    if(type.equals("3")){
+                        String jarUrl = livesOBJ.get("jar").getAsString().trim();
+                        if(!jarUrl.isEmpty()){
+                            jarLoader.loadLiveJar(jarUrl);
+                        }else if(!liveSpider.isEmpty()){
+                            jarLoader.loadLiveJar(liveSpider);
+                        }
                     }
                     LOG.i("echo-live-proxy-url:"+url);
                 }else {
@@ -828,6 +840,12 @@ public class ApiConfig {
         } catch (Throwable th) {
             th.printStackTrace();
         }
+    }
+
+    public void setLiveJar(String liveJar)
+    {
+        String jarUrl=!liveJar.isEmpty()?liveJar:liveSpider;
+        jarLoader.setRecentJarKey(MD5.string2MD5(jarUrl));
     }
 
     public String getSpider() {
