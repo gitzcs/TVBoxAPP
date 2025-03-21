@@ -1586,11 +1586,11 @@ public class PlayFragment extends BaseLazyFragment {
         @Override
         public void onPageFinished(WebView view, String url) {
             super.onPageFinished(view, url);
-            String clickSelector = sourceBean.getClickSelector();
+            String clickSelector = sourceBean.getClickSelector().trim();
             LOG.i("echo-onPageFinished url:" + url);
-            if (clickSelector != null && !clickSelector.trim().isEmpty()) {
+            if (!clickSelector.isEmpty()) {
                 String selector;
-                if (clickSelector.contains(";")) {
+                if (clickSelector.contains(";") && !clickSelector.endsWith(";")) {
                     String[] parts = clickSelector.split(";", 2);
                     if (!url.contains(parts[0])) {
                         return;

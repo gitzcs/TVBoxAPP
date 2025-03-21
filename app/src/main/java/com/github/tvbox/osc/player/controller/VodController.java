@@ -962,7 +962,7 @@ public class VodController extends BaseController {
                     return true;
                 }
 //            } else if (keyCode == KeyEvent.KEYCODE_DPAD_UP) {  return true;// 闲置开启计时关闭透明底栏
-            } else if (keyCode == KeyEvent.KEYCODE_DPAD_DOWN || keyCode == KeyEvent.KEYCODE_DPAD_UP || keyCode== KeyEvent.KEYCODE_MENU) {
+            } else if (keyCode == KeyEvent.KEYCODE_DPAD_DOWN || keyCode== KeyEvent.KEYCODE_MENU) {
                 if (!isBottomVisible()) {
                     showBottom();
                     myHandle.postDelayed(myRunnable, myHandleSeconds);
@@ -983,13 +983,26 @@ public class VodController extends BaseController {
 
     private boolean fromLongPress;
     private float speed_old = 1.0f;
-    @Override
-    public void onLongPress(MotionEvent e) {
-        if (videoPlayState!=VideoView.STATE_PAUSED) {
-            fromLongPress = true;
+
+    private void speedPlayStart(){
+        fromLongPress = true;
+        try {
+            speed_old = (float) mPlayerConfig.getDouble("sp");
+            float speed = 3.0f;
+            mPlayerConfig.put("sp", speed);
+            updatePlayerCfgView();
+            listener.updatePlayerCfg();
+            mControlWrapper.setSpeed(speed);
+            findViewById(R.id.play_speed_3_container).setVisibility(View.VISIBLE);
+        } catch (JSONException f) {
+            f.printStackTrace();
+        }
+    }
+    private void speedPlayEnd(){
+        if (fromLongPress) {
+            fromLongPress =false;
             try {
-                speed_old = (float) mPlayerConfig.getDouble("sp");
-                float speed = 3.0f;
+                float speed = speed_old;
                 mPlayerConfig.put("sp", speed);
                 updatePlayerCfgView();
                 listener.updatePlayerCfg();
@@ -997,6 +1010,13 @@ public class VodController extends BaseController {
             } catch (JSONException f) {
                 f.printStackTrace();
             }
+            findViewById(R.id.play_speed_3_container).setVisibility(View.GONE);
+        }
+    }
+    @Override
+    public void onLongPress(MotionEvent e) {
+        if (videoPlayState!=VideoView.STATE_PAUSED) {
+            speedPlayStart();
         }
     }
 
@@ -1004,20 +1024,24 @@ public class VodController extends BaseController {
     @Override
     public boolean onTouchEvent(MotionEvent e) {
         if (e.getAction() == MotionEvent.ACTION_UP) {
-            if (fromLongPress) {
-                fromLongPress =false;
-                try {
-                    float speed = speed_old;
-                    mPlayerConfig.put("sp", speed);
-                    updatePlayerCfgView();
-                    listener.updatePlayerCfg();
-                    mControlWrapper.setSpeed(speed);
-                } catch (JSONException f) {
-                    f.printStackTrace();
-                }
-            }
+            speedPlayEnd();
         }
         return super.onTouchEvent(e);
+    }
+
+    public boolean onKeyDown(int keyCode, KeyEvent event) {
+        if ((keyCode == KeyEvent.KEYCODE_DPAD_UP) && event.getRepeatCount() == 0) {
+            speedPlayStart();
+        }
+        return super.onKeyDown(keyCode, event);
+    }
+
+    @Override
+    public boolean onKeyUp(int keyCode, KeyEvent event) {
+        if (keyCode == KeyEvent.KEYCODE_DPAD_UP) {
+            speedPlayEnd();
+        }
+        return super.onKeyUp(keyCode, event);
     }
 
     @Override

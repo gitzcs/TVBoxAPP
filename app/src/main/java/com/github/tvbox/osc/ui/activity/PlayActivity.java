@@ -1536,15 +1536,15 @@ public class PlayActivity extends BaseActivity {
         @Override
         public void onPageFinished(WebView view, String url) {
             super.onPageFinished(view,url);
-            String click=sourceBean.getClickSelector();
+            String click=sourceBean.getClickSelector().trim();
             LOG.i("echo-onPageFinished url:" + url);
             if(!click.isEmpty()){
                 String selector;
-                if(click.contains(";")){
+                if(click.contains(";") && !click.endsWith(";")){
                     if(!url.contains(click.split(";")[0]))return;
                     selector=click.split(";")[1];
                 }else {
-                    selector=click.trim();
+                    selector=click;
                 }
                 String js = selector;
                 if(!selector.contains("click()"))js+=".click();";
