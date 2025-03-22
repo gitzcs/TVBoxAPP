@@ -318,7 +318,7 @@ public class SourceViewModel extends ViewModel {
     }
     // categoryContent
     public void getList(MovieSort.SortData sortData, int page) {
-        LOG.i("getList:");
+        LOG.i("echo-getList:");
         SourceBean homeSourceBean = ApiConfig.get().getHomeSourceBean();
         int type = homeSourceBean.getType();
         if (type == 3) {
@@ -373,11 +373,13 @@ public class SourceViewModel extends ViewModel {
                     });
         }else if (type == 4) {
             String ext= "";
+            String extend=homeSourceBean.getExt();
+            extend=getFixUrl(extend);
+            if(URLEncoder.encode(extend).length()>1000)extend="";
             if (sortData.filterSelect != null && sortData.filterSelect.size() > 0) {
                 try {
                     String selectExt = new JSONObject(sortData.filterSelect).toString();
                     ext = Base64.encodeToString(selectExt.getBytes("UTF-8"), Base64.DEFAULT |  Base64.NO_WRAP);
-                    LOG.i(ext);
                 } catch (UnsupportedEncodingException e) {
                     e.printStackTrace();
                 }
@@ -391,6 +393,7 @@ public class SourceViewModel extends ViewModel {
                 .params("t", sortData.id)
                 .params("pg", page)
                 .params("ext", ext)
+                .params("extend", extend)
                 .execute(new AbsCallback<String>() {
                     @Override
                     public String convertResponse(okhttp3.Response response) throws Throwable {
@@ -404,7 +407,7 @@ public class SourceViewModel extends ViewModel {
                     @Override
                     public void onSuccess(Response<String> response) {
                         String json = response.body();
-                        LOG.i(json);
+                        LOG.i("echo-list:"+json);
                         json(listResult, json, homeSourceBean.getKey());
                     }
 
@@ -564,10 +567,14 @@ public class SourceViewModel extends ViewModel {
                 }
             });
         } else if (type == 0 || type == 1|| type == 4) {
+            String extend=sourceBean.getExt();
+            extend=getFixUrl(extend);
+            if(URLEncoder.encode(extend).length()>1000)extend="";
             OkGo.<String>get(sourceBean.getApi())
                     .tag("detail")
                     .params("ac", type == 0 ? "videolist" : "detail")
                     .params("ids", id)
+                    .params("extend", extend)
                     .execute(new AbsCallback<String>() {
 
                         @Override
@@ -652,10 +659,14 @@ public class SourceViewModel extends ViewModel {
                         }
                     });
         }else if (type == 4) {
+            String extend=sourceBean.getExt();
+            extend=getFixUrl(extend);
+            if(URLEncoder.encode(extend).length()>1000)extend="";
             OkGo.<String>get(sourceBean.getApi())
                 .params("wd", wd)
                 .params("ac" ,"detail")
                 .params("quick" ,"false")
+                .params("extend" ,extend)
                 .tag("search")
                 .execute(new AbsCallback<String>() {
                     @Override
@@ -730,10 +741,14 @@ public class SourceViewModel extends ViewModel {
                         }
                     });
         }else if (type == 4) {
+            String extend=sourceBean.getExt();
+            extend=getFixUrl(extend);
+            if(URLEncoder.encode(extend).length()>1000)extend="";
             OkGo.<String>get(sourceBean.getApi())
                 .params("wd", wd)
                 .params("ac" ,"detail")
                 .params("quick" ,"true")
+                .params("extend" ,extend)
                 .tag("search")
                 .execute(new AbsCallback<String>() {
                     @Override
