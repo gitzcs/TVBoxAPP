@@ -321,7 +321,7 @@ public class ApiConfig {
                 return;
             }
         }else {
-            if (cache.exists()) {
+            if (cache.exists() && !FileUtils.isWeekAgo(cache)) {
                 if (jarLoader.load(cache.getAbsolutePath())) {
                     callback.success();
                 } else {

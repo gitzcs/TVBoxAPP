@@ -5,6 +5,7 @@ import android.util.Log;
 
 
 import com.github.tvbox.osc.base.App;
+import com.github.tvbox.osc.util.FileUtils;
 import com.github.tvbox.osc.util.MD5;
 import com.lzy.okgo.OkGo;
 
@@ -127,7 +128,7 @@ public class JarLoader {
                 return classLoaders.get(key);
             }
         }else {
-            if (cache.exists()) {
+            if (cache.exists() && !FileUtils.isWeekAgo(cache)) {
                 loadClassLoader(cache.getAbsolutePath(), key);
                 return classLoaders.get(key);
             }
@@ -181,6 +182,7 @@ public class JarLoader {
         DexClassLoader classLoader = jarKey.equals("main")? classLoaders.get("main"):loadJarInternal(jarUrl, jarMd5, jarKey);
         if (classLoader == null) return new SpiderNull();
         try {
+            Log.i("JarLoader", "echo-getSpider 加载spider: " + key);
             Spider sp = (Spider) classLoader.loadClass("com.github.catvod.spider." + clsKey).newInstance();
             sp.init(App.getInstance(), ext);
 //            if (!jar.isEmpty()) {
