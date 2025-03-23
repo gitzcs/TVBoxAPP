@@ -232,23 +232,27 @@ public class HomeActivity extends BaseActivity {
             @Override
             public void onClick(View v) {
                 FastClickCheckUtil.check(v);
-                String cspCachePath = FileUtils.getFilePath()+"/csp/";
-                String jar=ApiConfig.get().getHomeSourceBean().getJar();
-                String jarUrl=!jar.isEmpty()?jar:ApiConfig.get().getSpider();
-                File cspCacheDir = new File(cspCachePath + MD5.string2MD5(jarUrl)+".jar");
-                if (!cspCacheDir.exists()){
-                    Toast.makeText(mContext, "jar缓存已清除", Toast.LENGTH_LONG).show();
-                    return;
-                }
-                new Thread(() -> {
-                    try {
-                        FileUtils.deleteFile(cspCacheDir);
-                    } catch (Exception e) {
-                        e.printStackTrace();
+                if(dataInitOk && jarInitOk){
+                    String cspCachePath = FileUtils.getFilePath()+"/csp/";
+                    String jar=ApiConfig.get().getHomeSourceBean().getJar();
+                    String jarUrl=!jar.isEmpty()?jar:ApiConfig.get().getSpider();
+                    File cspCacheDir = new File(cspCachePath + MD5.string2MD5(jarUrl)+".jar");
+                    if (!cspCacheDir.exists()){
+                        Toast.makeText(mContext, "jar缓存已清除", Toast.LENGTH_LONG).show();
+                        return;
                     }
-                }).start();
-                ApiConfig.get().clearJarLoader();
-                Toast.makeText(mContext, "jar缓存已清除", Toast.LENGTH_LONG).show();
+                    new Thread(() -> {
+                        try {
+                            FileUtils.deleteFile(cspCacheDir);
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+                    }).start();
+                    ApiConfig.get().clearJarLoader();
+                    Toast.makeText(mContext, "jar缓存已清除", Toast.LENGTH_LONG).show();
+                }else {
+                    jumpActivity(SettingActivity.class);
+                }
             }
         });
         tvName.setOnLongClickListener(new View.OnLongClickListener() {
