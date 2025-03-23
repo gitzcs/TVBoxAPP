@@ -309,10 +309,19 @@ public class ApiConfig {
         String[] urls = spider.split(";md5;");
         String jarUrl = urls[0];
         String md5 = urls.length > 1 ? urls[1].trim() : "";
-        File cache = new File(App.getInstance().getFilesDir().getAbsolutePath() + "/csp.jar");
+        File cache = new File(App.getInstance().getFilesDir().getAbsolutePath() + "/csp/"+MD5.string2MD5(jarUrl)+".jar");
 
         if (!md5.isEmpty() || useCache) {
             if (cache.exists() && (useCache || MD5.getFileMd5(cache).equalsIgnoreCase(md5))) {
+                if (jarLoader.load(cache.getAbsolutePath())) {
+                    callback.success();
+                } else {
+                    callback.error("");
+                }
+                return;
+            }
+        }else {
+            if (cache.exists()) {
                 if (jarLoader.load(cache.getAbsolutePath())) {
                     callback.success();
                 } else {
@@ -997,5 +1006,10 @@ public class ApiConfig {
 
     public Map<String,String> getMyHost() {
         return myHosts;
+    }
+
+    public void clearJarLoader()
+    {
+        jarLoader.clear();
     }
 }

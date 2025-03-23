@@ -115,6 +115,9 @@ public class FileUtils {
     public static String getCachePath() {
         return getCacheDir().getAbsolutePath();
     }
+    public static String getFilePath() {
+        return App.getInstance().getFilesDir().getAbsolutePath();
+    }
 
     public static void cleanDirectory(File dir) {
         if (!dir.exists()) return;
