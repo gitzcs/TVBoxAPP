@@ -37,8 +37,6 @@ import com.lzy.okgo.callback.AbsCallback;
 import com.lzy.okgo.model.Response;
 import com.orhanobut.hawk.Hawk;
 
-import com.github.catvod.crawler.SpiderNull;
-
 import org.json.JSONObject;
 
 import java.io.BufferedReader;
@@ -64,11 +62,11 @@ import java.util.regex.Pattern;
  */
 public class ApiConfig {
     private static ApiConfig instance;
-    private LinkedHashMap<String, SourceBean> sourceBeanList;
+    private final LinkedHashMap<String, SourceBean> sourceBeanList;
     private SourceBean mHomeSource;
     private ParseBean mDefaultParse;
-    private List<LiveChannelGroup> liveChannelGroupList;
-    private List<ParseBean> parseBeanList;
+    private final List<LiveChannelGroup> liveChannelGroupList;
+    private final List<ParseBean> parseBeanList;
     private List<String> vipParseFlags;
     private Map<String,String> myHosts;
     private List<IJKCode> ijkCodes;
@@ -88,7 +86,7 @@ public class ApiConfig {
 
     private String defaultLiveObjString="{\"lives\":[{\"name\":\"txt_m3u\",\"type\":0,\"url\":\"txt_m3u_url\"}]}";
     private ApiConfig() {
-        jarLoader.clear();
+        clearLoader();
         sourceBeanList = new LinkedHashMap<>();
         liveChannelGroupList = new ArrayList<>();
         parseBeanList = new ArrayList<>();
@@ -877,22 +875,19 @@ public class ApiConfig {
     }
 
     public Spider getCSP(SourceBean sourceBean) {
-        boolean js = sourceBean.getApi().endsWith(".js") || sourceBean.getApi().contains(".js?");
-        if (js) return jsLoader.getSpider(sourceBean.getKey(), sourceBean.getApi(), sourceBean.getExt(), sourceBean.getJar());
-        if (sourceBean.getKey().startsWith("py_") || sourceBean.getApi().endsWith(".py")) {
-            try {
-                return pyLoader.getSpider(sourceBean.getKey(), sourceBean.getApi(), sourceBean.getExt());
-            } catch (Exception e) {
-                return new SpiderNull();
-            }
+        if (sourceBean.getApi().endsWith(".js") || sourceBean.getApi().contains(".js?")){
+            return jsLoader.getSpider(sourceBean.getKey(), sourceBean.getApi(), sourceBean.getExt(), sourceBean.getJar());
         }
-        return jarLoader.getSpider(sourceBean.getKey(), sourceBean.getApi(), sourceBean.getExt(), sourceBean.getJar());
+        else if (sourceBean.getKey().startsWith("py_")) {
+            return pyLoader.getSpider(sourceBean.getKey(), sourceBean.getApi(), sourceBean.getExt());
+        }
+        else return jarLoader.getSpider(sourceBean.getKey(), sourceBean.getApi(), sourceBean.getExt(), sourceBean.getJar());
     }
 
     public Object[] proxyLocal(Map<String,String> param) {
         SourceBean sourceBean = ApiConfig.get().getHomeSourceBean();
-        if (sourceBean.getKey().startsWith("py_") || sourceBean.getApi().endsWith(".py")) {
-            return pyLoader.proxyInvoke(sourceBean.getKey(), getPyUrl(sourceBean), param);
+        if (sourceBean.getKey().startsWith("py_")) {
+            return pyLoader.proxyInvoke(param,sourceBean.getKey(),sourceBean.getApi(),sourceBean.getExt());
         }else {
             return jarLoader.proxyInvoke(param);
         }
@@ -1047,14 +1042,8 @@ public class ApiConfig {
         parseBeanList.add(0, superPb);
     }
 
-    private String getPyUrl(SourceBean sb)
-    {
-        String api = sb.getApi();
-        String ext = sb.getExt();
-        StringBuilder urlBuilder = new StringBuilder(api);
-        if (!ext.isEmpty()) {
-            urlBuilder.append(api.contains("?") ? "&" : "?").append("extend=").append(ext);
-        }
-        return urlBuilder.toString();
+    public void clearLoader(){
+        jarLoader.clear();
+        pyLoader.clear();
     }
 }

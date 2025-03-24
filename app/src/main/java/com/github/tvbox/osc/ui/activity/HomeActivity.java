@@ -239,6 +239,7 @@ public class HomeActivity extends BaseActivity {
                     File cspCacheDir = new File(cspCachePath + MD5.string2MD5(jarUrl)+".jar");
                     Toast.makeText(mContext, "jar缓存已清除", Toast.LENGTH_LONG).show();
                     if (!cspCacheDir.exists()){
+                        refreshHome();
                         return;
                     }
                     new Thread(() -> {
