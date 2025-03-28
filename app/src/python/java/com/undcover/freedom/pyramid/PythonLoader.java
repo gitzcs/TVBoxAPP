@@ -122,7 +122,6 @@ public class PythonLoader {
         }
         try {
             PythonSpider sp = new PythonSpider(key, cache);
-
             Thread initThread = new Thread(() -> {
                 try {
                     sp.init(app, url);
@@ -132,13 +131,11 @@ public class PythonLoader {
             });
             initThread.start();
             initThread.join(12_000);
-
             if (initThread.isAlive()) {
                 PyLog.e("echo-init方法执行超时超时");
                 initThread.interrupt();
-                throw new Exception("echo-init方法执行超时");
+                return new SpiderNull();
             }
-
             spiders.put(key, sp);
             return sp;
         } catch (Throwable th) {
