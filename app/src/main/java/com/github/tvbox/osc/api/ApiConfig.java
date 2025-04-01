@@ -850,6 +850,7 @@ public class ApiConfig {
                     }
                     LOG.i("echo-live-proxy-url:"+url);
                 }else {
+                    liveChannelGroupList.clear();
                     return;
                 }
             }
