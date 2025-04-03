@@ -202,6 +202,9 @@ public class DetailActivity extends BaseActivity {
             protected void convert(BaseViewHolder helper, String item) {
                 TextView tvSeries = helper.getView(R.id.tvSeriesGroup);
                 tvSeries.setText(item);
+                if (helper.getLayoutPosition() == getData().size() - 1) {
+                    helper.itemView.setNextFocusRightId(R.id.tvPlay);
+                }
             }
         };
         mSeriesGroupView.setAdapter(seriesGroupAdapter);
