@@ -1,6 +1,8 @@
 package com.github.tvbox.osc.ui.adapter;
 
+import android.app.Activity;
 import android.graphics.Color;
+import android.view.View;
 import android.widget.TextView;
 
 import com.chad.library.adapter.base.BaseQuickAdapter;
@@ -37,19 +39,20 @@ public class SeriesAdapter extends BaseQuickAdapter<VodInfo.VodSeries, BaseViewH
             helper.itemView.setNextFocusUpId(R.id.mGridViewFlag);
         }
 
-        int spanCount = mGridLayoutManager.getSpanCount();
-        int position = helper.getLayoutPosition();
+        View mSeriesGroupTv = ((Activity) helper.itemView.getContext()).findViewById(R.id.mSeriesGroupTv);
+        if (getData().size()>1 && mSeriesGroupTv != null && mSeriesGroupTv.getVisibility() == View.VISIBLE) {
+            int spanCount = mGridLayoutManager.getSpanCount();
+            int position = helper.getLayoutPosition();
+            if (position < spanCount) {
+                helper.itemView.setNextFocusUpId(R.id.mSeriesSortTv);
+            }
+            int totalCount = getData().size();
+            int remainder = totalCount % spanCount;
+            int lastRowStart = remainder == 0 ? totalCount - spanCount : totalCount - remainder;
 
-        if (position < spanCount) {
-            helper.itemView.setNextFocusUpId(R.id.mSeriesSortTv);
-        }
-
-        int totalCount = getData().size();
-        int remainder = totalCount % spanCount;
-        int lastRowStart = remainder == 0 ? totalCount - spanCount : totalCount - remainder;
-
-        if (position >= lastRowStart) {
-            helper.itemView.setNextFocusDownId(R.id.tvPlay);
+            if (position >= lastRowStart) {
+                helper.itemView.setNextFocusDownId(R.id.tvPlay);
+            }
         }
     }
 }
