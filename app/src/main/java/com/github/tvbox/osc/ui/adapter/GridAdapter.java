@@ -48,7 +48,7 @@ public class GridAdapter extends BaseQuickAdapter<Movie.Video, BaseViewHolder> {
     public GridAdapter(boolean showList, Style style) {
         super( showList ? R.layout.item_list:R.layout.item_grid, new ArrayList<>());
         this.mShowList = showList;
-        if(style.type.equals("list"))this.mShowList=true;
+        if(style!=null && style.type.equals("list"))this.mShowList=true;
         this.style = style;
     }
 
