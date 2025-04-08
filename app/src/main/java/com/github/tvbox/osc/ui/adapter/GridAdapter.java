@@ -120,8 +120,8 @@ public class GridAdapter extends BaseQuickAdapter<Movie.Video, BaseViewHolder> {
         helper.setText(R.id.tvActor, item.actor);
         ImageView ivThumb = helper.getView(R.id.ivThumb);
 
-        int newWidth = 240;
-        int newHeight = 336;
+        int newWidth = ImgUtil.defaultWidth;
+        int newHeight = ImgUtil.defaultHeight;
         if(style!=null){
             newWidth = defaultWidth;
             newHeight = (int)(newWidth / style.ratio);
@@ -156,9 +156,9 @@ public class GridAdapter extends BaseQuickAdapter<Movie.Video, BaseViewHolder> {
      * 根据传入的 style 动态设置 ImageView 的高度：高度 = 宽度 / ratio
      */
     private void applyStyleToImage(final ImageView ivThumb) {
-        ViewGroup container = (ViewGroup) ivThumb.getParent();
-        int width = defaultWidth;
         if(style!=null){
+            ViewGroup container = (ViewGroup) ivThumb.getParent();
+            int width = defaultWidth;
             int height = (int) (width / style.ratio);
             ViewGroup.LayoutParams containerParams = container.getLayoutParams();
             containerParams.height = AutoSizeUtils.mm2px(mContext, height); // 高度
