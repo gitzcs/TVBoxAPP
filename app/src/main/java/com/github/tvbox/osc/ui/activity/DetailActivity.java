@@ -1057,6 +1057,7 @@ public class DetailActivity extends BaseActivity {
         mGridView.setVisibility(fullWindows ? View.GONE : View.VISIBLE);
         mGridViewFlag.setVisibility(fullWindows ? View.GONE : View.VISIBLE);
         tvSeriesGroup.setVisibility(fullWindows ? View.GONE : View.VISIBLE);
+        playFragment.setPlayTitle(fullWindows);
         toggleSubtitleTextSize();
     }
 
