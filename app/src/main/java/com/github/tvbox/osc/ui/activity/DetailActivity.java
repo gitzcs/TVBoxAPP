@@ -1005,6 +1005,7 @@ public class DetailActivity extends BaseActivity {
                 return;
             }
         }
+        if(showPreview && playFragment!=null)playFragment.setPlayTitle(false);
         super.onBackPressed();
     }
 
@@ -1057,7 +1058,6 @@ public class DetailActivity extends BaseActivity {
         mGridView.setVisibility(fullWindows ? View.GONE : View.VISIBLE);
         mGridViewFlag.setVisibility(fullWindows ? View.GONE : View.VISIBLE);
         tvSeriesGroup.setVisibility(fullWindows ? View.GONE : View.VISIBLE);
-        playFragment.setPlayTitle(fullWindows);
         toggleSubtitleTextSize();
     }
 
