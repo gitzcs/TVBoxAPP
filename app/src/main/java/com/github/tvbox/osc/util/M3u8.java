@@ -53,7 +53,7 @@ public class M3u8 {
      * <a href="https://github.com/asdfgh"> asdfgh </a>
      */
 
-    private static int timesNoAd = 10;  //出现超过多少次的域名不认为是广告
+    private static int timesNoAd = 15;  //出现超过多少次的域名不认为是广告
     private static String removeMinorityUrl(String tsUrlPre, String m3u8content) {
         String linesplit = "\n";
         if (m3u8content.contains("\r\n"))
