@@ -228,7 +228,7 @@ public class M3u8 {
             String group = m1.group();
             BigDecimal t = BigDecimal.ZERO;
             Matcher m2 = REGEX_MEDIA_DURATION.matcher(group);
-            while (m2.find()) t = t.add(new BigDecimal(m2.group(1)));
+            if (m2.find()) t = t.add(new BigDecimal(m2.group(1)));
             for (String ad : ads) if (t.toString().startsWith(ad)) line = line.replace(group.replace(TAG_ENDLIST, ""), "");
         }
         return line;
