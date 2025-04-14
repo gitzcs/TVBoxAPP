@@ -179,7 +179,7 @@ public class M3u8 {
                 String domain = (ifirst > 0) ? absoluteUrl.substring(0, ifirst) : absoluteUrl;
                 // 保留条件：域名等于出现次数最多的，或者该域名出现次数超过timesNoAd次
                 Integer cnt = preUrlMap.get(domain);
-                if (domain.equals(maxTimesPreUrl) || (cnt != null && cnt >= timesNoAd)) {
+                if (domain.equals(maxTimesPreUrl) || (cnt != null && cnt > timesNoAd)) {
                     lines[i] = absoluteUrl;
                 } else {
                     if (i > 0 && lines[i - 1].length() > 0 && lines[i - 1].charAt(0) == '#') {
