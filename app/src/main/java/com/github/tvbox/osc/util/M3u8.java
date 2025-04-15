@@ -228,10 +228,30 @@ public class M3u8 {
     private static String clean(String line, List<String> ads) {
         boolean scan = false;
         for (String ad : ads) {
-            if (ad.contains(TAG_DISCONTINUITY) || ad.contains(TAG_MEDIA_DURATION)) line = line.replaceAll(ad, "");
+            if (ad.contains(TAG_DISCONTINUITY) || ad.contains(TAG_MEDIA_DURATION)) line = scanAd(line,ad);
             else if (isDouble(ad)) scan = true;
         }
         return scan ? scan(line, ads) : line;
+    }
+
+    private static String scanAd(String line,String TAG_AD) {
+        Matcher m1 = Pattern.compile(TAG_AD).matcher(line);
+        List<String> needRemoveAd = new ArrayList<>();
+        while (m1.find()) {
+            String group = m1.group();
+            String groupCleaned = group.replace(TAG_ENDLIST, "");
+            Matcher m2 = REGEX_MEDIA_DURATION.matcher(group);
+            int tCount = 0;
+            while (m2.find()) {
+                tCount+=1;
+            }
+            needRemoveAd.add(groupCleaned);
+            currentAdCount+=tCount;
+        }
+        for (String rem : needRemoveAd) {
+            line = line.replace(rem, "");
+        }
+        return line;
     }
 
     private static String scan(String line, List<String> ads) {
