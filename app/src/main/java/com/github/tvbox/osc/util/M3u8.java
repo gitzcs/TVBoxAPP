@@ -234,8 +234,17 @@ public class M3u8 {
         return scan ? scan(line, ads) : line;
     }
 
+    private static final Map<String, Pattern> patternCache = new HashMap<>();
+    private static Pattern getPattern(String regex) {
+        Pattern pattern = patternCache.get(regex);
+        if (pattern == null) {
+            pattern = Pattern.compile(regex);
+            patternCache.put(regex, pattern);
+        }
+        return pattern;
+    }
     private static String scanAd(String line,String TAG_AD) {
-        Matcher m1 = Pattern.compile(TAG_AD).matcher(line);
+        Matcher m1 = getPattern(TAG_AD).matcher(line);
         List<String> needRemoveAd = new ArrayList<>();
         while (m1.find()) {
             String group = m1.group();
