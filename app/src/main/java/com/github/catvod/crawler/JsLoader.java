@@ -24,8 +24,8 @@ import dalvik.system.DexClassLoader;
 import okhttp3.Response;
 
 public class JsLoader {
-    private static ConcurrentHashMap<String, Spider> spiders = new ConcurrentHashMap<>();
-    private static ConcurrentHashMap<String, Class<?>> classes = new ConcurrentHashMap<>();
+    private static final ConcurrentHashMap<String, Spider> spiders = new ConcurrentHashMap<>();
+    private static final ConcurrentHashMap<String, Class<?>> classes = new ConcurrentHashMap<>();
     //当前的Js爬虫key
     private volatile String recentKey = "";
 
@@ -81,8 +81,10 @@ public class JsLoader {
     }
 
     private Class<?> loadJarInternal(String jar, String md5, String key) {
-        if (classes.containsKey(key))
+        if (classes.containsKey(key)){
+            Log.i("JSLoader", "echo-loadJarInternal cached");
             return classes.get(key);
+        }
         File cache = new File(App.getInstance().getFilesDir().getAbsolutePath() + "/csp/" + key + ".jar");
         if (!md5.isEmpty()) {
             if (cache.exists() && MD5.getFileMd5(cache).equalsIgnoreCase(md5)) {

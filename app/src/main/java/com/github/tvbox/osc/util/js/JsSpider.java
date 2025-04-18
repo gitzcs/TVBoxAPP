@@ -162,7 +162,6 @@ public class JsSpider extends Spider {
     @Override
     public boolean isVideoFormat(String url) {
         try {
-
             return (Boolean) call("isVideo", url);
         }catch (Exception e){
             return false;

@@ -23,8 +23,12 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -253,6 +257,7 @@ public class FileUtils {
 
 
     //JS  工具方法
+    private static final Pattern URL_JOIN = Pattern.compile("^http.*\\.(js|txt|json)", Pattern.MULTILINE | Pattern.CASE_INSENSITIVE);
     public static String loadModule(String name) {
         try {
             if (name.contains("gbk.js")) {
@@ -300,17 +305,23 @@ public class FileUtils {
         return name;
     }
 
-    public static boolean isAsFile(String name, String path) {
-        try {
-            for (String f_name : App.getInstance().getAssets().list(path)) {
-                if (f_name.equals(name.trim())) {
-                    return true;
-                }
+
+    private static final Map<String, Set<String>> cachedDirFiles = new HashMap<>();
+    public static boolean isAsFile(String name,String dir) {
+        // 1. 先从缓存里取目录列表
+        Set<String> files = cachedDirFiles.get(dir);
+        if (files == null) {
+            LOG.i("echo-读取AssetsList");
+            try {
+                String[] list = App.getInstance().getAssets().list(dir);
+                files = new HashSet<>(Arrays.asList(list));
+            } catch (IOException e) {
+                files = Collections.emptySet();
             }
-        } catch (Exception e) {
-            e.printStackTrace();
+            cachedDirFiles.put(dir, files);
         }
-        return false;
+        // 2. 内存查找
+        return files.contains(name.trim());
     }
 
     public static String getAsOpen(String name) {
@@ -384,7 +395,6 @@ public class FileUtils {
         return OkHttpUtil.string(str,headerMap);
     }
 
-    private static final Pattern URL_JOIN = Pattern.compile("^http.*\\.(js|txt|json|m3u)", Pattern.MULTILINE | Pattern.CASE_INSENSITIVE);
     public static File open(String str) {
         return new File(getExternalCachePath() + "/qjscache_" + str + ".js");
     }
