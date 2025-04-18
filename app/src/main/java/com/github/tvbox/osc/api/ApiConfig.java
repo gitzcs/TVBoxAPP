@@ -1,5 +1,7 @@
 package com.github.tvbox.osc.api;
 
+import static com.github.tvbox.osc.util.RegexUtils.getPattern;
+
 import android.app.Activity;
 import android.net.Uri;
 import android.text.TextUtils;
@@ -112,7 +114,7 @@ public class ApiConfig {
         String content = json;
         try {
             if (AES.isJson(content)) return content;
-            Pattern pattern = Pattern.compile("[A-Za-z0]{8}\\*\\*");
+            Pattern pattern = getPattern("[A-Za-z0]{8}\\*\\*");
             Matcher matcher = pattern.matcher(content);
             if(matcher.find()){
                 content=content.substring(content.indexOf(matcher.group()) + 10);
@@ -137,7 +139,7 @@ public class ApiConfig {
     }
 
     private static byte[] getImgJar(String body){
-        Pattern pattern = Pattern.compile("[A-Za-z0]{8}\\*\\*");
+        Pattern pattern = getPattern("[A-Za-z0]{8}\\*\\*");
         Matcher matcher = pattern.matcher(body);
         if(matcher.find()){
             body = body.substring(body.indexOf(matcher.group()) + 10);

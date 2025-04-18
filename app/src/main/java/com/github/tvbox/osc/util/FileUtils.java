@@ -267,6 +267,7 @@ public class FileUtils {
             } else if (name.contains("cat.js")) {
                 name = "cat.js";
             }
+            LOG.i("echo-loadModule "+name);
             Matcher m = URL_JOIN.matcher(name);
             if (m.find()) {
                 if (!Hawk.get(HawkConfig.DEBUG_OPEN, false)) {
@@ -347,11 +348,10 @@ public class FileUtils {
                 return "";
             }
             JsonObject asJsonObject = (new Gson().fromJson(code, JsonObject.class)).getAsJsonObject();
-            if (((long) asJsonObject.get("expires").getAsInt()) > System.currentTimeMillis() / 1000) {
-                return asJsonObject.get("data").getAsString();
+            if (((long) asJsonObject.get("expires").getAsInt()) <= System.currentTimeMillis() / 1000) {
+                recursiveDelete(open(name));
             }
-            recursiveDelete(open(name));
-            return "";
+            return asJsonObject.get("data").getAsString();
         } catch (Exception e4) {
             return "";
         }
