@@ -4,6 +4,7 @@ import android.app.Activity;
 import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.pm.ActivityInfo;
+import android.graphics.Color;
 import android.os.Build;
 import android.os.Handler;
 import android.os.Message;
@@ -665,6 +666,7 @@ public class VodController extends BaseController {
         int disPlay = Hawk.get(HawkConfig.SCREEN_DISPLAY, GONE);
         seekTime.setVisibility(disPlay);
         mPlayPauseTime.setVisibility(disPlay);
+        mScreenDisplay.setTextColor(disPlay==VISIBLE?getResources().getColor(R.color.color_02F8E1): Color.WHITE);
         mScreenDisplay.setOnClickListener(new OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -672,6 +674,7 @@ public class VodController extends BaseController {
                 seekTime.setVisibility(disPlay);
                 if(disPlay==VISIBLE)mPlayPauseTime.setVisibility(disPlay);
                 Hawk.put(HawkConfig.SCREEN_DISPLAY, disPlay);
+                mScreenDisplay.setTextColor(disPlay==VISIBLE?getResources().getColor(R.color.color_02F8E1): Color.WHITE);
                 hideBottom();
             }
         });
