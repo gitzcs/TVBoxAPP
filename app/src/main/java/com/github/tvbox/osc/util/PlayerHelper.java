@@ -289,4 +289,19 @@ public class PlayerHelper {
         else
             return speed > 0?speed + "B/s":(show?"0B/s":"");
     }
+    public static String getDisplaySpeedBps(long speed, boolean show) {
+        long bitSpeed = speed * 8; // 字节转比特
+
+        if (bitSpeed >= 1_000_000_000) {
+            return new DecimalFormat("0.00").format(bitSpeed / 1_000_000_000d) + "Gbps";
+        } else {
+            double mbps = bitSpeed / 1_000_000d;
+            if (mbps > 0 || show) {
+                DecimalFormat df = mbps < 0.1 ? new DecimalFormat("0.00") : new DecimalFormat("0.0");
+                return df.format(mbps) + "Mbps";
+            } else {
+                return "0bps";
+            }
+        }
+    }
 }

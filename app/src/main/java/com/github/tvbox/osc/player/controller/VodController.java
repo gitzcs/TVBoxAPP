@@ -94,6 +94,8 @@ public class VodController extends BaseController {
                         mPlayLoadNetSpeedRightTop.setVisibility(VISIBLE);
                         if(Hawk.get(HawkConfig.SCREEN_DISPLAY,GONE)==GONE){
                             mPlayPauseTime.setVisibility(VISIBLE);
+                        }else {
+                            net_play_speed.setVisibility(GONE);
                         }
                         mPlayTitle.setVisibility(GONE);
                         backBtn.setVisibility(ScreenUtils.isTv(context) ? INVISIBLE : VISIBLE);
@@ -106,6 +108,8 @@ public class VodController extends BaseController {
                         mPlayLoadNetSpeedRightTop.setVisibility(GONE);
                         if(Hawk.get(HawkConfig.SCREEN_DISPLAY,GONE)==GONE){
                             mPlayPauseTime.setVisibility(GONE);
+                        }else {
+                            net_play_speed.setVisibility(VISIBLE);
                         }
                         backBtn.setVisibility(INVISIBLE);
                         break;
@@ -168,6 +172,7 @@ public class VodController extends BaseController {
     TextView seekTime; //右上角进度时间显示
     TextView mScreenDisplay; //增加屏显开关
     LinearLayout tv_screen_display; //增加屏显布局
+    TextView net_play_speed;
 
     LockRunnable lockRunnable = new LockRunnable();
     private boolean isLock = false;
@@ -184,10 +189,11 @@ public class VodController extends BaseController {
             Date date = new Date();
             @SuppressLint("SimpleDateFormat") SimpleDateFormat timeFormat = new SimpleDateFormat("hh:mm a");
             mPlayPauseTime.setText(timeFormat.format(date));
-            String speedTop = PlayerHelper.getDisplaySpeed(mControlWrapper.getTcpSpeed(),true);
             String speed = PlayerHelper.getDisplaySpeed(mControlWrapper.getTcpSpeed(),false);
-            mPlayLoadNetSpeedRightTop.setText(speedTop);
+            String speedBps = PlayerHelper.getDisplaySpeedBps(mControlWrapper.getTcpSpeed(),true);
+            mPlayLoadNetSpeedRightTop.setText(speedBps);
             mPlayLoadNetSpeed.setText(speed);
+            net_play_speed.setText(speedBps);
             String width = Integer.toString(mControlWrapper.getVideoSize()[0]);
             String height = Integer.toString(mControlWrapper.getVideoSize()[1]);
             mVideoSize.setText("[ " + width + " X " + height +" ]");
@@ -219,6 +225,7 @@ public class VodController extends BaseController {
         mTopRoot2 = findViewById(R.id.tv_top_r_container);
         mPlayBtnGroup = findViewById(R.id.play_btn_group);
         tv_screen_display = findViewById(R.id.tv_screen_display);
+        net_play_speed = findViewById(R.id.net_play_speed);
         mParseRoot = findViewById(R.id.parse_root);
         mGridParseView = findViewById(R.id.mGridParseView);
         mPlayerRetry = findViewById(R.id.play_retry);
@@ -665,6 +672,7 @@ public class VodController extends BaseController {
         //屏显
         int disPlay = Hawk.get(HawkConfig.SCREEN_DISPLAY, GONE);
         seekTime.setVisibility(disPlay);
+        net_play_speed.setVisibility(disPlay);
         mPlayPauseTime.setVisibility(disPlay);
         mScreenDisplay.setTextColor(disPlay==VISIBLE?getResources().getColor(R.color.color_02F8E1): Color.WHITE);
         mScreenDisplay.setOnClickListener(new OnClickListener() {
@@ -672,6 +680,7 @@ public class VodController extends BaseController {
             public void onClick(View view) {
                 int disPlay =(Hawk.get(HawkConfig.SCREEN_DISPLAY, GONE) == VISIBLE) ? GONE : VISIBLE;
                 seekTime.setVisibility(disPlay);
+                net_play_speed.setVisibility(disPlay);
                 if(disPlay==VISIBLE)mPlayPauseTime.setVisibility(disPlay);
                 Hawk.put(HawkConfig.SCREEN_DISPLAY, disPlay);
                 mScreenDisplay.setTextColor(disPlay==VISIBLE?getResources().getColor(R.color.color_02F8E1): Color.WHITE);
