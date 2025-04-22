@@ -189,13 +189,15 @@ public class VodController extends BaseController {
             Date date = new Date();
             @SuppressLint("SimpleDateFormat") SimpleDateFormat timeFormat = new SimpleDateFormat("hh:mm a");
             mPlayPauseTime.setText(timeFormat.format(date));
-            String speed = PlayerHelper.getDisplaySpeed(mControlWrapper.getTcpSpeed(),false);
-            String speedBps = PlayerHelper.getDisplaySpeedBps(mControlWrapper.getTcpSpeed(),true);
+            long mSpeed = mControlWrapper.getTcpSpeed();
+            String speed = PlayerHelper.getDisplaySpeed(mSpeed,false);
+            String speedBps = PlayerHelper.getDisplaySpeedBps(mSpeed,true);
             mPlayLoadNetSpeedRightTop.setText(speedBps);
             mPlayLoadNetSpeed.setText(speed);
             net_play_speed.setText(speedBps);
-            String width = Integer.toString(mControlWrapper.getVideoSize()[0]);
-            String height = Integer.toString(mControlWrapper.getVideoSize()[1]);
+            int[] mVideoSizes = mControlWrapper.getVideoSize();
+            String width = Integer.toString(mVideoSizes[0]);
+            String height = Integer.toString(mVideoSizes[1]);
             mVideoSize.setText("[ " + width + " X " + height +" ]");
 
             mHandler.postDelayed(this, 1000);
