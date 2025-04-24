@@ -764,7 +764,7 @@ public class VodController extends BaseController {
             mPlayerSpeedBtn.setText("x" + mPlayerConfig.getDouble("sp"));
             mPlayerTimeStartBtn.setText(stringForTime(mPlayerConfig.getInt("st") * 1000));
             mPlayerTimeSkipBtn.setText(stringForTime(mPlayerConfig.getInt("et") * 1000));
-            mAudioTrackBtn.setVisibility((playerType == 1) ? VISIBLE : GONE);
+            mAudioTrackBtn.setVisibility((playerType == 1 || playerType == 2) ? VISIBLE : GONE);
         } catch (JSONException e) {
             e.printStackTrace();
         }

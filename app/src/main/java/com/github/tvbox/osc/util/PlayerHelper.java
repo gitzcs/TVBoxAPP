@@ -5,6 +5,7 @@ import android.content.Context;
 
 import com.github.tvbox.osc.api.ApiConfig;
 import com.github.tvbox.osc.bean.IJKCode;
+import com.github.tvbox.osc.player.ExoMediaPlayerFactory;
 import com.github.tvbox.osc.player.IjkMediaPlayer;
 import com.github.tvbox.osc.player.render.SurfaceRenderViewFactory;
 import com.github.tvbox.osc.player.thirdparty.Kodi;
@@ -22,7 +23,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 
 import tv.danmaku.ijk.media.player.IjkLibLoader;
-import xyz.doikki.videoplayer.exo.ExoMediaPlayerFactory;
 import xyz.doikki.videoplayer.player.AndroidMediaPlayerFactory;
 import xyz.doikki.videoplayer.player.PlayerFactory;
 import xyz.doikki.videoplayer.player.VideoView;
