@@ -5,7 +5,6 @@ import android.util.Pair;
 
 import com.github.tvbox.osc.util.LOG;
 import com.google.android.exoplayer2.Format;
-import com.google.android.exoplayer2.SimpleExoPlayer;
 import com.google.android.exoplayer2.source.TrackGroup;
 import com.google.android.exoplayer2.source.TrackGroupArray;
 import com.google.android.exoplayer2.trackselection.DefaultTrackSelector;
@@ -15,9 +14,7 @@ import xyz.doikki.videoplayer.exo.ExoMediaPlayer;
 
 import com.google.android.exoplayer2.C;
 
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 public class ExoPlayer extends ExoMediaPlayer {
@@ -28,11 +25,12 @@ public class ExoPlayer extends ExoMediaPlayer {
     // 3. 获取所有轨道信息
     public TrackInfo getTrackInfo() {
         TrackInfo data = new TrackInfo();
-        MappingTrackSelector.MappedTrackInfo mappedInfo = getMappingTrackSelector().getCurrentMappedTrackInfo();
+        MappingTrackSelector.MappedTrackInfo mappedInfo = trackSelector.getCurrentMappedTrackInfo();
         if (mappedInfo == null) return data;
-        DefaultTrackSelector.Parameters params = ((DefaultTrackSelector) getMappingTrackSelector()).getParameters();
+        DefaultTrackSelector.Parameters params = trackSelector.getParameters();
         for (int rendererIndex = 0; rendererIndex < mappedInfo.getRendererCount(); rendererIndex++) {
             int type = mappedInfo.getRendererType(rendererIndex);
+            if(type!=C.TRACK_TYPE_AUDIO && type!=C.TRACK_TYPE_TEXT)continue;
             TrackGroupArray groups = mappedInfo.getTrackGroups(rendererIndex);
             DefaultTrackSelector.SelectionOverride override = params.getSelectionOverride(rendererIndex, groups);
             boolean hasSelected = false;
@@ -63,7 +61,7 @@ public class ExoPlayer extends ExoMediaPlayer {
                     bean.selected = selected;
                     if (type == C.TRACK_TYPE_AUDIO) {
                         data.addAudio(bean);
-                    } else if (type == C.TRACK_TYPE_TEXT) {
+                    } else {
                         data.addSubtitle(bean);
                     }
                 }
@@ -72,13 +70,10 @@ public class ExoPlayer extends ExoMediaPlayer {
         return data;
     }
 
-    protected MappingTrackSelector getMappingTrackSelector() {
-        if (mTrackSelector instanceof MappingTrackSelector) {
-            return (MappingTrackSelector) mTrackSelector;
-        }
-        throw new IllegalStateException("trackSelector 必须是 MappingTrackSelector 类型");
-    }
 
+
+    /** 缓存：key=播放地址，value=已选的 {groupIndex, trackIndex} */
+    private static final Map<String, Pair<Integer, Integer>> mTrackOverrideCache = new HashMap<>();
     /**
      * 设置当前播放的音轨
      * @param groupIndex 音轨组的索引
@@ -86,7 +81,6 @@ public class ExoPlayer extends ExoMediaPlayer {
      */
     public void setTrack(int groupIndex, int trackIndex) {
         try {
-            DefaultTrackSelector trackSelector = (DefaultTrackSelector) getMappingTrackSelector();
             MappingTrackSelector.MappedTrackInfo mappedInfo = trackSelector.getCurrentMappedTrackInfo();
             if (mappedInfo == null) {
                 LOG.i("echo-setTrack: MappedTrackInfo is null");
@@ -107,9 +101,39 @@ public class ExoPlayer extends ExoMediaPlayer {
             builder.clearSelectionOverrides(audioRendererIndex);
             builder.setSelectionOverride(audioRendererIndex, audioGroups, newOverride);
             trackSelector.setParameters(builder.build());
+
+            // 缓存到 map：下次同一路径播放时使用
+            if (currentPlayPath != null) {
+                mTrackOverrideCache.put(currentPlayPath, Pair.create(groupIndex, trackIndex));
+            }
         } catch (Exception e) {
             LOG.i("echo-setTrack error: " + e.getMessage());
         }
+    }
+
+
+    //加载上一次选中的音轨
+    public void loadDefaultTrack() {
+        Pair<Integer, Integer> pair = mTrackOverrideCache.get(currentPlayPath);
+        if (pair == null) return;
+
+        MappingTrackSelector.MappedTrackInfo mappedInfo = trackSelector.getCurrentMappedTrackInfo();
+        if (mappedInfo == null) return;
+
+        int audioRendererIndex = findAudioRendererIndex(mappedInfo);
+        if (audioRendererIndex == C.INDEX_UNSET) return;
+
+        TrackGroupArray audioGroups = mappedInfo.getTrackGroups(audioRendererIndex);
+        int groupIndex = pair.first;
+        int trackIndex = pair.second;
+        if (!isTrackIndexValid(audioGroups, groupIndex, trackIndex)) return;
+
+        DefaultTrackSelector.SelectionOverride override = new DefaultTrackSelector.SelectionOverride(groupIndex, trackIndex);
+
+        DefaultTrackSelector.ParametersBuilder builder = trackSelector.buildUponParameters();
+        builder.clearSelectionOverrides(audioRendererIndex);
+        builder.setSelectionOverride(audioRendererIndex, audioGroups, override);
+        trackSelector.setParameters(builder.build());
     }
 
     /**

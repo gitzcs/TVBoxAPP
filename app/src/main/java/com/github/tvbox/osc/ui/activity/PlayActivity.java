@@ -586,11 +586,8 @@ public class PlayActivity extends BaseActivity {
             if (trackInfo != null && trackInfo.getSubtitle().size() > 0) {
                 mController.mSubtitleView.hasInternal = true;
             }
-            //默认选中第一个音轨 一般第一个音轨是国语
-            if (trackInfo != null && trackInfo.getAudio().size() > 1) {
-                int firsIndex=trackInfo.getAudio().get(0).index;
-                ((IjkMediaPlayer)(mVideoView.getMediaPlayer())).setTrack(firsIndex);
-            }
+            //默认选中第一个音轨 一般第一个音轨是国语 && 加载上一次选中的
+            ((IjkMediaPlayer)mVideoView.getMediaPlayer()).loadDefaultTrack(trackInfo);
             ((IjkMediaPlayer)(mVideoView.getMediaPlayer())).setOnTimedTextListener(new IMediaPlayer.OnTimedTextListener() {
                 @Override
                 public void onTimedText(IMediaPlayer mp, IjkTimedText text) {
@@ -602,6 +599,10 @@ public class PlayActivity extends BaseActivity {
                     }
                 }
             });
+        }
+        if(mVideoView.getMediaPlayer() instanceof ExoPlayer){
+            //加载上一次选中的
+            ((ExoPlayer) mVideoView.getMediaPlayer()).loadDefaultTrack();
         }
         mController.mSubtitleView.bindToMediaPlayer(mVideoView.getMediaPlayer());
         mController.mSubtitleView.setPlaySubtitleCacheKey(subtitleCacheKey);
@@ -837,9 +838,7 @@ public class PlayActivity extends BaseActivity {
         }
         stopLoadWebView(true);
         stopParse();
-        Thunder.stop(false);//停止磁力下载
-        Jianpian.finish();//停止p2p下载
-        App.getInstance().setDashData(null);
+        mController.stopOther();
     }
 
     private VodInfo mVodInfo;
@@ -953,6 +952,7 @@ public class PlayActivity extends BaseActivity {
 
         stopParse();
         initParseLoadFound();
+        mController.stopOther();
         if(mVideoView!=null) mVideoView.release();
         subtitleCacheKey = mVodInfo.sourceKey + "-" + mVodInfo.id + "-" + mVodInfo.playFlag + "-" + mVodInfo.playIndex+ "-" + vs.name + "-subt";
         progressKey = mVodInfo.sourceKey + mVodInfo.id + mVodInfo.playFlag + mVodInfo.playIndex + vs.name;
