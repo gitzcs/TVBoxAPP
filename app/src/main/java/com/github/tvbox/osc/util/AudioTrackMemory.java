@@ -9,7 +9,7 @@ import android.util.Pair;
  */
 public class AudioTrackMemory {
     private static AudioTrackMemory instance;
-    private static SharedPreferences prefs = null;
+    private final SharedPreferences prefs;
     private static final String PREFS_NAME = "audio_track_prefs";
     private static final String KEY_GROUP_SUFFIX = "_group";
     private static final String KEY_TRACK_SUFFIX = "_track";
@@ -25,7 +25,8 @@ public class AudioTrackMemory {
     }
     public void save(String playKey, int groupIndex, int trackIndex) {
         LOG.i("echo-AudioTrackMemory save playKey:"+playKey);
-        prefs.edit().putInt(playKey +"_exo" + KEY_GROUP_SUFFIX, groupIndex).putInt(playKey + KEY_TRACK_SUFFIX, trackIndex).apply();
+        playKey=playKey + "_exo";
+        prefs.edit().putInt(playKey + KEY_GROUP_SUFFIX, groupIndex).putInt(playKey + KEY_TRACK_SUFFIX, trackIndex).apply();
     }
     public void save(String playKey, int trackIndex) {
         LOG.i("echo-AudioTrackMemory save playKey:"+playKey);

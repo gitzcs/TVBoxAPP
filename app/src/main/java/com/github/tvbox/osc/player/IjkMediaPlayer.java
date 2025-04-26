@@ -255,6 +255,6 @@ public class IjkMediaPlayer extends IjkPlayer {
             }
             return;
         };
-        setTrack(trackIndex,playKey);
+        setTrack(trackIndex);
     }
 }
