@@ -247,14 +247,14 @@ public class IjkMediaPlayer extends IjkPlayer {
     }
 
     public void loadDefaultTrack(TrackInfo trackInfo,String playKey) {
-        Integer trackIndex = memory.ijkLoad(playKey);
-        if (trackIndex == -1) {
-            if(trackInfo!=null && trackInfo.getAudio().size()>1){
+        if(trackInfo!=null && trackInfo.getAudio().size()>1){
+            Integer trackIndex = memory.ijkLoad(playKey);
+            if (trackIndex == -1) {
                 int firsIndex=trackInfo.getAudio().get(0).index;
                 setTrack(firsIndex);
-            }
-            return;
-        };
-        setTrack(trackIndex);
+                return;
+            };
+            setTrack(trackIndex);
+        }
     }
 }
