@@ -10,6 +10,8 @@ import com.google.android.exoplayer2.source.TrackGroup;
 import com.google.android.exoplayer2.source.TrackGroupArray;
 import com.google.android.exoplayer2.trackselection.DefaultTrackSelector;
 import com.google.android.exoplayer2.trackselection.MappingTrackSelector;
+import com.google.android.exoplayer2.trackselection.TrackSelectionOverride;
+import com.google.android.exoplayer2.trackselection.TrackSelectionParameters;
 
 import xyz.doikki.videoplayer.exo.ExoMediaPlayer;
 
@@ -96,10 +98,10 @@ public class ExoPlayer extends ExoMediaPlayer {
                 LOG.i("echo-setTrack: Invalid track index - group:" + groupIndex + ", track:" + trackIndex);
                 return;
             }
-            DefaultTrackSelector.SelectionOverride newOverride = new DefaultTrackSelector.SelectionOverride(groupIndex, trackIndex);
-            DefaultTrackSelector.ParametersBuilder builder = trackSelector.buildUponParameters();
-            builder.clearSelectionOverrides(audioRendererIndex);
-            builder.setSelectionOverride(audioRendererIndex, audioGroups, newOverride);
+            TrackSelectionOverride override = new TrackSelectionOverride(audioGroups.get(groupIndex), trackIndex);
+            TrackSelectionParameters.Builder builder = trackSelector.getParameters().buildUpon();
+            builder.clearOverridesOfType(C.TRACK_TYPE_AUDIO);
+            builder.setOverrideForType(override);
             trackSelector.setParameters(builder.build());
 
             // 缓存到 map：下次同一路径播放时使用
@@ -127,11 +129,10 @@ public class ExoPlayer extends ExoMediaPlayer {
         int trackIndex = pair.second;
         if (!isTrackIndexValid(audioGroups, groupIndex, trackIndex)) return;
 
-        DefaultTrackSelector.SelectionOverride override = new DefaultTrackSelector.SelectionOverride(groupIndex, trackIndex);
-
-        DefaultTrackSelector.ParametersBuilder builder = trackSelector.buildUponParameters();
-        builder.clearSelectionOverrides(audioRendererIndex);
-        builder.setSelectionOverride(audioRendererIndex, audioGroups, override);
+        TrackSelectionOverride override = new TrackSelectionOverride(audioGroups.get(groupIndex), trackIndex);
+        TrackSelectionParameters.Builder builder = trackSelector.getParameters().buildUpon();
+        builder.clearOverridesOfType(C.TRACK_TYPE_AUDIO);
+        builder.setOverrideForType(override);
         trackSelector.setParameters(builder.build());
     }
 

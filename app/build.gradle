@@ -25,7 +25,7 @@ android {
     productFlavors {
         normal {
             dimension "mode"
-            minSdkVersion 16
+            minSdkVersion 19
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
         python {
@@ -42,7 +42,7 @@ android {
 
             ndk {
                 //noinspection ChromeOsAbiSupport
-                abiFilters 'armeabi-v7a'
+                abiFilters 'armeabi-v7a', 'arm64-v8a'
             }
         }
         release {

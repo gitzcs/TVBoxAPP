@@ -10,23 +10,23 @@ android {
         targetSdkVersion 28
         externalNativeBuild {
             cmake {
-                abiFilters 'armeabi-v7a'
+                abiFilters 'armeabi-v7a', 'arm64-v8a'
             }
         }
     }
 
     buildTypes {
-        all {
+        debug {
             ndk {
-                abiFilters 'armeabi-v7a'
+                abiFilters 'armeabi-v7a', 'arm64-v8a'
             }
         }
         release {
             minifyEnabled false
+            ndk {
+                abiFilters 'armeabi-v7a'
+            }
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
-        }
-
-        debug {
         }
     }
     compileOptions {

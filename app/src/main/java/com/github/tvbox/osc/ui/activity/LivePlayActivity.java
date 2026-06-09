@@ -1,6 +1,7 @@
 package com.github.tvbox.osc.ui.activity;
 
 import static com.github.tvbox.osc.util.RegexUtils.getPattern;
+import static xyz.doikki.videoplayer.util.PlayerUtils.safeTimeMs;
 
 import android.Manifest;
 import android.animation.Animator;
@@ -1226,10 +1227,10 @@ public class LivePlayActivity extends BaseActivity {
                     lp.width=videoHeight/7;
                     lp.height=videoHeight/7;
                     sBar = (SeekBar) findViewById(R.id.pb_progressbar);
-                    sBar.setMax(shiyi_time_c*1000);
-                    sBar.setProgress((int)  mVideoView.getCurrentPosition());
-                    tv_currentpos.setText(durationToString((int)mVideoView.getCurrentPosition()));
-                    tv_duration.setText(durationToString(shiyi_time_c*1000));
+                    sBar.setMax(safeTimeMs((long) shiyi_time_c * 1000));
+                    sBar.setProgress(safeTimeMs(mVideoView.getCurrentPosition()));
+                    tv_currentpos.setText(durationToString(safeTimeMs(mVideoView.getCurrentPosition())));
+                    tv_duration.setText(durationToString(safeTimeMs((long) shiyi_time_c * 1000)));
                     showProgressBars(true);
                     isBack = true;
                 }
@@ -1338,11 +1339,11 @@ public class LivePlayActivity extends BaseActivity {
                     lp.width=videoHeight/7;
                     lp.height=videoHeight/7;
                     sBar = (SeekBar) findViewById(R.id.pb_progressbar);
-                    sBar.setMax(shiyi_time_c*1000);
-                    sBar.setProgress((int)  mVideoView.getCurrentPosition());
+                    sBar.setMax(safeTimeMs((long) shiyi_time_c * 1000));
+                    sBar.setProgress(safeTimeMs(mVideoView.getCurrentPosition()));
                    // long dd = mVideoView.getDuration();
-                    tv_currentpos.setText(durationToString((int)mVideoView.getCurrentPosition()));
-                    tv_duration.setText(durationToString(shiyi_time_c*1000));
+                    tv_currentpos.setText(durationToString(safeTimeMs(mVideoView.getCurrentPosition())));
+                    tv_duration.setText(durationToString(safeTimeMs((long) shiyi_time_c * 1000)));
                     showProgressBars(true);
                     isBack = true;
                 }
@@ -2227,6 +2228,9 @@ public class LivePlayActivity extends BaseActivity {
         return diff;
     }
     private  String durationToString(int duration) {
+        if (duration < 0) {
+            duration = 0;
+        }
         String result = "";
         int dur = duration / 1000;
         int hour=dur/3600;
@@ -2366,8 +2370,8 @@ public class LivePlayActivity extends BaseActivity {
                 public void onTick(long arg0) {
 
                     if(mVideoView != null){
-                        sBar.setProgress((int) mVideoView.getCurrentPosition());
-                        tv_currentpos.setText(durationToString((int) mVideoView.getCurrentPosition()));
+                        sBar.setProgress(safeTimeMs(mVideoView.getCurrentPosition()));
+                        tv_currentpos.setText(durationToString(safeTimeMs(mVideoView.getCurrentPosition())));
                     }
 
                 }

@@ -68,6 +68,19 @@ import java.util.concurrent.atomic.AtomicInteger;
  * @description:
  */
 public class SearchActivity extends BaseActivity {
+    private static final String HOT_SEARCH_URL = "https://movie.douban.com/j/search_subjects?type=tv&tag=%E7%83%AD%E9%97%A8&sort=recommend&page_limit=20&page_start=0";
+    private static final String[] DEFAULT_HOT_WORDS = {
+            "\u5bb6\u4e1a",
+            "\u4e3b\u89d2",
+            "\u4f4e\u667a\u5546\u72af\u7f6a",
+            "\u82cf\u8d85",
+            "\u4e66\u5377\u4e00\u68a6",
+            "\u7f8e\u4eba\u4f59",
+            "\u85cf\u6d77\u4f20",
+            "\u957f\u5b89\u7684\u8354\u679d",
+            "\u5e86\u4f59\u5e74",
+            "\u51e1\u4eba\u4fee\u4ed9\u4f20"
+    };
     private LinearLayout llLayout;
     private TvRecyclerView mGridView;
     private TvRecyclerView mGridViewWord;
@@ -384,6 +397,27 @@ public class SearchActivity extends BaseActivity {
     }
 
     private static ArrayList<String> hots;
+
+    private void useDefaultHotWords() {
+        hots = new ArrayList<>();
+        for (String word : DEFAULT_HOT_WORDS) {
+            hots.add(word);
+        }
+        wordAdapter.setNewData(hots);
+    }
+
+    private String cleanHotWord(String title) {
+        if (TextUtils.isEmpty(title)) return "";
+        return title.trim().replaceAll("<|>|《|》|-", "").split(" ")[0];
+    }
+
+    private void addHotWord(ArrayList<String> data, String title) {
+        String word = cleanHotWord(title);
+        if (!TextUtils.isEmpty(word) && !data.contains(word)) {
+            data.add(word);
+        }
+    }
+
     private void initData() {
         initCheckedSourcesForSearch();
         Intent intent = getIntent();
@@ -404,26 +438,38 @@ public class SearchActivity extends BaseActivity {
             return;
         }
         // 加载热词
-        OkGo.<String>get("https://node.video.qq.com/x/api/hot_search")
+        OkGo.<String>get(HOT_SEARCH_URL)
 //        OkGo.<String>get("https://api.web.360kan.com/v1/rank")
 //                .params("cat", "1")
-                .params("channdlId", "0")
-                .params("_", System.currentTimeMillis())
+                .headers("User-Agent", "Mozilla/5.0")
                 .execute(new AbsCallback<String>() {
                     @Override
                     public void onSuccess(Response<String> response) {
                         try {
                             hots = new ArrayList<String>();
-                            JsonArray itemList = JsonParser.parseString(response.body()).getAsJsonObject().get("data").getAsJsonObject().get("mapResult").getAsJsonObject().get("0").getAsJsonObject().get("listInfo").getAsJsonArray();
+                            JsonArray itemList = JsonParser.parseString(response.body()).getAsJsonObject().get("subjects").getAsJsonArray();
 //                            JsonArray itemList = JsonParser.parseString(response.body()).getAsJsonObject().get("data").getAsJsonArray();
                             for (JsonElement ele : itemList) {
                                 JsonObject obj = (JsonObject) ele;
-                                hots.add(obj.get("title").getAsString().trim().replaceAll("<|>|《|》|-", "").split(" ")[0]);
+                                if (obj.has("title")) {
+                                    addHotWord(hots, obj.get("title").getAsString());
+                                }
+                            }
+                            if (hots.isEmpty()) {
+                                useDefaultHotWords();
+                                return;
                             }
                             wordAdapter.setNewData(hots);
                         } catch (Throwable th) {
                             th.printStackTrace();
+                            useDefaultHotWords();
                         }
+                    }
+
+                    @Override
+                    public void onError(Response<String> response) {
+                        super.onError(response);
+                        useDefaultHotWords();
                     }
 
                     @Override
