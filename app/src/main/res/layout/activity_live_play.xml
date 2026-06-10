@@ -32,9 +32,9 @@
 
 	<LinearLayout
 		android:id="@+id/tvLeftChannnelListLayout"
-		android:layout_width="match_parent"
+		android:layout_width="wrap_content"
 		android:layout_height="match_parent"
-		android:layout_gravity="center_horizontal"
+		android:layout_gravity="left|center_vertical"
 		android:layout_margin="0dp"
 		android:baselineAligned="false"
 		android:orientation="horizontal"
@@ -57,7 +57,7 @@
 
 				<com.owen.tvrecyclerview.widget.TvRecyclerView
 					android:id="@+id/mGroupGridView"
-					android:layout_width="@dimen/vs_240"
+					android:layout_width="@dimen/vs_220"
 					android:layout_height="wrap_content"
 					android:divider="@null"
 					android:fadeScrollbars="false"
@@ -129,7 +129,7 @@
 
 			<com.owen.tvrecyclerview.widget.TvRecyclerView
 				android:id="@+id/mChannelGridView"
-				android:layout_width="@dimen/vs_280"
+				android:layout_width="@dimen/vs_340"
 				android:layout_height="match_parent"
 				android:divider="@null"
 				android:fadeScrollbars="false"
@@ -194,7 +194,7 @@
 			</LinearLayout>
 			<LinearLayout
 				android:id="@+id/divEPG"
-				android:layout_width="@dimen/vs_300"
+				android:layout_width="@dimen/vs_420"
 				android:layout_height="match_parent"
 				android:layout_gravity="center_horizontal"
 				android:orientation="horizontal"
@@ -245,9 +245,9 @@
 
 	<LinearLayout
         android:id="@+id/tvRightSettingLayout"
-        android:layout_width="361mm"
+        android:layout_width="wrap_content"
         android:layout_height="match_parent"
-        android:layout_marginRight="-361mm"
+        android:layout_margin="20dp"
         android:layout_gravity="right"
 		android:background="@drawable/bg_channel_list"
 		android:gravity="center_vertical"
@@ -255,36 +255,39 @@
         android:visibility="visible" >
 
         <com.owen.tvrecyclerview.widget.TvRecyclerView
-            android:id="@+id/mSettingItemView"
-            android:layout_width="180mm"
+            android:id="@+id/mSettingGroupView"
+            android:layout_width="@dimen/vs_220"
             android:layout_height="match_parent"
-            android:paddingLeft="5mm"
-            android:paddingTop="10mm"
-            android:paddingRight="5mm"
-            android:paddingBottom="10mm"
-            android:visibility="visible"
+            android:divider="@null"
+            android:fadeScrollbars="false"
             android:gravity= "center"
+            android:listSelector="@drawable/item_bg_selector_left"
+            android:padding="10dp"
+            android:scrollbars="none"
+            android:visibility="visible"
             app:tv_selectedItemIsCentered="true"
-            app:tv_verticalSpacingWithMargins="10mm" />
+            app:tv_verticalSpacingWithMargins="4mm" />
 
         <View
-            android:layout_width="1mm"
+            android:layout_width="1dp"
             android:layout_height="match_parent"
-            android:background="@color/color_FFFFFF"
-            android:layout_gravity="center_horizontal" />
+            android:layout_margin="1dp"
+            android:layout_gravity="center_horizontal"
+            android:background="#FF333333" />
 
         <com.owen.tvrecyclerview.widget.TvRecyclerView
-            android:id="@+id/mSettingGroupView"
-            android:layout_width="180mm"
+            android:id="@+id/mSettingItemView"
+            android:layout_width="@dimen/vs_340"
             android:layout_height="match_parent"
-            android:paddingLeft="5mm"
-            android:paddingTop="10mm"
-            android:paddingRight="5mm"
-            android:paddingBottom="10mm"
-            android:visibility="visible"
+            android:divider="@null"
+            android:fadeScrollbars="false"
             android:gravity= "center"
+            android:listSelector="@drawable/item_bg_selector_right"
+            android:padding="5dp"
+            android:scrollbars="none"
+            android:visibility="visible"
             app:tv_selectedItemIsCentered="true"
-            app:tv_verticalSpacingWithMargins="10mm" />
+            app:tv_verticalSpacingWithMargins="4mm" />
     </LinearLayout>
 
     <TextView
@@ -336,7 +339,7 @@
 		android:gravity="center_vertical"
 		android:id="@+id/ll_epg"
 		android:paddingBottom="5dp"
-		android:layout_width="@dimen/vs_960"
+		android:layout_width="match_parent"
 		android:layout_height="@dimen/vs_140">
 		<View
 			android:id="@+id/view_bg"
@@ -348,7 +351,7 @@
 
 		<LinearLayout
 			android:id="@+id/channelinfo"
-			android:layout_width="@dimen/vs_240"
+			android:layout_width="@dimen/vs_270"
 			android:layout_height="match_parent"
 			android:layout_marginStart="@dimen/vs_5"
 			android:layout_marginLeft="@dimen/vs_5"
@@ -469,7 +472,7 @@
 
 		<com.github.tvbox.osc.ui.tv.widget.MarqueeTextView
 			android:id="@+id/tv_current_program_name"
-			android:layout_width="@dimen/vs_360"
+			android:layout_width="@dimen/vs_440"
 			android:layout_height="wrap_content"
 			android:layout_alignTop="@+id/tv_current_program"
 			android:layout_alignParentEnd="true"
@@ -521,7 +524,7 @@
 
 		<com.github.tvbox.osc.ui.tv.widget.MarqueeTextView
 			android:id="@+id/tv_next_program_name"
-			android:layout_width="@dimen/vs_360"
+			android:layout_width="@dimen/vs_440"
 			android:layout_height="wrap_content"
 			android:layout_alignTop="@+id/tv_next_program"
 			android:layout_alignEnd="@+id/tv_current_program_name"

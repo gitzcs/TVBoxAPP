@@ -120,6 +120,7 @@ import xyz.doikki.videoplayer.player.VideoView;
  * @description:
  */
 public class LivePlayActivity extends BaseActivity {
+    private static final String DEFAULT_EPG_URL = "http://home.jundie.top:81/gif026/e.xml";
     public static Context context;
     private VideoView<xyz.doikki.videoplayer.player.AbstractPlayer> mVideoView;
     private TextView tvChannelInfo;
@@ -140,6 +141,16 @@ public class LivePlayActivity extends BaseActivity {
 
     public static  int currentChannelGroupIndex = 0;
     private Handler mHandler = new Handler();
+    private static final long EPG_LOAD_DELAY = 1200L;
+    private final Runnable mLoadEpgRun = new Runnable() {
+        @Override
+        public void run() {
+            if (channel_Name != null && liveEpgDateAdapter != null && liveEpgDateAdapter.getSelectedIndex() >= 0) {
+                getEpg(new Date());
+            }
+        }
+    };
+    private boolean firstLiveEpgLoad = true;
 
     private List<LiveChannelGroup> liveChannelGroupList = new ArrayList<>();
     private int currentLiveChannelIndex = -1;
@@ -230,9 +241,7 @@ public class LivePlayActivity extends BaseActivity {
     @Override
     protected void init() {
         context = this;
-        epgStringAddress = Hawk.get(HawkConfig.EPG_URL,"");
-        if(epgStringAddress == null || epgStringAddress.length()<5)
-            epgStringAddress = "http://epg.51zmt.top:8000/api/diyp/";
+        epgStringAddress = DEFAULT_EPG_URL;
 
         setLoadSir(findViewById(R.id.live_root));
         mVideoView = findViewById(R.id.mVideoView);
@@ -400,7 +409,9 @@ public class LivePlayActivity extends BaseActivity {
     private List<Epginfo> epgdata = new ArrayList<>();
 
     private void showEpg(Date date, ArrayList<Epginfo> arrayList) {
-        if (arrayList != null && arrayList.size() > 0) {
+        boolean hasEpg = arrayList != null && arrayList.size() > 0;
+        updateEpgPanelState(hasEpg);
+        if (hasEpg) {
             epgdata = arrayList;
             epgListAdapter.CanBack(currentLiveChannelItem.getinclude_back());
             epgListAdapter.setNewData(epgdata);
@@ -426,6 +437,26 @@ public class LivePlayActivity extends BaseActivity {
                     }
                 });
             }
+        }
+    }
+
+    private void updateEpgPanelState(boolean hasEpg) {
+        if (hasEpg) {
+            txtNoEpg.setVisibility(View.GONE);
+            mRightEpgList.setVisibility(View.VISIBLE);
+            if (divEpg.getVisibility() != View.VISIBLE) {
+                divLoadEpg.setVisibility(View.VISIBLE);
+                divLoadEpgleft.setVisibility(View.GONE);
+            }
+        } else {
+            epgdata = new ArrayList<>();
+            epgListAdapter.setNewData(epgdata);
+            txtNoEpg.setVisibility(View.GONE);
+            mRightEpgList.setVisibility(View.GONE);
+            divEpg.setVisibility(View.GONE);
+            divLoadEpg.setVisibility(View.GONE);
+            divLoadEpgleft.setVisibility(View.GONE);
+            mChannelGroupView.setVisibility(View.VISIBLE);
         }
     }
 
@@ -462,13 +493,7 @@ public class LivePlayActivity extends BaseActivity {
         final String finalEpgTagName = epgTagName;
         epgListAdapter.CanBack(currentLiveChannelItem.getinclude_back());
         String url;
-        if(epgStringAddress.contains("{name}") && epgStringAddress.contains("{date}")){
-            url= epgStringAddress.replace("{name}",URLEncoder.encode(finalEpgTagName)).replace("{date}",timeFormat.format(date));
-        }else if(isXmlEpgAddress(epgStringAddress)){
-            url= epgStringAddress;
-        }else {
-            url= epgStringAddress + "?ch="+ URLEncoder.encode(finalEpgTagName) + "&date=" + timeFormat.format(date);
-        }
+        url = buildEpgUrl(epgStringAddress, finalEpgTagName, date, timeFormat);
 
         String savedEpgKey = channelName + "_" + Objects.requireNonNull(liveEpgDateAdapter.getItem(liveEpgDateAdapter.getSelectedIndex())).getDatePresented();
         if (hsEpg.containsKey(savedEpgKey)){
@@ -476,13 +501,42 @@ public class LivePlayActivity extends BaseActivity {
             showBottomEpg();
             return;
         }
+        updateEpgPanelState(false);
+        requestEpg(url, date, channelNameReal, finalEpgTagName, savedEpgKey, timeFormat, true);
+    }
+
+    private String buildEpgUrl(String address, String epgTagName, Date date, SimpleDateFormat timeFormat) {
+        if(address.contains("{name}") && address.contains("{date}")){
+            return address.replace("{name}",URLEncoder.encode(epgTagName)).replace("{date}",timeFormat.format(date));
+        }else if(isXmlEpgAddress(address)){
+            return address;
+        }else {
+            return address + "?ch="+ URLEncoder.encode(epgTagName) + "&date=" + timeFormat.format(date);
+        }
+    }
+
+    private void requestFallbackEpg(Date date, String channelNameReal, String finalEpgTagName, String savedEpgKey, SimpleDateFormat timeFormat) {
+        String fallbackEpgAddress = Hawk.get(HawkConfig.EPG_URL,"");
+        if (fallbackEpgAddress == null || fallbackEpgAddress.length() < 5 || fallbackEpgAddress.equals(epgStringAddress)) return;
+        requestEpg(buildEpgUrl(fallbackEpgAddress, finalEpgTagName, date, timeFormat), date, channelNameReal, finalEpgTagName, savedEpgKey, timeFormat, false);
+    }
+
+    private void requestEpg(String url, Date date, String channelNameReal, String finalEpgTagName, String savedEpgKey, SimpleDateFormat timeFormat, boolean allowFallback) {
         UrlHttpUtil.get(url, new CallBackUtil.CallBackString() {
             public void onFailure(int i, String str) {
+                if (!isCurrentEpgRequest(savedEpgKey)) return;
+                if (allowFallback) requestFallbackEpg(date, channelNameReal, finalEpgTagName, savedEpgKey, timeFormat);
+                else updateEpgPanelState(false);
 //                showEpg(date, new ArrayList<>());
 //                showBottomEpg();
             }
 
             public void onResponse(String paramString) {
+                if (!isCurrentEpgRequest(savedEpgKey)) return;
+                if ((paramString == null || paramString.trim().isEmpty()) && allowFallback) {
+                    requestFallbackEpg(date, channelNameReal, finalEpgTagName, savedEpgKey, timeFormat);
+                    return;
+                }
                 LOG.i("echo-epgTagName:"+channelNameReal);
                 ArrayList<Epginfo> arrayList = new ArrayList<Epginfo>();
                 try {
@@ -502,10 +556,17 @@ public class LivePlayActivity extends BaseActivity {
                     jSONException.printStackTrace();
                 }
                 hsEpg.put(savedEpgKey, arrayList);
+                if (!isCurrentEpgRequest(savedEpgKey)) return;
                 showEpg(date, arrayList);
                 showBottomEpg();
             }
         });
+    }
+
+    private boolean isCurrentEpgRequest(String savedEpgKey) {
+        if (channel_Name == null || liveEpgDateAdapter == null || liveEpgDateAdapter.getSelectedIndex() < 0) return false;
+        String currentEpgKey = channel_Name.getChannelName() + "_" + Objects.requireNonNull(liveEpgDateAdapter.getItem(liveEpgDateAdapter.getSelectedIndex())).getDatePresented();
+        return savedEpgKey.equals(currentEpgKey);
     }
 
     //显示底部EPG
@@ -708,10 +769,9 @@ public class LivePlayActivity extends BaseActivity {
                 }
                 epgListAdapter.CanBack(currentLiveChannelItem.getinclude_back());
                 epgListAdapter.setNewData(arrayList);
+                updateEpgPanelState(arrayList != null && arrayList.size() > 0);
             } else {
-                int selectedIndex = liveEpgDateAdapter.getSelectedIndex();
-                if (selectedIndex < 0)
-                    getEpg(new Date());
+                updateEpgPanelState(false);
             }
 
             if (countDownTimer != null) {
@@ -764,6 +824,10 @@ public class LivePlayActivity extends BaseActivity {
     //频道列表
     @SuppressLint("NotifyDataSetChanged")
     public  void divLoadEpgRight(View view) {
+        if (epgListAdapter.getData() == null || epgListAdapter.getData().isEmpty()) {
+            updateEpgPanelState(false);
+            return;
+        }
         mHandler.removeCallbacks(mHideChannelListRun);
         mHandler.postDelayed(mHideChannelListRun, postTimeout);
         mChannelGroupView.setVisibility(View.GONE);
@@ -953,6 +1017,7 @@ public class LivePlayActivity extends BaseActivity {
             mVideoView.release();
             mVideoView = null;
         }
+        mHandler.removeCallbacks(mLoadEpgRun);
     }
 
     private void showChannelList() {
@@ -1162,7 +1227,6 @@ public class LivePlayActivity extends BaseActivity {
             currentLiveChannelItem.setinclude_back(false);
         }
         showBottomEpg();
-        getEpg(new Date());
         backcontroller.setVisibility(View.GONE);
         ll_right_top_huikan.setVisibility(View.GONE);
         if(mVideoView!=null){
@@ -1170,7 +1234,28 @@ public class LivePlayActivity extends BaseActivity {
             mVideoView.setUrl(currentLiveChannelItem.getUrl(),liveWebHeader());
             mVideoView.start();
         }
+        loadEpgAfterChannelStarted();
         return true;
+    }
+
+    private void loadEpgAfterChannelStarted() {
+        mHandler.removeCallbacks(mLoadEpgRun);
+        if (hasCurrentEpgCache()) {
+            firstLiveEpgLoad = false;
+            return;
+        }
+        if (firstLiveEpgLoad) {
+            firstLiveEpgLoad = false;
+            mHandler.postDelayed(mLoadEpgRun, EPG_LOAD_DELAY);
+        } else {
+            getEpg(new Date());
+        }
+    }
+
+    private boolean hasCurrentEpgCache() {
+        if (channel_Name == null || liveEpgDateAdapter == null || liveEpgDateAdapter.getSelectedIndex() < 0) return false;
+        String currentEpgKey = channel_Name.getChannelName() + "_" + Objects.requireNonNull(liveEpgDateAdapter.getItem(liveEpgDateAdapter.getSelectedIndex())).getDatePresented();
+        return hsEpg.containsKey(currentEpgKey);
     }
 
     private void playNext() {
@@ -1231,7 +1316,7 @@ public class LivePlayActivity extends BaseActivity {
                 ViewGroup.MarginLayoutParams params = (ViewGroup.MarginLayoutParams) tvRightSettingLayout.getLayoutParams();
                 if (tvRightSettingLayout.getVisibility() == View.VISIBLE) {
                     ViewObj viewObj = new ViewObj(tvRightSettingLayout, params);
-                    ObjectAnimator animator = ObjectAnimator.ofObject(viewObj, "marginRight", new IntEvaluator(), -tvRightSettingLayout.getLayoutParams().width, 0);
+                    ObjectAnimator animator = ObjectAnimator.ofObject(viewObj, "marginRight", new IntEvaluator(), -tvRightSettingLayout.getLayoutParams().width, livePanelEdgeMargin());
                     animator.setDuration(200);
                     animator.addListener(new AnimatorListenerAdapter() {
                         @Override
@@ -1252,7 +1337,7 @@ public class LivePlayActivity extends BaseActivity {
             ViewGroup.MarginLayoutParams params = (ViewGroup.MarginLayoutParams) tvRightSettingLayout.getLayoutParams();
             if (tvRightSettingLayout.getVisibility() == View.VISIBLE) {
                 ViewObj viewObj = new ViewObj(tvRightSettingLayout, params);
-                ObjectAnimator animator = ObjectAnimator.ofObject(viewObj, "marginRight", new IntEvaluator(), 0, -tvRightSettingLayout.getLayoutParams().width);
+                ObjectAnimator animator = ObjectAnimator.ofObject(viewObj, "marginRight", new IntEvaluator(), params.rightMargin, -tvRightSettingLayout.getLayoutParams().width);
                 animator.setDuration(200);
                 animator.addListener(new AnimatorListenerAdapter() {
                     @Override
@@ -1266,6 +1351,10 @@ public class LivePlayActivity extends BaseActivity {
             }
         }
     };
+
+    private int livePanelEdgeMargin() {
+        return (int) (20 * getResources().getDisplayMetrics().density + 0.5f);
+    }
 
     //laodao 7天Epg数据绑定和展示
     private void initEpgListView() {
