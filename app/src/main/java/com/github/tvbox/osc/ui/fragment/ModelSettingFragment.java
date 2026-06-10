@@ -3,6 +3,7 @@ package com.github.tvbox.osc.ui.fragment;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.os.Bundle;
+import android.os.Handler;
 import android.view.View;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -293,8 +294,12 @@ public class ModelSettingFragment extends BaseLazyFragment {
                 dialog.setOnListener(new ApiDialog.OnListener() {
                     @Override
                     public void onchange(String api) {
+                        String oldApi = Hawk.get(HawkConfig.API_URL, "");
                         Hawk.put(HawkConfig.API_URL, api);
                         tvApi.setText(api);
+                        if (!oldApi.equals(api)) {
+                            restartAppAfterConfigChanged();
+                        }
                     }
                 });
                 dialog.setOnDismissListener(new DialogInterface.OnDismissListener() {
@@ -323,11 +328,15 @@ public class ModelSettingFragment extends BaseLazyFragment {
                 dialog.setAdapter(new ApiHistoryDialogAdapter.SelectDialogInterface() {
                     @Override
                     public void click(String value) {
+                        String oldApi = Hawk.get(HawkConfig.API_URL, "");
                         Hawk.put(HawkConfig.API_URL, value);
                         Hawk.put(HawkConfig.LIVE_API_URL, value);
                         HistoryHelper.setLiveApiHistory(value);
                         tvApi.setText(value);
                         dialog.dismiss();
+                        if (!oldApi.equals(value)) {
+                            restartAppAfterConfigChanged();
+                        }
                     }
 
                     @Override
@@ -720,6 +729,26 @@ public class ModelSettingFragment extends BaseLazyFragment {
 
         findViewById(R.id.llIjkCachePlay).setOnClickListener((view -> onClickIjkCachePlay(view)));
         findViewById(R.id.llClearCache).setOnClickListener((view -> onClickClearCache(view)));
+    }
+
+    private void restartAppAfterConfigChanged() {
+        Toast.makeText(mContext, "配置已切换,即将自动重启应用!", Toast.LENGTH_SHORT).show();
+        new Handler().postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                restartApp();
+            }
+        }, 3000);
+    }
+
+    private void restartApp() {
+        if (mContext == null) return;
+        Intent intent = mContext.getPackageManager().getLaunchIntentForPackage(mContext.getPackageName());
+        if (intent != null) {
+            intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+            startActivity(intent);
+            System.exit(0);
+        }
     }
 
     private void onClickIjkCachePlay(View v) {
