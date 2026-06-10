@@ -294,6 +294,7 @@ public class ExoMediaPlayer extends AbstractPlayer implements Player.Listener {
 
     @Override
     public void onPlayerError(PlaybackException error) {
+        Log.e("Tvbox-runtime", "Exo player error: " + currentPlayPath, error);
         if (mPlayerEventListener != null) {
             mPlayerEventListener.onError();
         }

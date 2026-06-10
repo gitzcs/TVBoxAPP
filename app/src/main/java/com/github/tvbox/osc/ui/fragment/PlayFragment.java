@@ -373,6 +373,12 @@ public class PlayFragment extends BaseLazyFragment {
         }
     }
 
+    private boolean isSameTrack(TrackInfoBean left, TrackInfoBean right) {
+        return left.renderId == right.renderId
+                && left.trackGroupId == right.trackGroupId
+                && left.trackId == right.trackId;
+    }
+
     void selectMyAudioTrack() {
         AbstractPlayer mediaPlayer = mVideoView.getMediaPlayer();
         TrackInfo trackInfo = null;
@@ -395,12 +401,12 @@ public class PlayFragment extends BaseLazyFragment {
             public void click(TrackInfoBean value, int pos) {
                 try {
                     for (TrackInfoBean audio : bean) {
-                        audio.selected = audio.index == value.index;
+                        audio.selected = isSameTrack(audio, value);
                     }
                     mediaPlayer.pause();
                     long progress = mediaPlayer.getCurrentPosition();//保存当前进度，ijk 切换轨道 会有快进几秒
-                    if (mediaPlayer instanceof IjkMediaPlayer)((IjkMediaPlayer)mediaPlayer).setTrack(value.index,progressKey);
-                    if (mediaPlayer instanceof ExoPlayer)((ExoPlayer)mediaPlayer).setTrack(value.groupIndex,value.index,progressKey);
+                    if (mediaPlayer instanceof IjkMediaPlayer)((IjkMediaPlayer)mediaPlayer).setTrack(value.trackId,progressKey);
+                    if (mediaPlayer instanceof ExoPlayer)((ExoPlayer)mediaPlayer).setTrack(value,progressKey);
                     new Handler().postDelayed(new Runnable() {
                         @Override
                         public void run() {
@@ -416,17 +422,17 @@ public class PlayFragment extends BaseLazyFragment {
 
             @Override
             public String getDisplay(TrackInfoBean val) {
-                return val.groupIndex + val.index + " . " + val.language + " : " + val.name;
+                return val.name;
             }
         }, new DiffUtil.ItemCallback<TrackInfoBean>() {
             @Override
             public boolean areItemsTheSame(@NonNull @NotNull TrackInfoBean oldItem, @NonNull @NotNull TrackInfoBean newItem) {
-                return oldItem.index == newItem.index;
+                return isSameTrack(oldItem, newItem);
             }
 
             @Override
             public boolean areContentsTheSame(@NonNull @NotNull TrackInfoBean oldItem, @NonNull @NotNull TrackInfoBean newItem) {
-                return oldItem.index == newItem.index;
+                return isSameTrack(oldItem, newItem);
             }
         }, bean, trackInfo.getAudioSelected(false));
         dialog.show();
@@ -452,14 +458,14 @@ public class PlayFragment extends BaseLazyFragment {
             public void click(TrackInfoBean value, int pos) {
                 try {
                     for (TrackInfoBean subtitle : bean) {
-                        subtitle.selected = subtitle.index == value.index;
+                        subtitle.selected = isSameTrack(subtitle, value);
                     }
                     mediaPlayer.pause();
                     long progress = mediaPlayer.getCurrentPosition();//保存当前进度，ijk 切换轨道 会有快进几秒
                     mController.mSubtitleView.destroy();
                     mController.mSubtitleView.clearSubtitleCache();
                     mController.mSubtitleView.isInternal = true;
-                    ((IjkMediaPlayer)mediaPlayer).setTrack(value.index);
+                    ((IjkMediaPlayer)mediaPlayer).setTrack(value.trackId);
                     new Handler().postDelayed(new Runnable() {
                         @Override
                         public void run() {
@@ -475,17 +481,17 @@ public class PlayFragment extends BaseLazyFragment {
 
             @Override
             public String getDisplay(TrackInfoBean val) {
-                return val.index + " : " + val.language;
+                return val.name;
             }
         }, new DiffUtil.ItemCallback<TrackInfoBean>() {
             @Override
             public boolean areItemsTheSame(@NonNull @NotNull TrackInfoBean oldItem, @NonNull @NotNull TrackInfoBean newItem) {
-                return oldItem.index == newItem.index;
+                return isSameTrack(oldItem, newItem);
             }
 
             @Override
             public boolean areContentsTheSame(@NonNull @NotNull TrackInfoBean oldItem, @NonNull @NotNull TrackInfoBean newItem) {
-                return oldItem.index == newItem.index;
+                return isSameTrack(oldItem, newItem);
             }
         }, bean, trackInfo.getSubtitleSelected(false));
         dialog.show();
@@ -642,13 +648,13 @@ public class PlayFragment extends BaseLazyFragment {
                             String lowerLang = subtitleTrackInfoBean.language.toLowerCase();
                             if (lowerLang.contains("zh") || lowerLang.contains("ch")) {
                                 hasCh=true;
-                                if (selectedIndex != subtitleTrackInfoBean.index) {
-                                    ((IjkMediaPlayer)(mVideoView.getMediaPlayer())).setTrack(subtitleTrackInfoBean.index);
+                                if (selectedIndex != subtitleTrackInfoBean.trackId) {
+                                    ((IjkMediaPlayer)(mVideoView.getMediaPlayer())).setTrack(subtitleTrackInfoBean.trackId);
                                     break;
                                 }
                             }
                         }
-                        if(!hasCh)((IjkMediaPlayer)(mVideoView.getMediaPlayer())).setTrack(subtitleTrackList.get(0).index);
+                        if(!hasCh)((IjkMediaPlayer)(mVideoView.getMediaPlayer())).setTrack(subtitleTrackList.get(0).trackId);
                     }
                 }
             }

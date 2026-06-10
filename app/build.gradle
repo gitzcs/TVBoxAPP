@@ -26,12 +26,20 @@ android {
         normal {
             dimension "mode"
             minSdkVersion 19
+            ndk {
+                //noinspection ChromeOsAbiSupport
+                abiFilters 'armeabi-v7a', 'arm64-v8a'
+            }
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
         python {
             dimension "mode"
             // 配置Python打包特有的设置（如有需要）
             minSdkVersion 19
+            ndk {
+                //noinspection ChromeOsAbiSupport
+                abiFilters 'armeabi-v7a'
+            }
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro', 'proguard-python.pro'
         }
     }
@@ -39,19 +47,9 @@ android {
     buildTypes {
         debug {
             minifyEnabled false
-
-            ndk {
-                //noinspection ChromeOsAbiSupport
-                abiFilters 'armeabi-v7a', 'arm64-v8a'
-            }
         }
         release {
             minifyEnabled true
-
-            ndk {
-                //noinspection ChromeOsAbiSupport
-                abiFilters 'armeabi-v7a'
-            }
         }
     }
 
