@@ -1222,27 +1222,24 @@ public class VodController extends BaseController {
         }
     }
 
-    private static int switchPlayerCount=0;
     public boolean switchPlayer(){
         try {
             int playerType= mPlayerConfig.getInt("pl");
             int p_type = (playerType == 1) ? playerType + 1 : (playerType == 2) ? playerType - 1 : playerType;
             if (p_type != playerType) {
-                Toast.makeText(getContext(), "切换到"+(p_type==1?"IJK":"EXO")+"播放器重试", Toast.LENGTH_SHORT).show();
+                LOG.i("echo-switchPlayer: " + playerType + " -> " + p_type);
+//                Toast.makeText(getContext(), "切换到"+(p_type==1?"IJK":"EXO")+"播放器重试", Toast.LENGTH_SHORT).show();
                 mPlayerConfig.put("pl", p_type);
                 updatePlayerCfgView();
                 listener.updatePlayerCfg();
             }else {
+                LOG.i("echo-switchPlayer: skip unsupported playerType=" + playerType);
                 return true;
             }
         }catch (Exception e){
+            LOG.i("echo-switchPlayer error: " + e.getMessage());
             return true;
         }
-        if(switchPlayerCount==1) {
-            switchPlayerCount=0;
-            return true;
-        }
-        switchPlayerCount++;
         return false;
     }
 

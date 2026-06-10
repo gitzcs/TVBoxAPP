@@ -899,7 +899,7 @@ public class PlayActivity extends BaseActivity {
         if (currentTime - lastRetryTime > 60_000) {
             LOG.i("echo-reset-autoRetryCount");
             autoRetryCount = 0;
-            allowSwitchPlayer = false;
+            allowSwitchPlayer = true;
         }
         lastRetryTime = currentTime;  // 更新上次调用时间
         if (loadFoundVideoUrls != null && !loadFoundVideoUrls.isEmpty()) {
@@ -917,7 +917,9 @@ public class PlayActivity extends BaseActivity {
                 if(webPlayUrl!=null){
                     if(allowSwitchPlayer){
                         //切换播放器不占用重试次数
+                        LOG.i("echo-autoRetry switch player and replay current url");
                         if(mController.switchPlayer())autoRetryCount++;
+                        allowSwitchPlayer=false;
                     }else {
                         autoRetryCount++;
                         allowSwitchPlayer=true;

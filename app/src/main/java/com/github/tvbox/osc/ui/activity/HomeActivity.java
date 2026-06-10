@@ -96,7 +96,6 @@ public class HomeActivity extends BaseActivity {
     public View sortFocusView = null;
     private final Handler mHandler = new Handler();
     private long mExitTime = 0;
-    private boolean eventBusRegistered = false;
     private final Runnable mRunnable = new Runnable() {
         @SuppressLint({"DefaultLocale", "SetTextI18n"})
         @Override
@@ -119,7 +118,6 @@ public class HomeActivity extends BaseActivity {
     @Override
     protected void init() {
         EventBus.getDefault().register(this);
-        eventBusRegistered = true;
         ControlManager.get().startServer();
         initView();
         initViewModel();
@@ -526,7 +524,7 @@ public class HomeActivity extends BaseActivity {
         // 如果两次返回间隔小于 2000 毫秒，则退出应用
         if (System.currentTimeMillis() - mExitTime < 2000) {
             AppManager.getInstance().finishAllActivity();
-            unregisterEventBus();
+            EventBus.getDefault().unregister(this);
             ControlManager.get().stopServer();
             finish();
             android.os.Process.killProcess(android.os.Process.myPid());
@@ -548,7 +546,7 @@ public class HomeActivity extends BaseActivity {
     @Override
     protected void onPause() {
         super.onPause();
-        mHandler.removeCallbacks(mRunnable);
+        mHandler.removeCallbacksAndMessages(null);
     }
 
     @Subscribe(threadMode = ThreadMode.MAIN)
@@ -664,17 +662,9 @@ public class HomeActivity extends BaseActivity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        unregisterEventBus();
-        if (isFinishing()) {
-            ControlManager.get().stopServer();
-        }
-    }
-
-    private void unregisterEventBus() {
-        if (eventBusRegistered) {
-            EventBus.getDefault().unregister(this);
-            eventBusRegistered = false;
-        }
+        EventBus.getDefault().unregister(this);
+        AppManager.getInstance().appExit(0);
+        ControlManager.get().stopServer();
     }
 
     private SelectDialog<SourceBean> mSiteSwitchDialog;

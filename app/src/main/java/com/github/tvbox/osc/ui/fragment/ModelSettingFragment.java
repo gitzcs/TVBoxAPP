@@ -93,7 +93,7 @@ public class ModelSettingFragment extends BaseLazyFragment {
     @Override
     protected void init() {
         tvFastSearchText = findViewById(R.id.showFastSearchText);
-        tvFastSearchText.setText(Hawk.get(HawkConfig.FAST_SEARCH_MODE, false) ? "开启" : "关闭");
+        tvFastSearchText.setText(Hawk.get(HawkConfig.FAST_SEARCH_MODE, true) ? "开启" : "关闭");
         tvm3u8AdText = findViewById(R.id.m3u8AdText);
         tvm3u8AdText.setText(Hawk.get(HawkConfig.M3U8_PURIFY, false) ? "开启" : "关闭");
         tvRecStyleText = findViewById(R.id.showRecStyleText);
@@ -629,8 +629,8 @@ public class ModelSettingFragment extends BaseLazyFragment {
             @Override
             public void onClick(View v) {
                 FastClickCheckUtil.check(v);
-                Hawk.put(HawkConfig.FAST_SEARCH_MODE, !Hawk.get(HawkConfig.FAST_SEARCH_MODE, false));
-                tvFastSearchText.setText(Hawk.get(HawkConfig.FAST_SEARCH_MODE, false) ? "开启" : "关闭");
+                Hawk.put(HawkConfig.FAST_SEARCH_MODE, !Hawk.get(HawkConfig.FAST_SEARCH_MODE, true));
+                tvFastSearchText.setText(Hawk.get(HawkConfig.FAST_SEARCH_MODE, true) ? "开启" : "关闭");
             }
         });
         findViewById(R.id.m3u8Ad).setOnClickListener(new View.OnClickListener() {

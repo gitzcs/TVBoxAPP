@@ -160,7 +160,7 @@ public class SearchActivity extends BaseActivity {
         wordAdapter.setOnItemClickListener(new BaseQuickAdapter.OnItemClickListener() {
             @Override
             public void onItemClick(BaseQuickAdapter adapter, View view, int position) {
-                if(Hawk.get(HawkConfig.FAST_SEARCH_MODE, false)){
+                if(Hawk.get(HawkConfig.FAST_SEARCH_MODE, true)){
                     Bundle bundle = new Bundle();
                     bundle.putString("title", wordAdapter.getItem(position));
                     jumpActivity(FastSearchActivity.class, bundle);
@@ -231,7 +231,7 @@ public class SearchActivity extends BaseActivity {
                 hasKeyBoard = true;
                 String wd = etSearch.getText().toString().trim();
                 if (!TextUtils.isEmpty(wd)) {
-                    if(Hawk.get(HawkConfig.FAST_SEARCH_MODE, false)){
+                    if(Hawk.get(HawkConfig.FAST_SEARCH_MODE, true)){
                         Bundle bundle = new Bundle();
                         bundle.putString("title", wd);
                         jumpActivity(FastSearchActivity.class, bundle);
@@ -253,13 +253,14 @@ public class SearchActivity extends BaseActivity {
         });
 
         //软键盘
+
         etSearch.setOnEditorActionListener(new TextView.OnEditorActionListener() {
             @Override
             public boolean onEditorAction(TextView v, int actionId, KeyEvent event) {
                 if (actionId == EditorInfo.IME_ACTION_DONE || actionId == EditorInfo.IME_ACTION_SEARCH || (event != null && event.getKeyCode() == KeyEvent.KEYCODE_ENTER)) {
                     String wd = etSearch.getText().toString().trim();
                     if (!TextUtils.isEmpty(wd)) {
-                        if (Hawk.get(HawkConfig.FAST_SEARCH_MODE, false)) {
+                        if (Hawk.get(HawkConfig.FAST_SEARCH_MODE, true)) {
                             Bundle bundle = new Bundle();
                             bundle.putString("title", wd);
                             jumpActivity(FastSearchActivity.class, bundle);
@@ -283,7 +284,7 @@ public class SearchActivity extends BaseActivity {
                 if (event.getAction() == KeyEvent.ACTION_DOWN && (keyCode == KeyEvent.KEYCODE_DPAD_CENTER || keyCode == KeyEvent.KEYCODE_ENTER)) {
                     String wd = etSearch.getText().toString().trim();
                     if (!TextUtils.isEmpty(wd)) {
-                        if (Hawk.get(HawkConfig.FAST_SEARCH_MODE, false)) {
+                        if (Hawk.get(HawkConfig.FAST_SEARCH_MODE, true)) {
                             Bundle bundle = new Bundle();
                             bundle.putString("title", wd);
                             jumpActivity(FastSearchActivity.class, bundle);
@@ -424,7 +425,7 @@ public class SearchActivity extends BaseActivity {
         if (intent != null && intent.hasExtra("title")) {
             String title = intent.getStringExtra("title");
             showLoading();
-            if(Hawk.get(HawkConfig.FAST_SEARCH_MODE, false)){
+            if(Hawk.get(HawkConfig.FAST_SEARCH_MODE, true)){
                 Bundle bundle = new Bundle();
                 bundle.putString("title", title);
                 jumpActivity(FastSearchActivity.class, bundle);
@@ -485,7 +486,7 @@ public class SearchActivity extends BaseActivity {
         if (event.type == ServerEvent.SERVER_SEARCH) {
             String title = (String) event.obj;
             showLoading();
-            if(Hawk.get(HawkConfig.FAST_SEARCH_MODE, false)){
+            if(Hawk.get(HawkConfig.FAST_SEARCH_MODE, true)){
                 Bundle bundle = new Bundle();
                 bundle.putString("title", title);
                 jumpActivity(FastSearchActivity.class, bundle);
