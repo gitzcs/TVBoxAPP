@@ -203,6 +203,7 @@ public class PlayActivity extends BaseActivity {
             @Override
             public void changeParse(ParseBean pb) {
                 autoRetryCount = 0;
+                triedLineFlags.clear();
                 doParse(pb);
             }
 
@@ -215,6 +216,7 @@ public class PlayActivity extends BaseActivity {
             @Override
             public void replay(boolean replay) {
                 autoRetryCount = 0;
+                triedLineFlags.clear();
                 if(replay){
                     play(true);
                 }else {
@@ -743,6 +745,7 @@ public class PlayActivity extends BaseActivity {
             sourceKey = bundle.getString("sourceKey");
             sourceBean = ApiConfig.get().getSource(sourceKey);
             initPlayerCfg();
+            triedLineFlags.clear();
             play(false);
         }
     }
@@ -854,6 +857,7 @@ public class PlayActivity extends BaseActivity {
     private SourceBean sourceBean;
 
     private void playNext(boolean isProgress) {
+        triedLineFlags.clear();
         boolean hasNext = true;
         if (mVodInfo == null || mVodInfo.seriesMap.get(mVodInfo.playFlag) == null) {
             hasNext = false;
@@ -875,6 +879,7 @@ public class PlayActivity extends BaseActivity {
     }
 
     private void playPrevious() {
+        triedLineFlags.clear();
         boolean hasPre = true;
         if (mVodInfo == null || mVodInfo.seriesMap.get(mVodInfo.playFlag) == null) {
             hasPre = false;
@@ -892,6 +897,7 @@ public class PlayActivity extends BaseActivity {
     private int autoRetryCount = 0;
     private long lastRetryTime = 0;  // 记录上次调用时间（毫秒）
     private boolean allowSwitchPlayer = true;
+    private java.util.Set<String> triedLineFlags = new java.util.HashSet<>();  // 记录已尝试过的线路
 
     boolean autoRetry() {
         long currentTime = System.currentTimeMillis();
@@ -900,6 +906,7 @@ public class PlayActivity extends BaseActivity {
             LOG.i("echo-reset-autoRetryCount");
             autoRetryCount = 0;
             allowSwitchPlayer = true;
+            triedLineFlags.clear();
         }
         lastRetryTime = currentTime;  // 更新上次调用时间
         if (loadFoundVideoUrls != null && !loadFoundVideoUrls.isEmpty()) {
@@ -935,9 +942,55 @@ public class PlayActivity extends BaseActivity {
             }
             return true;
         } else {
+            // 当前线路重试耗尽，尝试切换下一条线路
+            return tryNextLine();
+        }
+    }
+
+    boolean tryNextLine() {
+        if (mVodInfo == null || mVodInfo.seriesMap == null || mVodInfo.seriesMap.isEmpty()) {
+            autoRetryCount = 0;
+            triedLineFlags.clear();
+            return false;
+        }
+        // 将当前线路标记为已尝试
+        String currentFlag = mVodInfo.playFlag;
+        int currentIndex = Math.max(mVodInfo.playIndex, 0);
+        triedLineFlags.add(currentFlag);
+        // 查找下一条未尝试过的线路
+        String nextFlag = null;
+        int nextIndex = 0;
+        for (String flag : mVodInfo.seriesMap.keySet()) {
+            List<VodInfo.VodSeries> seriesList = mVodInfo.seriesMap.get(flag);
+            if (!triedLineFlags.contains(flag) && seriesList != null && !seriesList.isEmpty()) {
+                nextFlag = flag;
+                nextIndex = Math.min(currentIndex, seriesList.size() - 1);
+                break;
+            }
+        }
+        if (nextFlag == null) {
+            // 所有线路都已尝试过
+            LOG.i("echo-autoRetry all lines exhausted");
+            triedLineFlags.clear();
             autoRetryCount = 0;
             return false;
         }
+        final String flagToSwitch = nextFlag;
+        LOG.i("echo-autoRetry switch line: " + mVodInfo.playFlag + " -> " + flagToSwitch);
+        // 显示切换线路提示
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                Toast.makeText(mContext, "自动切换线路: " + flagToSwitch, Toast.LENGTH_SHORT).show();
+            }
+        });
+        // 切换到新线路
+        mVodInfo.playFlag = flagToSwitch;
+        mVodInfo.playIndex = nextIndex;
+        autoRetryCount = 0;
+        allowSwitchPlayer = true;
+        play(false);
+        return true;
     }
 
     void autoRetryFromLoadFoundVideoUrls() {

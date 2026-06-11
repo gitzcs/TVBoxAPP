@@ -822,7 +822,9 @@ public class DetailActivity extends BaseActivity {
     public void refresh(RefreshEvent event) {
         if (event.type == RefreshEvent.TYPE_REFRESH) {
             if (event.obj != null) {
-                if (event.obj instanceof Integer) {
+                if (event.obj instanceof VodInfo) {
+                    syncPlayingVodInfo((VodInfo) event.obj);
+                } else if (event.obj instanceof Integer) {
                     int index = (int) event.obj;
                     for (int j = 0; j < Objects.requireNonNull(vodInfo.seriesMap.get(vodInfo.playFlag)).size(); j++) {
                         seriesAdapter.getData().get(j).selected = false;
@@ -970,6 +972,64 @@ public class DetailActivity extends BaseActivity {
             quickSearchData.addAll(data);
             EventBus.getDefault().post(new RefreshEvent(RefreshEvent.TYPE_QUICK_SEARCH, data));
         }
+    }
+
+    private void syncPlayingVodInfo(VodInfo playingVodInfo) {
+        if (playingVodInfo == null || vodInfo == null || vodInfo.seriesMap == null) {
+            return;
+        }
+        String newFlag = playingVodInfo.playFlag;
+        if (TextUtils.isEmpty(newFlag) || !vodInfo.seriesMap.containsKey(newFlag)) {
+            return;
+        }
+        List<VodInfo.VodSeries> newSeriesList = vodInfo.seriesMap.get(newFlag);
+        if (newSeriesList == null || newSeriesList.isEmpty()) {
+            return;
+        }
+
+        int newIndex = Math.max(0, Math.min(playingVodInfo.playIndex, newSeriesList.size() - 1));
+        vodInfo.playFlag = newFlag;
+        vodInfo.playIndex = newIndex;
+        if (playingVodInfo.playerCfg != null) {
+            vodInfo.playerCfg = playingVodInfo.playerCfg;
+        }
+
+        for (VodInfo.VodSeriesFlag flag : vodInfo.seriesFlags) {
+            flag.selected = flag.name.equals(newFlag);
+        }
+        for (List<VodInfo.VodSeries> seriesList : vodInfo.seriesMap.values()) {
+            if (seriesList == null) {
+                continue;
+            }
+            for (VodInfo.VodSeries series : seriesList) {
+                series.selected = false;
+            }
+        }
+        newSeriesList.get(newIndex).selected = true;
+
+        seriesFlagAdapter.notifyDataSetChanged();
+        refreshList();
+        setTvPlayUrl(newSeriesList.get(newIndex).url);
+
+        int flagIndex = -1;
+        for (int i = 0; i < vodInfo.seriesFlags.size(); i++) {
+            if (vodInfo.seriesFlags.get(i).name.equals(newFlag)) {
+                flagIndex = i;
+                break;
+            }
+        }
+        if (flagIndex >= 0) {
+            mGridViewFlag.scrollToPosition(flagIndex);
+            if (mGridViewFlag.hasFocus()) {
+                mGridViewFlag.setSelection(flagIndex);
+            }
+        }
+        if (!isFirstLoad && mGridView.hasFocus()) {
+            mGridView.setSelection(newIndex);
+        }
+
+        insertVod(firstsourceKey, vodInfo);
+        isFirstLoad = false;
     }
 
     private void insertVod(String sourceKey, VodInfo vodInfo) {
