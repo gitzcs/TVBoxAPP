@@ -14,6 +14,7 @@ import android.graphics.Bitmap;
 import android.net.Uri;
 import android.os.CountDownTimer;
 import android.os.Handler;
+import android.text.TextUtils;
 import android.util.Base64;
 import android.view.Gravity;
 import android.view.KeyEvent;
@@ -144,6 +145,7 @@ public class LivePlayActivity extends BaseActivity {
     public static  int currentChannelGroupIndex = 0;
     private Handler mHandler = new Handler();
     private static final long EPG_LOAD_DELAY = 1200L;
+    private static final String DEFAULT_EPG_ADDRESS = "http://epg.51zmt.top:8000/api/diyp/?ch={name}&date={date}";
     private final Runnable mLoadEpgRun = new Runnable() {
         @Override
         public void run() {
@@ -500,8 +502,9 @@ public class LivePlayActivity extends BaseActivity {
             updateEpgPanelState(false);
             return;
         }
+        ArrayList<String> epgQueryNames = buildEpgQueryNames(channelName, channelNameReal, finalEpgTagName);
         String url;
-        url = buildEpgUrl(epgStringAddress, finalEpgTagName, date, timeFormat);
+        url = buildEpgUrl(epgStringAddress, epgQueryNames.get(0), date, timeFormat);
 
         String savedEpgKey = channelName + "_" + Objects.requireNonNull(liveEpgDateAdapter.getItem(liveEpgDateAdapter.getSelectedIndex())).getDatePresented();
         if (hsEpg.containsKey(savedEpgKey)){
@@ -510,17 +513,45 @@ public class LivePlayActivity extends BaseActivity {
             return;
         }
         updateEpgPanelState(false);
-        requestEpg(url, date, channelNameReal, finalEpgTagName, savedEpgKey);
+        requestEpg(url, date, channelNameReal, finalEpgTagName, savedEpgKey, epgQueryNames, timeFormat, 0);
     }
 
     private String buildEpgUrl(String address, String epgTagName, Date date, SimpleDateFormat timeFormat) {
-        if(address.contains("{name}") && address.contains("{date}")){
-            return address.replace("{name}",URLEncoder.encode(epgTagName)).replace("{date}",timeFormat.format(date));
-        }else if(isXmlEpgAddress(address)){
+        if (address.contains("{name}") || address.contains("{date}")) {
+            return address.replace("{name}", encodeEpgParam(epgTagName)).replace("{date}", timeFormat.format(date));
+        } else if(isXmlEpgAddress(address)){
             return address;
         }else {
-            return address + "?ch="+ URLEncoder.encode(epgTagName) + "&date=" + timeFormat.format(date);
+            return address + (address.contains("?") ? "&" : "?") + "ch=" + encodeEpgParam(epgTagName) + "&date=" + timeFormat.format(date);
         }
+    }
+
+    private String encodeEpgParam(String value) {
+        try {
+            return URLEncoder.encode(value == null ? "" : value, "UTF-8").replace("+", "%20");
+        } catch (Exception e) {
+            return value == null ? "" : value;
+        }
+    }
+
+    private ArrayList<String> buildEpgQueryNames(String channelName, String channelNameReal, String epgTagName) {
+        ArrayList<String> queryNames = new ArrayList<>();
+        addEpgQueryName(queryNames, epgTagName);
+        addEpgQueryName(queryNames, channelNameReal);
+        addEpgQueryName(queryNames, normalizeEpgChannelName(getFirstPartBeforeSpace(channelName)));
+        addEpgQueryName(queryNames, getFirstPartBeforeSpace(channelName));
+        addEpgQueryName(queryNames, channelName);
+        if (queryNames.isEmpty()) {
+            queryNames.add("");
+        }
+        return queryNames;
+    }
+
+    private void addEpgQueryName(ArrayList<String> queryNames, String name) {
+        if (name == null) return;
+        String trimName = name.trim();
+        if (trimName.isEmpty() || queryNames.contains(trimName)) return;
+        queryNames.add(trimName);
     }
 
     private String getConfiguredEpgAddress() {
@@ -528,17 +559,24 @@ public class LivePlayActivity extends BaseActivity {
         if (userEpgAddress != null && userEpgAddress.trim().length() >= 5) {
             return userEpgAddress.trim();
         }
-        return "";
+        return DEFAULT_EPG_ADDRESS;
     }
 
     private boolean hasEpgAddress() {
         return epgStringAddress != null && !epgStringAddress.trim().isEmpty();
     }
 
-    private void requestEpg(String url, Date date, String channelNameReal, String finalEpgTagName, String savedEpgKey) {
+    private void requestEpg(String url, Date date, String channelNameReal, String finalEpgTagName, String savedEpgKey,
+                            ArrayList<String> epgQueryNames, SimpleDateFormat timeFormat, int queryIndex) {
         UrlHttpUtil.get(url, new CallBackUtil.CallBackString() {
             public void onFailure(int i, String str) {
                 if (!isCurrentEpgRequest(savedEpgKey)) return;
+                if (requestNextEpgQueryName(date, channelNameReal, finalEpgTagName, savedEpgKey, epgQueryNames, timeFormat, queryIndex)) {
+                    return;
+                }
+                if (requestDefaultEpgOnFailure(date, channelNameReal, finalEpgTagName, savedEpgKey, epgQueryNames, timeFormat, queryIndex)) {
+                    return;
+                }
                 updateEpgPanelState(false);
 //                showEpg(date, new ArrayList<>());
 //                showBottomEpg();
@@ -555,18 +593,15 @@ public class LivePlayActivity extends BaseActivity {
                 try {
                     if (isXmlEpgResponse(paramString)) {
                         arrayList = parseXmlEpg(paramString, finalEpgTagName, date);
-                    } else if (paramString != null && paramString.contains("epg_data")) {
-                        final JSONArray jSONArray = new JSONObject(paramString).optJSONArray("epg_data");
-                        if (jSONArray != null)
-                            for (int b = 0; b < jSONArray.length(); b++) {
-                                JSONObject jSONObject = jSONArray.getJSONObject(b);
-                                Epginfo epgbcinfo = new Epginfo(date,jSONObject.optString("title"), date, jSONObject.optString("start"), jSONObject.optString("end"),b);
-                                arrayList.add(epgbcinfo);
-                            }
+                    } else if (paramString != null && (paramString.contains("epg_data") || paramString.trim().startsWith("{"))) {
+                        arrayList = parseJsonEpg(paramString, date);
                     }
 
                 } catch (JSONException jSONException) {
                     jSONException.printStackTrace();
+                }
+                if (arrayList.isEmpty() && requestNextEpgQueryName(date, channelNameReal, finalEpgTagName, savedEpgKey, epgQueryNames, timeFormat, queryIndex)) {
+                    return;
                 }
                 hsEpg.put(savedEpgKey, arrayList);
                 if (!isCurrentEpgRequest(savedEpgKey)) return;
@@ -574,6 +609,33 @@ public class LivePlayActivity extends BaseActivity {
                 showBottomEpg();
             }
         });
+    }
+
+    private boolean requestDefaultEpgOnFailure(Date date, String channelNameReal, String finalEpgTagName, String savedEpgKey,
+                                               ArrayList<String> epgQueryNames, SimpleDateFormat timeFormat, int queryIndex) {
+        if (DEFAULT_EPG_ADDRESS.equals(epgStringAddress) || epgQueryNames == null || queryIndex >= epgQueryNames.size()) {
+            return false;
+        }
+        String fallbackUrl = buildEpgUrl(DEFAULT_EPG_ADDRESS, epgQueryNames.get(0), date, timeFormat);
+        LOG.i("echo-epg fallback default address");
+        requestEpg(fallbackUrl, date, channelNameReal, finalEpgTagName, savedEpgKey, epgQueryNames, timeFormat, epgQueryNames.size());
+        return true;
+    }
+
+    private boolean requestNextEpgQueryName(Date date, String channelNameReal, String finalEpgTagName, String savedEpgKey,
+                                            ArrayList<String> epgQueryNames, SimpleDateFormat timeFormat, int queryIndex) {
+        if (!isTemplateEpgAddress(epgStringAddress) || epgQueryNames == null || queryIndex + 1 >= epgQueryNames.size()) {
+            return false;
+        }
+        int nextIndex = queryIndex + 1;
+        String nextUrl = buildEpgUrl(epgStringAddress, epgQueryNames.get(nextIndex), date, timeFormat);
+        LOG.i("echo-epg retry query name:" + epgQueryNames.get(nextIndex));
+        requestEpg(nextUrl, date, channelNameReal, finalEpgTagName, savedEpgKey, epgQueryNames, timeFormat, nextIndex);
+        return true;
+    }
+
+    private boolean isTemplateEpgAddress(String address) {
+        return address != null && (address.contains("{name}") || address.contains("{date}"));
     }
 
     private boolean isCurrentEpgRequest(String savedEpgKey) {
@@ -601,6 +663,99 @@ public class LivePlayActivity extends BaseActivity {
         }
         String trimResponse = response.trim();
         return trimResponse.startsWith("<?xml") || trimResponse.startsWith("<tv") || trimResponse.contains("<programme");
+    }
+
+    private ArrayList<Epginfo> parseJsonEpg(String response, Date date) throws JSONException {
+        ArrayList<Epginfo> epgList = new ArrayList<>();
+        JSONObject jsonObject = new JSONObject(response);
+        String channelName = jsonObject.optString("channel_name", jsonObject.optString("channel", ""));
+        if (isUnavailableEpgText(channelName)) {
+            return epgList;
+        }
+        JSONArray epgArray = findJsonEpgArray(jsonObject);
+        if (epgArray == null) {
+            return epgList;
+        }
+        for (int i = 0; i < epgArray.length(); i++) {
+            JSONObject item = epgArray.optJSONObject(i);
+            if (item == null) {
+                continue;
+            }
+            String title = cleanEpgTitle(item.optString("title", item.optString("name", "")));
+            if (TextUtils.isEmpty(title) || isUnavailableEpgText(title)) {
+                continue;
+            }
+            String startText = item.optString("start", item.optString("start_time", item.optString("starttime", "")));
+            String endText = item.optString("end", item.optString("end_time", item.optString("endtime", "")));
+            Date startDate = parseJsonEpgDate(date, startText);
+            Date endDate = parseJsonEpgDate(date, endText);
+            if (startDate == null || endDate == null) {
+                continue;
+            }
+            if (!endDate.after(startDate)) {
+                endDate = new Date(endDate.getTime() + TimeUnit.DAYS.toMillis(1));
+            }
+            epgList.add(createXmlEpgInfo(date, title, startDate, endDate, epgList.size()));
+        }
+        return epgList;
+    }
+
+    private JSONArray findJsonEpgArray(JSONObject jsonObject) {
+        JSONArray epgArray = jsonObject.optJSONArray("epg_data");
+        if (epgArray != null) return epgArray;
+        epgArray = jsonObject.optJSONArray("data");
+        if (epgArray != null) return epgArray;
+        epgArray = jsonObject.optJSONArray("list");
+        if (epgArray != null) return epgArray;
+        JSONObject dataObject = jsonObject.optJSONObject("data");
+        if (dataObject != null) {
+            epgArray = dataObject.optJSONArray("epg_data");
+            if (epgArray != null) return epgArray;
+            epgArray = dataObject.optJSONArray("list");
+        }
+        return epgArray;
+    }
+
+    private Date parseJsonEpgDate(Date date, String timeText) {
+        if (timeText == null || timeText.trim().isEmpty()) {
+            return null;
+        }
+        String trimText = timeText.trim();
+        String[] fullPatterns = new String[]{"yyyy-MM-dd HH:mm:ss", "yyyy-MM-dd HH:mm"};
+        for (String pattern : fullPatterns) {
+            try {
+                SimpleDateFormat dateFormat = new SimpleDateFormat(pattern, Locale.getDefault());
+                dateFormat.setTimeZone(TimeZone.getTimeZone("GMT+8:00"));
+                return dateFormat.parse(trimText);
+            } catch (ParseException ignored) {
+            }
+        }
+        SimpleDateFormat dayFormat = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
+        dayFormat.setTimeZone(TimeZone.getTimeZone("GMT+8:00"));
+        String dayText = dayFormat.format(date);
+        String[] timePatterns = new String[]{"HH:mm:ss", "HH:mm"};
+        for (String pattern : timePatterns) {
+            try {
+                SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd " + pattern, Locale.getDefault());
+                dateFormat.setTimeZone(TimeZone.getTimeZone("GMT+8:00"));
+                return dateFormat.parse(dayText + " " + trimText);
+            } catch (ParseException ignored) {
+            }
+        }
+        return null;
+    }
+
+    private String cleanEpgTitle(String title) {
+        if (title == null) {
+            return "";
+        }
+        return title.replace(" --免费使用", "")
+                .replace("--免费使用", "")
+                .trim();
+    }
+
+    private boolean isUnavailableEpgText(String text) {
+        return text != null && (text.contains("未提供") || text.contains("暂无"));
     }
 
     private String normalizeEpgChannelName(String channelName) {
