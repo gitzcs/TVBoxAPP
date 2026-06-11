@@ -12,6 +12,29 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent" />
 
+	<FrameLayout
+		android:id="@+id/switchChannelSnapshotOverlay"
+		android:layout_width="match_parent"
+		android:layout_height="match_parent"
+		android:clickable="false"
+		android:focusable="false"
+		android:visibility="gone">
+
+		<ImageView
+			android:id="@+id/switchChannelSnapshotImage"
+			android:layout_width="match_parent"
+			android:layout_height="match_parent"
+			android:background="@android:color/black"
+			android:scaleType="fitCenter"
+			android:visibility="gone" />
+
+		<ProgressBar
+			android:layout_width="56dp"
+			android:layout_height="56dp"
+			android:layout_gravity="center"
+			android:indeterminate="true" />
+	</FrameLayout>
+
 	<TextView
 		android:id="@+id/tv_selected_channel"
 		android:layout_width="wrap_content"

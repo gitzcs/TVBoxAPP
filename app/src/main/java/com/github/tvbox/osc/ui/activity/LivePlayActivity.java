@@ -10,6 +10,7 @@ import android.animation.IntEvaluator;
 import android.animation.ObjectAnimator;
 import android.annotation.SuppressLint;
 import android.content.Context;
+import android.graphics.Bitmap;
 import android.net.Uri;
 import android.os.CountDownTimer;
 import android.os.Handler;
@@ -120,9 +121,10 @@ import xyz.doikki.videoplayer.player.VideoView;
  * @description:
  */
 public class LivePlayActivity extends BaseActivity {
-    private static final String DEFAULT_EPG_URL = "http://home.jundie.top:81/gif026/e.xml";
     public static Context context;
     private VideoView<xyz.doikki.videoplayer.player.AbstractPlayer> mVideoView;
+    private View switchChannelSnapshotOverlay;
+    private ImageView switchChannelSnapshotImage;
     private TextView tvChannelInfo;
     private TextView tvTime;
     private TextView tvNetSpeed;
@@ -241,10 +243,12 @@ public class LivePlayActivity extends BaseActivity {
     @Override
     protected void init() {
         context = this;
-        epgStringAddress = DEFAULT_EPG_URL;
+        epgStringAddress = getConfiguredEpgAddress();
 
         setLoadSir(findViewById(R.id.live_root));
         mVideoView = findViewById(R.id.mVideoView);
+        switchChannelSnapshotOverlay = findViewById(R.id.switchChannelSnapshotOverlay);
+        switchChannelSnapshotImage = findViewById(R.id.switchChannelSnapshotImage);
 
         tvLeftChannelListLayout = findViewById(R.id.tvLeftChannnelListLayout);
         mChannelGroupView = findViewById(R.id.mGroupGridView);
@@ -492,6 +496,10 @@ public class LivePlayActivity extends BaseActivity {
         }
         final String finalEpgTagName = epgTagName;
         epgListAdapter.CanBack(currentLiveChannelItem.getinclude_back());
+        if (!hasEpgAddress()) {
+            updateEpgPanelState(false);
+            return;
+        }
         String url;
         url = buildEpgUrl(epgStringAddress, finalEpgTagName, date, timeFormat);
 
@@ -502,7 +510,7 @@ public class LivePlayActivity extends BaseActivity {
             return;
         }
         updateEpgPanelState(false);
-        requestEpg(url, date, channelNameReal, finalEpgTagName, savedEpgKey, timeFormat, true);
+        requestEpg(url, date, channelNameReal, finalEpgTagName, savedEpgKey);
     }
 
     private String buildEpgUrl(String address, String epgTagName, Date date, SimpleDateFormat timeFormat) {
@@ -515,26 +523,31 @@ public class LivePlayActivity extends BaseActivity {
         }
     }
 
-    private void requestFallbackEpg(Date date, String channelNameReal, String finalEpgTagName, String savedEpgKey, SimpleDateFormat timeFormat) {
-        String fallbackEpgAddress = Hawk.get(HawkConfig.EPG_URL,"");
-        if (fallbackEpgAddress == null || fallbackEpgAddress.length() < 5 || fallbackEpgAddress.equals(epgStringAddress)) return;
-        requestEpg(buildEpgUrl(fallbackEpgAddress, finalEpgTagName, date, timeFormat), date, channelNameReal, finalEpgTagName, savedEpgKey, timeFormat, false);
+    private String getConfiguredEpgAddress() {
+        String userEpgAddress = Hawk.get(HawkConfig.EPG_URL, "");
+        if (userEpgAddress != null && userEpgAddress.trim().length() >= 5) {
+            return userEpgAddress.trim();
+        }
+        return "";
     }
 
-    private void requestEpg(String url, Date date, String channelNameReal, String finalEpgTagName, String savedEpgKey, SimpleDateFormat timeFormat, boolean allowFallback) {
+    private boolean hasEpgAddress() {
+        return epgStringAddress != null && !epgStringAddress.trim().isEmpty();
+    }
+
+    private void requestEpg(String url, Date date, String channelNameReal, String finalEpgTagName, String savedEpgKey) {
         UrlHttpUtil.get(url, new CallBackUtil.CallBackString() {
             public void onFailure(int i, String str) {
                 if (!isCurrentEpgRequest(savedEpgKey)) return;
-                if (allowFallback) requestFallbackEpg(date, channelNameReal, finalEpgTagName, savedEpgKey, timeFormat);
-                else updateEpgPanelState(false);
+                updateEpgPanelState(false);
 //                showEpg(date, new ArrayList<>());
 //                showBottomEpg();
             }
 
             public void onResponse(String paramString) {
                 if (!isCurrentEpgRequest(savedEpgKey)) return;
-                if ((paramString == null || paramString.trim().isEmpty()) && allowFallback) {
-                    requestFallbackEpg(date, channelNameReal, finalEpgTagName, savedEpgKey, timeFormat);
+                if (paramString == null || paramString.trim().isEmpty()) {
+                    updateEpgPanelState(false);
                     return;
                 }
                 LOG.i("echo-epgTagName:"+channelNameReal);
@@ -805,9 +818,36 @@ public class LivePlayActivity extends BaseActivity {
         }
     }
 
+    private void updateCurrentChannelIcon() {
+        if (channel_Name == null || channel_Name.getChannelName() == null) {
+            return;
+        }
+        String channelName = channel_Name.getChannelName();
+        String channelNameReal = normalizeEpgChannelName(getFirstPartBeforeSpace(channelName));
+        String epgTagName = channelNameReal;
+        String iconUrl = null;
+        if (logoUrl == null || logoUrl.isEmpty()) {
+            String[] epgInfo = EpgUtil.getEpgInfo(channelNameReal);
+            if (epgInfo != null) {
+                iconUrl = epgInfo[0];
+                if (!epgInfo[1].isEmpty()) {
+                    epgTagName = epgInfo[1];
+                }
+            }
+        } else if (!logoUrl.equals("false")) {
+            iconUrl = logoUrl.replace("{name}", epgTagName);
+        }
+        updateChannelIcon(channelName, iconUrl);
+    }
+
     @SuppressLint("SetTextI18n")
     private void updateChannelIcon(String channelName, String logoUrl) {
+        if (channel_Name == null || channel_Name.getChannelName() == null || !channel_Name.getChannelName().equals(channelName)) {
+            return;
+        }
         if (StringUtils.isEmpty(logoUrl)) {
+            Picasso.get().cancelRequest(imgLiveIcon);
+            imgLiveIcon.setImageDrawable(null);
             liveIconNullBg.setVisibility(View.VISIBLE);
             liveIconNullText.setVisibility(View.VISIBLE);
             imgLiveIcon.setVisibility(View.INVISIBLE);
@@ -1013,6 +1053,7 @@ public class LivePlayActivity extends BaseActivity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
+        hideSwitchChannelSnapshot();
         if (mVideoView != null) {
             mVideoView.release();
             mVideoView = null;
@@ -1200,13 +1241,44 @@ public class LivePlayActivity extends BaseActivity {
     {
         return Hawk.get(HawkConfig.LIVE_WEB_HEADER);
     }
+
+    private void showSwitchChannelSnapshot() {
+        if (switchChannelSnapshotImage != null && mVideoView != null) {
+            Bitmap bitmap = null;
+            try {
+                bitmap = mVideoView.doScreenShot();
+            } catch (Throwable ignored) {
+            }
+            if (bitmap != null) {
+                switchChannelSnapshotImage.setImageBitmap(bitmap);
+                switchChannelSnapshotImage.setVisibility(View.VISIBLE);
+            } else {
+                switchChannelSnapshotImage.setImageBitmap(null);
+                switchChannelSnapshotImage.setVisibility(View.GONE);
+            }
+        }
+        if (switchChannelSnapshotOverlay != null) {
+            switchChannelSnapshotOverlay.setVisibility(View.VISIBLE);
+        }
+    }
+
+    private void hideSwitchChannelSnapshot() {
+        if (switchChannelSnapshotOverlay != null) {
+            switchChannelSnapshotOverlay.setVisibility(View.GONE);
+        }
+        if (switchChannelSnapshotImage != null) {
+            switchChannelSnapshotImage.setImageBitmap(null);
+            switchChannelSnapshotImage.setVisibility(View.GONE);
+        }
+    }
+
     private boolean playChannel(int channelGroupIndex, int liveChannelIndex, boolean changeSource) {
         if ((channelGroupIndex == currentChannelGroupIndex && liveChannelIndex == currentLiveChannelIndex && !changeSource)
                 || (changeSource && currentLiveChannelItem.getSourceNum() == 1)) {
            // showChannelInfo();
             return true;
         }
-        if(mVideoView!=null)mVideoView.release();
+        boolean showPreviousFrame = currentLiveChannelItem != null && mVideoView != null && mVideoView.isPlaying();
         allowLiveSwitchPlayer = true;
         if (!changeSource) {
             currentChannelGroupIndex = channelGroupIndex;
@@ -1226,11 +1298,18 @@ public class LivePlayActivity extends BaseActivity {
         }else {
             currentLiveChannelItem.setinclude_back(false);
         }
+        updateCurrentChannelIcon();
         showBottomEpg();
         backcontroller.setVisibility(View.GONE);
         ll_right_top_huikan.setVisibility(View.GONE);
         if(mVideoView!=null){
             if(liveWebHeader()!=null)LOG.i("echo-"+liveWebHeader().toString());
+            if (showPreviousFrame) {
+                showSwitchChannelSnapshot();
+            } else {
+                hideSwitchChannelSnapshot();
+            }
+            mVideoView.release();
             mVideoView.setUrl(currentLiveChannelItem.getUrl(),liveWebHeader());
             mVideoView.start();
         }
@@ -1240,6 +1319,10 @@ public class LivePlayActivity extends BaseActivity {
 
     private void loadEpgAfterChannelStarted() {
         mHandler.removeCallbacks(mLoadEpgRun);
+        if (!hasEpgAddress()) {
+            updateEpgPanelState(false);
+            return;
+        }
         if (hasCurrentEpgCache()) {
             firstLiveEpgLoad = false;
             return;
@@ -1729,6 +1812,7 @@ public class LivePlayActivity extends BaseActivity {
                     case VideoView.STATE_BUFFERED:
                     case VideoView.STATE_PLAYING:
                         // 播放状态：当播放器缓冲完成或正在正常播放时，表明当前源是可用的，
+                        hideSwitchChannelSnapshot();
                         currentLiveChangeSourceTimes = 0;
                         allowLiveSwitchPlayer = true;
                         break;
@@ -1736,6 +1820,7 @@ public class LivePlayActivity extends BaseActivity {
                     case VideoView.STATE_PLAYBACK_COMPLETED:
                         // 错误或播放结束状态：播放器遇到错误或播放完毕时，
                         // 启动自动换源任务，等待3秒后尝试切换至备选源
+                        hideSwitchChannelSnapshot();
                         mHandler.postDelayed(mConnectTimeoutChangeSourceRun, 3500);
                         break;
                     case VideoView.STATE_PREPARING:
