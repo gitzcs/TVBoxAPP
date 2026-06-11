@@ -71,9 +71,12 @@ import java.io.ObjectOutputStream;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Objects;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import me.jessyan.autosize.utils.AutoSizeUtils;
 
@@ -366,9 +369,17 @@ public class DetailActivity extends BaseActivity {
             private void refresh(View itemView, int position) {
                 String newFlag = seriesFlagAdapter.getData().get(position).name;
                 if (vodInfo != null && !vodInfo.playFlag.equals(newFlag)) {
+                    String oldFlag = vodInfo.playFlag;
+                    int oldIndex = Math.max(vodInfo.playIndex, 0);
+                    VodInfo.VodSeries currentSeries = null;
+                    List<VodInfo.VodSeries> oldSeriesList = vodInfo.seriesMap.get(oldFlag);
+                    if (oldSeriesList != null && !oldSeriesList.isEmpty()) {
+                        int safeOldIndex = Math.max(0, Math.min(oldIndex, oldSeriesList.size() - 1));
+                        currentSeries = oldSeriesList.get(safeOldIndex);
+                    }
                     for (int i = 0; i < vodInfo.seriesFlags.size(); i++) {
                         VodInfo.VodSeriesFlag flag = vodInfo.seriesFlags.get(i);
-                        if (flag.name.equals(vodInfo.playFlag)) {
+                        if (flag.name.equals(oldFlag)) {
                             flag.selected = false;
                             seriesFlagAdapter.notifyItemChanged(i);
                             break;
@@ -377,10 +388,18 @@ public class DetailActivity extends BaseActivity {
                     VodInfo.VodSeriesFlag flag = vodInfo.seriesFlags.get(position);
                     flag.selected = true;
                     // clean pre flag select status
-                    if (vodInfo.seriesMap.get(vodInfo.playFlag).size() > vodInfo.playIndex) {
-                        vodInfo.seriesMap.get(vodInfo.playFlag).get(vodInfo.playIndex).selected = false;
+                    if (oldSeriesList != null && oldSeriesList.size() > oldIndex) {
+                        oldSeriesList.get(oldIndex).selected = false;
                     }
                     vodInfo.playFlag = newFlag;
+                    List<VodInfo.VodSeries> newSeriesList = vodInfo.seriesMap.get(newFlag);
+                    if (newSeriesList != null && !newSeriesList.isEmpty()) {
+                        vodInfo.playIndex = findSameEpisodeIndex(currentSeries, newSeriesList, oldIndex);
+                        for (VodInfo.VodSeries series : newSeriesList) {
+                            series.selected = false;
+                        }
+                        newSeriesList.get(vodInfo.playIndex).selected = true;
+                    }
                     seriesFlagAdapter.notifyItemChanged(position);
                     refreshList();
                     mGridView.clearFocus();
@@ -987,7 +1006,8 @@ public class DetailActivity extends BaseActivity {
             return;
         }
 
-        int newIndex = Math.max(0, Math.min(playingVodInfo.playIndex, newSeriesList.size() - 1));
+        VodInfo.VodSeries playingSeries = getPlayingSeries(playingVodInfo, newFlag);
+        int newIndex = findSameEpisodeIndex(playingSeries, newSeriesList, playingVodInfo.playIndex);
         vodInfo.playFlag = newFlag;
         vodInfo.playIndex = newIndex;
         if (playingVodInfo.playerCfg != null) {
@@ -1030,6 +1050,77 @@ public class DetailActivity extends BaseActivity {
 
         insertVod(firstsourceKey, vodInfo);
         isFirstLoad = false;
+    }
+
+    private VodInfo.VodSeries getPlayingSeries(VodInfo playingVodInfo, String flag) {
+        if (playingVodInfo == null || playingVodInfo.seriesMap == null || TextUtils.isEmpty(flag)) {
+            return null;
+        }
+        List<VodInfo.VodSeries> playingList = playingVodInfo.seriesMap.get(flag);
+        if (playingList == null || playingList.isEmpty()) {
+            return null;
+        }
+        int safeIndex = Math.max(0, Math.min(playingVodInfo.playIndex, playingList.size() - 1));
+        return playingList.get(safeIndex);
+    }
+
+    private int findSameEpisodeIndex(VodInfo.VodSeries currentSeries, List<VodInfo.VodSeries> targetList, int fallbackIndex) {
+        if (targetList == null || targetList.isEmpty()) {
+            return 0;
+        }
+        if (currentSeries != null && !TextUtils.isEmpty(currentSeries.name)) {
+            String currentName = normalizeEpisodeName(currentSeries.name);
+            for (int i = 0; i < targetList.size(); i++) {
+                VodInfo.VodSeries targetSeries = targetList.get(i);
+                if (targetSeries != null && currentName.equals(normalizeEpisodeName(targetSeries.name))) {
+                    return i;
+                }
+            }
+            int currentEpisode = extractEpisodeNumber(currentSeries.name);
+            if (currentEpisode >= 0) {
+                for (int i = 0; i < targetList.size(); i++) {
+                    VodInfo.VodSeries targetSeries = targetList.get(i);
+                    if (targetSeries != null && extractEpisodeNumber(targetSeries.name) == currentEpisode) {
+                        return i;
+                    }
+                }
+            }
+        }
+        return Math.max(0, Math.min(fallbackIndex, targetList.size() - 1));
+    }
+
+    private String normalizeEpisodeName(String name) {
+        if (name == null) {
+            return "";
+        }
+        return name.toLowerCase(Locale.ROOT)
+                .replaceAll("\\s+", "")
+                .replaceAll("[\\[\\]【】()（）]", "")
+                .replace("第", "")
+                .replace("集", "")
+                .replace("话", "")
+                .replace("期", "");
+    }
+
+    private int extractEpisodeNumber(String name) {
+        if (name == null) {
+            return -1;
+        }
+        Matcher episodeMatcher = Pattern.compile("(?:第)?(\\d+)(?:集|话|期|$)").matcher(name);
+        if (episodeMatcher.find()) {
+            try {
+                return Integer.parseInt(episodeMatcher.group(1));
+            } catch (NumberFormatException ignored) {
+            }
+        }
+        Matcher matcher = Pattern.compile("\\d+").matcher(name);
+        if (matcher.find()) {
+            try {
+                return Integer.parseInt(matcher.group());
+            } catch (NumberFormatException ignored) {
+            }
+        }
+        return -1;
     }
 
     private void insertVod(String sourceKey, VodInfo vodInfo) {

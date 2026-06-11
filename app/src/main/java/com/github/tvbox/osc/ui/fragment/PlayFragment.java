@@ -102,10 +102,13 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import me.jessyan.autosize.AutoSize;
 import tv.danmaku.ijk.media.player.IMediaPlayer;
@@ -186,13 +189,10 @@ public class PlayFragment extends BaseLazyFragment {
                         errorWithRetry("嗅探错误", false);
                         break;
                     case MSG_PLAY_TIMEOUT:
-                        // 8秒播放超时，切换线路
-                        LOG.i("echo-playTimeout 8s exceeded, switching line");
+                        // 播放超时先走统一重试，避免未切播放器就直接切线路
+                        LOG.i("echo-playTimeout exceeded, retry current url first");
                         stopParse();
-                        if (mVideoView != null) mVideoView.release();
-                        if (!tryNextLine()) {
-                            setTip("播放超时", false, true);
-                        }
+                        errorWithRetry("播放超时", false);
                         break;
                 }
                 return false;
@@ -243,6 +243,7 @@ public class PlayFragment extends BaseLazyFragment {
             @Override
             public void changeParse(ParseBean pb) {
                 autoRetryCount = 0;
+                hasAutoSwitchedPlayer = false;
                 triedLineFlags.clear();
                 doParse(pb);
             }
@@ -256,6 +257,7 @@ public class PlayFragment extends BaseLazyFragment {
             @Override
             public void replay(boolean replay) {
                 autoRetryCount = 0;
+                hasAutoSwitchedPlayer = false;
                 triedLineFlags.clear();
                 if(replay){
                     play(true);
@@ -951,6 +953,7 @@ public class PlayFragment extends BaseLazyFragment {
     private long lastRetryTime = 0;  // 记录上次调用时间（毫秒）
 
     private boolean allowSwitchPlayer = true;
+    private boolean hasAutoSwitchedPlayer = false;
     private java.util.Set<String> triedLineFlags = new java.util.HashSet<>();  // 记录已尝试过的线路
     boolean autoRetry() {
         long currentTime = System.currentTimeMillis();
@@ -958,6 +961,7 @@ public class PlayFragment extends BaseLazyFragment {
             LOG.i("echo-reset-autoRetryCount");
             autoRetryCount = 0;
             allowSwitchPlayer = true;
+            hasAutoSwitchedPlayer = false;
             triedLineFlags.clear();
         }
 
@@ -966,37 +970,25 @@ public class PlayFragment extends BaseLazyFragment {
             autoRetryFromLoadFoundVideoUrls();
             return true;
         }
-        if (autoRetryCount < 2) {
-            if(autoRetryCount==1){
-                //第二次重试：ijk/exo都已尝试过，直接切换线路
-                LOG.i("echo-autoRetry both players failed, try next line");
-                return tryNextLine();
-            }else {
-                //第一次重试直接带着原地址继续播放
-                if(webPlayUrl!=null){
-                    if(allowSwitchPlayer){
-                        //切换播放器不占用重试次数
-                        LOG.i("echo-autoRetry switch player and replay current url");
-                        if(mController.switchPlayer())autoRetryCount++;
-                        allowSwitchPlayer=false;
-                    }else {
-                        autoRetryCount++;
-                        allowSwitchPlayer=true;
-                    }
+        if (webPlayUrl != null) {
+            if (allowSwitchPlayer && !hasAutoSwitchedPlayer) {
+                LOG.i("echo-autoRetry switch player and replay current url");
+                boolean switchSkipped = mController.switchPlayer();
+                hasAutoSwitchedPlayer = true;
+                allowSwitchPlayer = false;
+                if (!switchSkipped) {
                     stopParse();
+                    startPlayTimeout();
                     initParseLoadFound();
                     if(mVideoView!=null) mVideoView.release();
                     playUrl(webPlayUrl, webHeaderMap);
-                }else {
-                    return tryNextLine();
+                    return true;
                 }
             }
-            return true;
-        } else {
-            autoRetryCount = 0;
-            triedLineFlags.clear();
-            return false;
+            LOG.i("echo-autoRetry current url failed after player switch, try next line");
+            return tryNextLine();
         }
+        return tryNextLine();
     }
 
     boolean tryNextLine() {
@@ -1008,6 +1000,7 @@ public class PlayFragment extends BaseLazyFragment {
         // 将当前线路标记为已尝试
         String currentFlag = mVodInfo.playFlag;
         int currentIndex = Math.max(mVodInfo.playIndex, 0);
+        VodInfo.VodSeries currentSeries = getCurrentSeries(currentFlag, currentIndex);
         triedLineFlags.add(currentFlag);
         // 查找下一条未尝试过的线路
         String nextFlag = null;
@@ -1016,7 +1009,7 @@ public class PlayFragment extends BaseLazyFragment {
             List<VodInfo.VodSeries> seriesList = mVodInfo.seriesMap.get(flag);
             if (!triedLineFlags.contains(flag) && seriesList != null && !seriesList.isEmpty()) {
                 nextFlag = flag;
-                nextIndex = Math.min(currentIndex, seriesList.size() - 1);
+                nextIndex = findSameEpisodeIndex(currentSeries, seriesList, currentIndex);
                 break;
             }
         }
@@ -1043,8 +1036,80 @@ public class PlayFragment extends BaseLazyFragment {
         mVodInfo.playIndex = nextIndex;
         autoRetryCount = 0;
         allowSwitchPlayer = true;
+        hasAutoSwitchedPlayer = false;
         play(false);
         return true;
+    }
+
+    private VodInfo.VodSeries getCurrentSeries(String flag, int index) {
+        if (flag == null || mVodInfo == null || mVodInfo.seriesMap == null) {
+            return null;
+        }
+        List<VodInfo.VodSeries> currentList = mVodInfo.seriesMap.get(flag);
+        if (currentList == null || currentList.isEmpty()) {
+            return null;
+        }
+        int safeIndex = Math.max(0, Math.min(index, currentList.size() - 1));
+        return currentList.get(safeIndex);
+    }
+
+    private int findSameEpisodeIndex(VodInfo.VodSeries currentSeries, List<VodInfo.VodSeries> targetList, int fallbackIndex) {
+        if (targetList == null || targetList.isEmpty()) {
+            return 0;
+        }
+        if (currentSeries != null && !TextUtils.isEmpty(currentSeries.name)) {
+            String currentName = normalizeEpisodeName(currentSeries.name);
+            for (int i = 0; i < targetList.size(); i++) {
+                VodInfo.VodSeries targetSeries = targetList.get(i);
+                if (targetSeries != null && currentName.equals(normalizeEpisodeName(targetSeries.name))) {
+                    return i;
+                }
+            }
+            int currentEpisode = extractEpisodeNumber(currentSeries.name);
+            if (currentEpisode >= 0) {
+                for (int i = 0; i < targetList.size(); i++) {
+                    VodInfo.VodSeries targetSeries = targetList.get(i);
+                    if (targetSeries != null && extractEpisodeNumber(targetSeries.name) == currentEpisode) {
+                        return i;
+                    }
+                }
+            }
+        }
+        return Math.max(0, Math.min(fallbackIndex, targetList.size() - 1));
+    }
+
+    private String normalizeEpisodeName(String name) {
+        if (name == null) {
+            return "";
+        }
+        return name.toLowerCase(Locale.ROOT)
+                .replaceAll("\\s+", "")
+                .replaceAll("[\\[\\]【】()（）]", "")
+                .replace("第", "")
+                .replace("集", "")
+                .replace("话", "")
+                .replace("期", "");
+    }
+
+    private int extractEpisodeNumber(String name) {
+        if (name == null) {
+            return -1;
+        }
+        Matcher episodeMatcher = Pattern.compile("(?:第)?(\\d+)(?:集|话|期|$)").matcher(name);
+        if (episodeMatcher.find()) {
+            try {
+                return Integer.parseInt(episodeMatcher.group(1));
+            } catch (NumberFormatException ignored) {
+            }
+        }
+        Matcher matcher = Pattern.compile("\\d+").matcher(name);
+        if (matcher.find()) {
+            try {
+                return Integer.parseInt(matcher.group());
+            } catch (NumberFormatException ignored) {
+            }
+        }
+        return -1;
     }
 
     void autoRetryFromLoadFoundVideoUrls() {
@@ -1081,9 +1146,12 @@ public class PlayFragment extends BaseLazyFragment {
         mController.setTitle(playTitleInfo);
 
         stopParse();
+        webPlayUrl = null;
+        webHeaderMap = null;
         startPlayTimeout();
         initParseLoadFound();
         allowSwitchPlayer=true;
+        hasAutoSwitchedPlayer=false;
         mController.stopOther();
         if(mVideoView!=null) mVideoView.release();
         subtitleCacheKey = mVodInfo.sourceKey + "-" + mVodInfo.id + "-" + mVodInfo.playFlag + "-" + mVodInfo.playIndex+ "-" + vs.name + "-subt";

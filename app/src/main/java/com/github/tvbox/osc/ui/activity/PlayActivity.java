@@ -100,10 +100,13 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import me.jessyan.autosize.AutoSize;
 import tv.danmaku.ijk.media.player.IMediaPlayer;
@@ -956,6 +959,7 @@ public class PlayActivity extends BaseActivity {
         // 将当前线路标记为已尝试
         String currentFlag = mVodInfo.playFlag;
         int currentIndex = Math.max(mVodInfo.playIndex, 0);
+        VodInfo.VodSeries currentSeries = getCurrentSeries(currentFlag, currentIndex);
         triedLineFlags.add(currentFlag);
         // 查找下一条未尝试过的线路
         String nextFlag = null;
@@ -964,7 +968,7 @@ public class PlayActivity extends BaseActivity {
             List<VodInfo.VodSeries> seriesList = mVodInfo.seriesMap.get(flag);
             if (!triedLineFlags.contains(flag) && seriesList != null && !seriesList.isEmpty()) {
                 nextFlag = flag;
-                nextIndex = Math.min(currentIndex, seriesList.size() - 1);
+                nextIndex = findSameEpisodeIndex(currentSeries, seriesList, currentIndex);
                 break;
             }
         }
@@ -991,6 +995,77 @@ public class PlayActivity extends BaseActivity {
         allowSwitchPlayer = true;
         play(false);
         return true;
+    }
+
+    private VodInfo.VodSeries getCurrentSeries(String flag, int index) {
+        if (flag == null || mVodInfo == null || mVodInfo.seriesMap == null) {
+            return null;
+        }
+        List<VodInfo.VodSeries> currentList = mVodInfo.seriesMap.get(flag);
+        if (currentList == null || currentList.isEmpty()) {
+            return null;
+        }
+        int safeIndex = Math.max(0, Math.min(index, currentList.size() - 1));
+        return currentList.get(safeIndex);
+    }
+
+    private int findSameEpisodeIndex(VodInfo.VodSeries currentSeries, List<VodInfo.VodSeries> targetList, int fallbackIndex) {
+        if (targetList == null || targetList.isEmpty()) {
+            return 0;
+        }
+        if (currentSeries != null && !TextUtils.isEmpty(currentSeries.name)) {
+            String currentName = normalizeEpisodeName(currentSeries.name);
+            for (int i = 0; i < targetList.size(); i++) {
+                VodInfo.VodSeries targetSeries = targetList.get(i);
+                if (targetSeries != null && currentName.equals(normalizeEpisodeName(targetSeries.name))) {
+                    return i;
+                }
+            }
+            int currentEpisode = extractEpisodeNumber(currentSeries.name);
+            if (currentEpisode >= 0) {
+                for (int i = 0; i < targetList.size(); i++) {
+                    VodInfo.VodSeries targetSeries = targetList.get(i);
+                    if (targetSeries != null && extractEpisodeNumber(targetSeries.name) == currentEpisode) {
+                        return i;
+                    }
+                }
+            }
+        }
+        return Math.max(0, Math.min(fallbackIndex, targetList.size() - 1));
+    }
+
+    private String normalizeEpisodeName(String name) {
+        if (name == null) {
+            return "";
+        }
+        return name.toLowerCase(Locale.ROOT)
+                .replaceAll("\\s+", "")
+                .replaceAll("[\\[\\]【】()（）]", "")
+                .replace("第", "")
+                .replace("集", "")
+                .replace("话", "")
+                .replace("期", "");
+    }
+
+    private int extractEpisodeNumber(String name) {
+        if (name == null) {
+            return -1;
+        }
+        Matcher episodeMatcher = Pattern.compile("(?:第)?(\\d+)(?:集|话|期|$)").matcher(name);
+        if (episodeMatcher.find()) {
+            try {
+                return Integer.parseInt(episodeMatcher.group(1));
+            } catch (NumberFormatException ignored) {
+            }
+        }
+        Matcher matcher = Pattern.compile("\\d+").matcher(name);
+        if (matcher.find()) {
+            try {
+                return Integer.parseInt(matcher.group());
+            } catch (NumberFormatException ignored) {
+            }
+        }
+        return -1;
     }
 
     void autoRetryFromLoadFoundVideoUrls() {
