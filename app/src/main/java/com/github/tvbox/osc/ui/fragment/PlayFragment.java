@@ -120,7 +120,7 @@ import xyz.doikki.videoplayer.player.VideoView;
 public class PlayFragment extends BaseLazyFragment {
     private static final int MSG_PARSE_TIMEOUT = 100;
     private static final int MSG_PLAY_TIMEOUT = 101;
-    private static final long PLAY_TIMEOUT_MS = 6 * 1000L;
+    private static final long PLAY_TIMEOUT_MS = 8 * 1000L;
     private MyVideoView mVideoView;
     private TextView mPlayLoadTip;
     private ImageView mPlayLoadErr;
