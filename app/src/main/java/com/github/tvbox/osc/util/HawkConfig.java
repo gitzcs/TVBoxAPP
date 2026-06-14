@@ -48,6 +48,7 @@ public class HawkConfig {
     public static final String LIVE_GROUP_LIST = "live_group_list";
     public static final String LIVE_API_URL = "live_api_url";
     public static final String M3U8_PURIFY = "m3u8_purify";
+    public static final String AUTO_SWITCH_LINE = "auto_switch_line";
     public static final String SCREEN_DISPLAY = "screen_display";
     public static final String LIVE_WEB_HEADER = "live_web_header";
     public static final String DEFAULT_LOAD_LIVE = "DEFAULT_LOAD_LIVE";

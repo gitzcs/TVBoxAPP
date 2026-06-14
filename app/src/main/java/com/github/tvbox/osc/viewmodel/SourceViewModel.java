@@ -3,6 +3,8 @@ package com.github.tvbox.osc.viewmodel;
 import android.text.TextUtils;
 
 import android.util.Base64;
+import android.os.Handler;
+import android.os.Looper;
 
 import androidx.annotation.NonNull;
 import androidx.lifecycle.MutableLiveData;
@@ -65,6 +67,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import okhttp3.Call;
 
@@ -81,6 +84,8 @@ public class SourceViewModel extends ViewModel {
     public MutableLiveData<AbsXml> detailResult;
     public MutableLiveData<JSONObject> playResult;
     public Gson gson;
+    private final Handler mainHandler = new Handler(Looper.getMainLooper());
+    private final AtomicInteger playRequestSeq = new AtomicInteger();
 
     public SourceViewModel() {
         sortResult = new MutableLiveData<>();
@@ -820,6 +825,7 @@ public class SourceViewModel extends ViewModel {
     }
     // playerContent
     public void getPlay(String sourceKey, String playFlag, String progressKey, String url, String subtitleKey) {
+        final int requestSeq = playRequestSeq.incrementAndGet();
         SourceBean sourceBean = ApiConfig.get().getSource(sourceKey);
         int type = sourceBean.getType();
         if (type == 3) {
@@ -852,19 +858,19 @@ public class SourceViewModel extends ViewModel {
                             result.put("subtKey", subtitleKey);
                             if (!result.has("flag"))
                                 result.put("flag", playFlag);
-                            playResult.postValue(result);
+                            postPlayResult(requestSeq, result);
                         } else {
-                            playResult.postValue(null);
+                            postPlayResult(requestSeq, null);
                         }
                     } catch (TimeoutException e) {
                         // 如果超时了，处理超时逻辑
                         LOG.i("echo--getPlay--timeout");
                         future.cancel(true);
-                        playResult.postValue(null);
+                        postPlayResult(requestSeq, null);
                     } catch (Exception e) {
                         // 捕获其他异常
                         LOG.i("echo--getPlay--error: " + e.getMessage());
-                        playResult.postValue(null);
+                        postPlayResult(requestSeq, null);
                     } finally {
                         executor.shutdown();
                     }
@@ -886,10 +892,10 @@ public class SourceViewModel extends ViewModel {
                 result.put("subtKey", subtitleKey);
                 result.put("playUrl", playUrl);
                 result.put("flag", playFlag);
-                playResult.postValue(result);
+                postPlayResult(requestSeq, result);
             } catch (Throwable th) {
                 th.printStackTrace();
-                playResult.postValue(null);
+                postPlayResult(requestSeq, null);
             }
         } else if (type == 4) {
             String extend=sourceBean.getExt();
@@ -924,22 +930,39 @@ public class SourceViewModel extends ViewModel {
                             result.put("subtKey", subtitleKey);
                             if (!result.has("flag"))
                                 result.put("flag", playFlag);
-                            playResult.postValue(result);
+                            postPlayResult(requestSeq, result);
                         } catch (Throwable th) {
                             th.printStackTrace();
-                            playResult.postValue(null);
+                            postPlayResult(requestSeq, null);
                         }
                     }
 
                     @Override
                     public void onError(Response<String> response) {
                         super.onError(response);
-                        playResult.postValue(null);
+                        postPlayResult(requestSeq, null);
                     }
                 });
         }else {
-            playResult.postValue(null);
+            postPlayResult(requestSeq, null);
         }
+    }
+
+    public void cancelPlayRequest() {
+        playRequestSeq.incrementAndGet();
+    }
+
+    private void postPlayResult(int requestSeq, JSONObject result) {
+        mainHandler.post(new Runnable() {
+            @Override
+            public void run() {
+                if (requestSeq != playRequestSeq.get()) {
+                    LOG.i("echo--getPlay--ignore stale result");
+                    return;
+                }
+                playResult.setValue(result);
+            }
+        });
     }
 
     private static final ConcurrentHashMap<String, String> extendCache = new ConcurrentHashMap<>();

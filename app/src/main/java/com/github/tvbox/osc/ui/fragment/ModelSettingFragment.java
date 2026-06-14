@@ -79,6 +79,7 @@ public class ModelSettingFragment extends BaseLazyFragment {
     private TextView tvShowPreviewText;
     private TextView tvFastSearchText;
     private TextView tvm3u8AdText;
+    private TextView tvAutoSwitchLineText;
     private TextView tvRecStyleText;
     private TextView tvIjkCachePlay;
     private TextView tvHomeDefaultShow;
@@ -102,6 +103,8 @@ public class ModelSettingFragment extends BaseLazyFragment {
         tvFastSearchText.setText(Hawk.get(HawkConfig.FAST_SEARCH_MODE, true) ? "开启" : "关闭");
         tvm3u8AdText = findViewById(R.id.m3u8AdText);
         tvm3u8AdText.setText(Hawk.get(HawkConfig.M3U8_PURIFY, false) ? "开启" : "关闭");
+        tvAutoSwitchLineText = findViewById(R.id.autoSwitchLineText);
+        tvAutoSwitchLineText.setText(Hawk.get(HawkConfig.AUTO_SWITCH_LINE, true) ? "开启" : "关闭");
         tvRecStyleText = findViewById(R.id.showRecStyleText);
         tvRecStyleText.setText(Hawk.get(HawkConfig.HOME_REC_STYLE, false) ? "是" : "否");
         tvShowPreviewText = findViewById(R.id.showPreviewText);
@@ -713,6 +716,15 @@ public class ModelSettingFragment extends BaseLazyFragment {
                 boolean is_purify=Hawk.get(HawkConfig.M3U8_PURIFY, false);
                 Hawk.put(HawkConfig.M3U8_PURIFY, !is_purify);
                 tvm3u8AdText.setText(!is_purify ? "开启" : "关闭");
+            }
+        });
+        findViewById(R.id.autoSwitchLine).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                FastClickCheckUtil.check(v);
+                boolean enable = !Hawk.get(HawkConfig.AUTO_SWITCH_LINE, true);
+                Hawk.put(HawkConfig.AUTO_SWITCH_LINE, enable);
+                tvAutoSwitchLineText.setText(enable ? "开启" : "关闭");
             }
         });
         findViewById(R.id.llHomeRecStyle).setOnClickListener(new View.OnClickListener() {
