@@ -233,6 +233,7 @@ public class FastSearchActivity extends BaseActivity {
     }
 
     private void filterResult(String spName) {
+        spListAdapter.setSelectedName(spName);
         if (TextUtils.equals(spName, "全部")) {
             mGridView.setVisibility(View.VISIBLE);
             mGridViewFilter.setVisibility(View.GONE);
@@ -345,6 +346,7 @@ public class FastSearchActivity extends BaseActivity {
         searchAdapterFilter.setNewData(new ArrayList<>());
 
         spListAdapter.reset();
+        spListAdapter.setSelectedName("全部");
         resultVods.clear();
         searchFilterKey = "";
         isFilterMode = false;

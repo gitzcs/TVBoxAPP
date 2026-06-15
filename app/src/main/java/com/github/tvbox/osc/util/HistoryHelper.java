@@ -34,6 +34,10 @@ public class HistoryHelper {
         Hawk.put(HawkConfig.SEARCH_HISTORY, history);
     }
 
+    public static void clearSearchHistory(){
+        Hawk.put(HawkConfig.SEARCH_HISTORY, new ArrayList<String>());
+    }
+
     public static void setLiveApiHistory(String value){
         ArrayList<String> history = Hawk.get(HawkConfig.LIVE_API_HISTORY, new ArrayList<String>());
         if (!history.contains(value)) {
