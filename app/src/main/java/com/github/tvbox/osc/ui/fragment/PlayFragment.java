@@ -121,7 +121,7 @@ public class PlayFragment extends BaseLazyFragment {
     private static final int MSG_PARSE_TIMEOUT = 100;
     private static final int MSG_RESOLVE_PLAY_URL_TIMEOUT = 101;
     private static final int MSG_SWITCH_LINE_PLAY_TIMEOUT = 102;
-    private static final long RESOLVE_PLAY_URL_TIMEOUT_MS = 5 * 1000L;
+    private static final long RESOLVE_PLAY_URL_TIMEOUT_MS = 8 * 1000L;
     private static final long SWITCH_LINE_PLAY_TIMEOUT_MS = 8 * 1000L;
     private MyVideoView mVideoView;
     private TextView mPlayLoadTip;
