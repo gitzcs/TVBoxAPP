@@ -122,7 +122,7 @@ public class PlayFragment extends BaseLazyFragment {
     private static final int MSG_RESOLVE_PLAY_URL_TIMEOUT = 101;
     private static final int MSG_SWITCH_LINE_PLAY_TIMEOUT = 102;
     private static final long RESOLVE_PLAY_URL_TIMEOUT_MS = 10 * 1000L;
-    private static final long SWITCH_LINE_PLAY_TIMEOUT_MS = 10 * 1000L;
+    private static final long SWITCH_LINE_PLAY_TIMEOUT_MS = 12 * 1000L;
     private MyVideoView mVideoView;
     private TextView mPlayLoadTip;
     private ImageView mPlayLoadErr;
@@ -1060,11 +1060,17 @@ public class PlayFragment extends BaseLazyFragment {
         String currentFlag = mVodInfo.playFlag;
         int currentIndex = Math.max(mVodInfo.playIndex, 0);
         VodInfo.VodSeries currentSeries = getCurrentSeries(currentFlag, currentIndex);
-        triedLineFlags.add(currentFlag);
+        if (!TextUtils.isEmpty(currentFlag)) {
+            triedLineFlags.add(currentFlag);
+        }
+        List<String> lineFlags = getLineFlagsInDisplayOrder();
+        int currentLineIndex = findLineFlagIndex(lineFlags, currentFlag);
+        int startLineIndex = currentLineIndex >= 0 ? currentLineIndex + 1 : 0;
         // 查找下一条未尝试过的线路
         String nextFlag = null;
         int nextIndex = 0;
-        for (String flag : mVodInfo.seriesMap.keySet()) {
+        for (int i = startLineIndex; i < lineFlags.size(); i++) {
+            String flag = lineFlags.get(i);
             List<VodInfo.VodSeries> seriesList = mVodInfo.seriesMap.get(flag);
             if (!triedLineFlags.contains(flag) && seriesList != null && !seriesList.isEmpty()) {
                 nextFlag = flag;
@@ -1098,6 +1104,38 @@ public class PlayFragment extends BaseLazyFragment {
         hasAutoSwitchedPlayer = false;
         play(false);
         return true;
+    }
+
+    private List<String> getLineFlagsInDisplayOrder() {
+        List<String> lineFlags = new java.util.ArrayList<>();
+        if (mVodInfo == null || mVodInfo.seriesMap == null) {
+            return lineFlags;
+        }
+        if (mVodInfo.seriesFlags != null) {
+            for (VodInfo.VodSeriesFlag flag : mVodInfo.seriesFlags) {
+                if (flag != null && !TextUtils.isEmpty(flag.name) && mVodInfo.seriesMap.containsKey(flag.name) && !lineFlags.contains(flag.name)) {
+                    lineFlags.add(flag.name);
+                }
+            }
+        }
+        for (String flag : mVodInfo.seriesMap.keySet()) {
+            if (!TextUtils.isEmpty(flag) && !lineFlags.contains(flag)) {
+                lineFlags.add(flag);
+            }
+        }
+        return lineFlags;
+    }
+
+    private int findLineFlagIndex(List<String> lineFlags, String currentFlag) {
+        if (lineFlags == null || TextUtils.isEmpty(currentFlag)) {
+            return -1;
+        }
+        for (int i = 0; i < lineFlags.size(); i++) {
+            if (currentFlag.equals(lineFlags.get(i))) {
+                return i;
+            }
+        }
+        return -1;
     }
 
     private VodInfo.VodSeries getCurrentSeries(String flag, int index) {

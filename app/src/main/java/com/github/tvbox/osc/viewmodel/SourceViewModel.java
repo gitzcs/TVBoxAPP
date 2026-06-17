@@ -111,7 +111,6 @@ public class SourceViewModel extends ViewModel {
 
     // homeContent
     public void getSort(final String sourceKey) {
-        LOG.i("echo--getSort-start");
         if (sourceKey == null) {
             sortResult.postValue(null);
             return;
@@ -120,7 +119,6 @@ public class SourceViewModel extends ViewModel {
         // 优先检查缓存
         AbsSortXml cached = sortCache.get(sourceKey);
         if (cached != null) {
-            LOG.i("echo--getSort-cached--"+sourceKey);
             int homeRec = Hawk.get(HawkConfig.HOME_REC, 0);
             boolean shouldUseCache = (homeRec != 1) || (cached.videoList != null && !cached.videoList.isEmpty());
             if (shouldUseCache) {
@@ -130,6 +128,11 @@ public class SourceViewModel extends ViewModel {
         }
 
         SourceBean sourceBean = ApiConfig.get().getSource(sourceKey);
+        if (sourceBean == null) {
+            LOG.i("echo--getSort-source-null--" + sourceKey);
+            sortResult.postValue(null);
+            return;
+        }
         if(sourceBean.getName().length()<=3 && sourceBean.getName().endsWith("搜")){
             sortResult.postValue(null);
             return;
@@ -153,9 +156,12 @@ public class SourceViewModel extends ViewModel {
                     try {
                         sortJson = future.get(20, TimeUnit.SECONDS);
                     } catch (TimeoutException e) {
+                        LOG.i("echo--getSort-timeout--" + sourceBean.getKey());
                         e.printStackTrace();
                         future.cancel(true);
                     } catch (InterruptedException | ExecutionException e) {
+                        Throwable cause = e.getCause();
+                        LOG.i("echo--getSort-error--" + sourceBean.getKey() + "--" + e.getClass().getSimpleName() + "--" + (cause != null ? cause.getClass().getSimpleName() + ":" + cause.getMessage() : e.getMessage()));
                         e.printStackTrace();
                     } finally {
                         if (sortJson != null) {
@@ -191,7 +197,7 @@ public class SourceViewModel extends ViewModel {
                     }
                 }
             };
-            spThreadPool.execute(waitResponse);
+            httpPrepareThreadPool.execute(waitResponse);
         } else if (type == 0 || type == 1) {
             OkGo.<String>get(sourceBean.getApi())
                     .tag(sourceBean.getKey() + "_sort")
@@ -1086,9 +1092,11 @@ public class SourceViewModel extends ViewModel {
                         }
                         sortFilters.put(key, sortFilter);
                     }
-                    for (MovieSort.SortData sort : data.classes.sortList) {
-                        if (sortFilters.containsKey(sort.id) && sortFilters.get(sort.id) != null) {
-                            sort.filters = sortFilters.get(sort.id);
+                    if (data.classes != null && data.classes.sortList != null) {
+                        for (MovieSort.SortData sort : data.classes.sortList) {
+                            if (sortFilters.containsKey(sort.id) && sortFilters.get(sort.id) != null) {
+                                sort.filters = sortFilters.get(sort.id);
+                            }
                         }
                     }
                 }
