@@ -5,6 +5,7 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.graphics.Typeface;
+import android.os.Build;
 import android.os.Bundle;
 import android.text.TextUtils;
 import android.util.TypedValue;
@@ -146,15 +147,7 @@ public class SearchActivity extends BaseActivity {
         if (searchPaused) {
             resumePausedSearches();
         }
-        if (hasKeyBoard) {
-            tvSearch.requestFocus();
-            tvSearch.requestFocusFromTouch();
-        }else {
-            if(!isSearchBack){
-                etSearch.requestFocus();
-                etSearch.requestFocusFromTouch();
-            }
-        }
+        requestSearchFocusWhenReady();
         applySearchWordMode();
         if (aggregateSearchMode) {
             refreshSearchHistoryWords();
@@ -162,6 +155,19 @@ public class SearchActivity extends BaseActivity {
                 hotWordAdapter.setNewData(hots);
             }
         }
+    }
+
+    private void requestSearchFocusWhenReady() {
+        final View focusView = hasKeyBoard || isSearchBack ? tvSearch : etSearch;
+        if (focusView == null) return;
+        focusView.post(new Runnable() {
+            @Override
+            public void run() {
+                if (isFinishing()) return;
+                focusView.requestFocus();
+                focusView.requestFocusFromTouch();
+            }
+        });
     }
 
     private void initView() {
@@ -398,14 +404,18 @@ public class SearchActivity extends BaseActivity {
         wordsSwitch.setText("热  门");
         wordsSwitch.setTextSize(TypedValue.COMPLEX_UNIT_PX, getResources().getDimension(R.dimen.ts_22));
         wordsSwitch.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
-        wordsSwitch.setLetterSpacing(0.08f);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            wordsSwitch.setLetterSpacing(0.08f);
+        }
     }
 
     private void setNormalWordTitle() {
         wordsSwitch.setText("热词 | 历史");
         wordsSwitch.setTextSize(TypedValue.COMPLEX_UNIT_PX, getResources().getDimension(R.dimen.ts_20));
         wordsSwitch.setTypeface(Typeface.DEFAULT, Typeface.NORMAL);
-        wordsSwitch.setLetterSpacing(0f);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            wordsSwitch.setLetterSpacing(0f);
+        }
     }
 
     private void applySearchWordMode() {

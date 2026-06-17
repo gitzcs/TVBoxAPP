@@ -275,7 +275,7 @@ public class ApiConfig {
                     public void onSuccess(Response<String> response) {
                         try {
                             String json = response.body();
-//                            LOG.i("echo-ConfigJson"+json);
+                            LOG.i("echo-ConfigJson"+json);
                             if (switchApiCollectionIfNeeded(apiUrl, json)) {
                                 FileUtils.saveCache(cache,json);
                                 loadConfig(false, callback, activity);
