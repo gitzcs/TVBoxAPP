@@ -1151,6 +1151,7 @@ public class PlayFragment extends BaseLazyFragment {
 
     private boolean allowSwitchPlayer = true;
     private boolean hasAutoSwitchedPlayer = false;
+    private boolean allowAutoSwitchLine = true;
     private boolean playbackStarted = false;
     private long playTimeoutBasePosition = 0;
     private java.util.Set<String> triedLineFlags = new java.util.HashSet<>();  // 记录已尝试过的线路
@@ -1190,7 +1191,7 @@ public class PlayFragment extends BaseLazyFragment {
     }
 
     boolean tryNextLineIfEnabled() {
-        if (Hawk.get(HawkConfig.AUTO_SWITCH_LINE, true)) return tryNextLine();
+        if (allowAutoSwitchLine && Hawk.get(HawkConfig.AUTO_SWITCH_LINE, true)) return tryNextLine();
         LOG.i("echo-autoRetry line switching disabled");
         autoRetryCount = 0;
         allowSwitchPlayer = true;
@@ -1532,6 +1533,10 @@ public class PlayFragment extends BaseLazyFragment {
     }
 
     void startSwitchLinePlayTimeout() {
+        if (!allowAutoSwitchLine) {
+            cancelPlayTimeout();
+            return;
+        }
         cancelPlayTimeout();
         LOG.i("echo-switchLinePlay start timeout");
         mHandler.sendEmptyMessageDelayed(MSG_SWITCH_LINE_PLAY_TIMEOUT, SWITCH_LINE_PLAY_TIMEOUT_MS);
@@ -1544,6 +1549,14 @@ public class PlayFragment extends BaseLazyFragment {
     void cancelPlayTimeout() {
         mHandler.removeMessages(MSG_RESOLVE_PLAY_URL_TIMEOUT);
         mHandler.removeMessages(MSG_SWITCH_LINE_PLAY_TIMEOUT);
+    }
+
+    public void setAutoSwitchLineEnabled(boolean enabled) {
+        allowAutoSwitchLine = enabled;
+        if (!enabled) {
+            cancelPlayTimeout();
+            triedLineFlags.clear();
+        }
     }
 
     void markPlaybackStarted() {

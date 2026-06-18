@@ -1271,6 +1271,9 @@ public class DetailActivity extends BaseActivity {
             windowsFull = new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
         }
         fullWindows = !fullWindows;
+        if (playFragment != null) {
+            playFragment.setAutoSwitchLineEnabled(!fullWindows);
+        }
         llPlayerFragmentContainer.setLayoutParams(fullWindows ? windowsFull : windowsPreview);
         setPreviewRoundClip(!fullWindows);
         llPlayerFragmentContainerBlock.setVisibility(fullWindows ? View.GONE : View.VISIBLE);
