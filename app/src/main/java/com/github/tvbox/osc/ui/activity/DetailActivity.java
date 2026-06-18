@@ -452,11 +452,16 @@ public class DetailActivity extends BaseActivity {
                         reload = true;
                         isAllowFull = true;
                     }
+                    boolean isCurrentPlaying = !showPreview || isCurrentPreviewPlaying(position);
+                    if (showPreview && !isCurrentPlaying) {
+                        reload = true;
+                        isAllowFull = true;
+                    }
 
                     seriesAdapter.getData().get(vodInfo.playIndex).selected = true;
                     seriesAdapter.notifyItemChanged(vodInfo.playIndex);
                     //选集全屏 想选集不全屏的注释下面一行
-                    if (showPreview && !fullWindows && !isAllowFull && playFragment.getPlayer().isPlaying())toggleFullPreview();
+                    if (showPreview && !fullWindows && isCurrentPlaying && !isAllowFull && playFragment.getPlayer().isPlaying())toggleFullPreview();
                     if (!showPreview || reload) {
                         jumpToPlay();
                         firstReverse=false;
@@ -1093,6 +1098,22 @@ public class DetailActivity extends BaseActivity {
         }
         int safeIndex = Math.max(0, Math.min(playingVodInfo.playIndex, playingList.size() - 1));
         return playingList.get(safeIndex);
+    }
+
+    private boolean isCurrentPreviewPlaying(int position) {
+        if (!showPreview || previewVodInfo == null || vodInfo == null || vodInfo.seriesMap == null || TextUtils.isEmpty(vodInfo.playFlag)) {
+            return false;
+        }
+        if (!TextUtils.equals(vodInfo.playFlag, previewVodInfo.playFlag) || previewVodInfo.playIndex != position) {
+            return false;
+        }
+        List<VodInfo.VodSeries> currentList = vodInfo.seriesMap.get(vodInfo.playFlag);
+        if (currentList == null || position < 0 || position >= currentList.size()) {
+            return false;
+        }
+        VodInfo.VodSeries currentSeries = currentList.get(position);
+        VodInfo.VodSeries previewSeries = getPlayingSeries(previewVodInfo, previewVodInfo.playFlag);
+        return currentSeries != null && previewSeries != null && TextUtils.equals(currentSeries.url, previewSeries.url);
     }
 
     private int findSameEpisodeIndex(VodInfo.VodSeries currentSeries, List<VodInfo.VodSeries> targetList, int fallbackIndex) {
