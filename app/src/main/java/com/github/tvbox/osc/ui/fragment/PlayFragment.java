@@ -333,7 +333,7 @@ public class PlayFragment extends BaseLazyFragment {
             @Override
             public void saveProgress(String url, long progress) {
                 CacheManager.save(MD5.string2MD5(url), progress);
-                if (webPlayUrl != null && isPlaybackStarted()) {
+                if (webPlayUrl != null && progress > 0) {
                     markPlaybackStarted();
                     hideTipOnUiThread();
                 }
@@ -348,7 +348,7 @@ public class PlayFragment extends BaseLazyFragment {
         mVideoView.addOnStateChangeListener(new VideoView.SimpleOnStateChangeListener() {
             @Override
             public void onPlayStateChanged(int playState) {
-                if (webPlayUrl != null && hasPlaybackProgress(mVideoView.getCurrentPosition())) {
+                if (webPlayUrl != null && isStartedPlayState(playState)) {
                     markPlaybackStarted();
                     hideTipOnUiThread();
                 }
@@ -1567,7 +1567,12 @@ public class PlayFragment extends BaseLazyFragment {
     boolean isPlaybackStarted() {
         if (playbackStarted) return true;
         if (mVideoView == null) return false;
-        return hasPlaybackProgress(mVideoView.getCurrentPosition());
+        int state = mVideoView.getCurrentPlayState();
+        return isStartedPlayState(state) || hasPlaybackProgress(mVideoView.getCurrentPosition()) || mVideoView.isPlaying();
+    }
+
+    boolean isStartedPlayState(int state) {
+        return state == VideoView.STATE_PREPARED || state == VideoView.STATE_BUFFERED || state == VideoView.STATE_PLAYING;
     }
 
     boolean hasPlaybackProgress(long progress) {
