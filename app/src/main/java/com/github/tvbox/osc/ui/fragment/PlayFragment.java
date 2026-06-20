@@ -1236,6 +1236,9 @@ public class PlayFragment extends BaseLazyFragment {
             return false;
         }
         final String flagToSwitch = nextFlag;
+        final String preProgressKey = progressKey;
+        final long savedProgress = TextUtils.isEmpty(preProgressKey) ? 0 : getSavedProgress(preProgressKey);
+        final long preProgress = Math.max(savedProgress, mVideoView == null ? 0 : mVideoView.getCurrentPosition());
         LOG.i("echo-autoRetry switch line: " + mVodInfo.playFlag + " -> " + flagToSwitch);
         // 显示切换线路提示
         if (isAdded()) {
@@ -1252,6 +1255,8 @@ public class PlayFragment extends BaseLazyFragment {
         autoRetryCount = 0;
         allowSwitchPlayer = true;
         hasAutoSwitchedPlayer = false;
+        inheritProgressKey = preProgressKey;
+        inheritProgress = preProgress;
         play(false);
         return true;
     }
@@ -1411,6 +1416,7 @@ public class PlayFragment extends BaseLazyFragment {
             CacheManager.delete(MD5.string2MD5(progressKey), 0);
             CacheManager.delete(MD5.string2MD5(subtitleCacheKey), 0);
         }else{
+            inheritProgressIfNeeded();
             try{
                 int playerType = mVodPlayerCfg.getInt("pl");
                 if(playerType==1){
@@ -1458,9 +1464,26 @@ public class PlayFragment extends BaseLazyFragment {
         sourceViewModel.getPlay(sourceKey, mVodInfo.playFlag, progressKey, vs.url, subtitleCacheKey);
     }
 
+    private void inheritProgressIfNeeded() {
+        try {
+            if (TextUtils.isEmpty(inheritProgressKey) || TextUtils.isEmpty(progressKey)) return;
+            if (TextUtils.equals(inheritProgressKey, progressKey)) return;
+            if (inheritProgress <= 0) return;
+            Object targetCache = CacheManager.getCache(MD5.string2MD5(progressKey));
+            if (targetCache == null) {
+                CacheManager.save(MD5.string2MD5(progressKey), inheritProgress);
+            }
+        } finally {
+            inheritProgressKey = null;
+            inheritProgress = 0;
+        }
+    }
+
     private String playSubtitle;
     private String subtitleCacheKey;
     private String progressKey;
+    private String inheritProgressKey;
+    private long inheritProgress;
     private String parseFlag;
     private String webUrl;
     private String webUserAgent;
