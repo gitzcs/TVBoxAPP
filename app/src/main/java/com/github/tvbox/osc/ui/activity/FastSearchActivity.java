@@ -2,6 +2,7 @@ package com.github.tvbox.osc.ui.activity;
 
 import android.content.Intent;
 import android.graphics.Typeface;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Looper;
 import android.text.SpannableString;
@@ -64,7 +65,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public class FastSearchActivity extends BaseActivity {
     private static final int SEARCH_THREAD_COUNT = 6;
-    private static final int SEARCH_MAX_THREAD_COUNT = 18;
+    private static final int SEARCH_MAX_THREAD_COUNT = Build.VERSION.SDK_INT >= 30 ? 18 : 12;
     private static final int SEARCH_PUMP_SECONDS = 2;
     private static final int SEARCH_NEXT_BATCH_SECONDS = 3;
     private static final int SEARCH_SITE_TIMEOUT_SECONDS = 10;
