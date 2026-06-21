@@ -47,7 +47,7 @@ public class M3u8 {
     }
 
     public static String purify(String tsUrlPre, String m3u8content) {
-        LOG.i("echo-fixAdM3u8 m3u8content: " +m3u8content);
+//        LOG.i("echo-fixAdM3u8 m3u8content: " +m3u8content);
         long start = System.currentTimeMillis();
         currentAdCount = 0;
         if (null == m3u8content || m3u8content.length() == 0) return null;
