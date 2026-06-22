@@ -145,6 +145,7 @@ public class PlayFragment extends BaseLazyFragment {
     private DanmakuContext mDanmakuContext;
     private String danmuText;
     private final AtomicInteger danmuLoadSeq = new AtomicInteger();
+    private int danmuStartedSeq = -1;
 
     private final long videoDuration = -1;
 
@@ -220,6 +221,7 @@ public class PlayFragment extends BaseLazyFragment {
     private void prepareDanmu(String danmu) {
         if (TextUtils.isEmpty(danmu)) return;
         int seq = danmuLoadSeq.incrementAndGet();
+        danmuStartedSeq = -1;
         if (danmuExecutor == null || danmuExecutor.isShutdown()) {
             danmuExecutor = Executors.newSingleThreadExecutor();
         }
@@ -240,18 +242,9 @@ public class PlayFragment extends BaseLazyFragment {
                     }
                     mDanmuView.prepare(parser, mDanmakuContext);
                     mDanmuView.setVisibility(DanmuHelper.isOpen() ? View.VISIBLE : View.GONE);
-                    if (mVideoView != null && mVideoView.isPlaying()) {
-                        mDanmuView.seekTo(mVideoView.getCurrentPosition());
-                    }
-                    mDanmuView.postDelayed(() -> {
-                        if (seq == danmuLoadSeq.get()
-                                && mVideoView != null
-                                && mVideoView.isPlaying()
-                                && mDanmuView != null
-                                && mDanmuView.isPrepared()) {
-                            mDanmuView.start(mVideoView.getCurrentPosition());
-                        }
-                    }, 300);
+                    startDanmuIfReady(seq);
+                    mDanmuView.postDelayed(() -> startDanmuIfReady(seq), 300);
+                    mDanmuView.postDelayed(() -> startDanmuIfReady(seq), 1000);
                 } catch (Throwable th) {
                     LOG.e("echo-danmu prepare error: " + th.getMessage());
                     mDanmuView.setVisibility(View.GONE);
@@ -260,10 +253,33 @@ public class PlayFragment extends BaseLazyFragment {
         });
     }
 
+    private void startDanmuIfReady(int seq) {
+        if (seq != danmuLoadSeq.get()
+                || seq == danmuStartedSeq
+                || mVideoView == null
+                || !mVideoView.isPlaying()
+                || mDanmuView == null
+                || !mDanmuView.isPrepared()
+                || !DanmuHelper.isOpen()) {
+            return;
+        }
+        long position = mVideoView.getCurrentPosition();
+        mDanmuView.setVisibility(View.VISIBLE);
+        mDanmuView.seekTo(position);
+        mDanmuView.start(position);
+        danmuStartedSeq = seq;
+        LOG.i("echo-danmu start at: " + position);
+    }
+
+    private void startDanmuIfReady() {
+        startDanmuIfReady(danmuLoadSeq.get());
+    }
+
     private void resetDanmuState() {
         DanmakuApi.cancel();
         danmuText = "";
         danmuLoadSeq.incrementAndGet();
+        danmuStartedSeq = -1;
         if (mController != null) mController.setHasDanmu(false);
         releaseDanmuView();
     }
@@ -355,6 +371,7 @@ public class PlayFragment extends BaseLazyFragment {
                     markPlaybackStarted();
                     hideTipOnUiThread();
                 }
+                startDanmuIfReady();
             }
         });
         mController.setListener(new VodController.VodControlListener() {
@@ -432,6 +449,8 @@ public class PlayFragment extends BaseLazyFragment {
             @Override
             public void prepared() {
                 initSubtitleView();
+                if (mVideoView != null) mVideoView.prepared();
+                startDanmuIfReady();
             }
             @Override
             public void startPlayUrl(String url, HashMap<String, String> headers) {

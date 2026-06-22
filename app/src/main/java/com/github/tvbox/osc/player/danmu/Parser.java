@@ -218,13 +218,16 @@ public class Parser extends BaseDanmakuParser {
     @Override
     protected Danmakus parse() {
         Danmakus result = new Danmakus(IDanmakus.ST_BY_TIME);
+        int renderedCount = 0;
         for (Danmu.Data data : danmu.getData()) {
             BaseDanmaku danmaku = createDanmaku(data);
             if (danmaku == null) continue;
             synchronized (result.obtainSynchronizer()) {
                 result.addItem(danmaku);
             }
+            renderedCount++;
         }
+        LOG.i("echo-danmu rendered count: " + renderedCount);
         return result;
     }
 
