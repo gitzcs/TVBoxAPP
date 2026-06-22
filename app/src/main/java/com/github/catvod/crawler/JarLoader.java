@@ -369,14 +369,23 @@ public class JarLoader {
     }
 
     public Object[] proxyInvoke(Map<String,String> params) {
-        try {
-            Method proxyFun = proxyMethods.get(recentJarKey);
-            if (proxyFun != null) {
-                return (Object[]) proxyFun.invoke(null, params);
-            }
-        } catch (Throwable th) {
-            th.printStackTrace();
+        Object[] result = invokeProxy(proxyMethods.get(recentJarKey), params);
+        if (result != null) return result;
+        for (String key : proxyMethods.keySet()) {
+            if (key.equals(recentJarKey)) continue;
+            result = invokeProxy(proxyMethods.get(key), params);
+            if (result != null) return result;
         }
         return null;
+    }
+
+    private Object[] invokeProxy(Method proxyFun, Map<String, String> params) {
+        if (proxyFun == null) return null;
+        try {
+            return (Object[]) proxyFun.invoke(null, params);
+        } catch (Throwable th) {
+            th.printStackTrace();
+            return null;
+        }
     }
 }

@@ -269,8 +269,8 @@ public class ApiConfig {
         }
         String configUrl=configUrl(apiUrl);
         // 使用内部存储，将当前配置地址写入到应用的私有目录中
-        File configUrlFile = new File(App.getInstance().getFilesDir().getAbsolutePath() + "/config_url");
-        FileUtils.saveCache(configUrlFile,configUrl);
+//        File configUrlFile = new File(App.getInstance().getFilesDir().getAbsolutePath() + "/config_url");
+//        FileUtils.saveCache(configUrlFile,configUrl);
 
         OkGo.<String>get(configUrl)
                 .headers("User-Agent", userAgent)
@@ -280,7 +280,7 @@ public class ApiConfig {
                     public void onSuccess(Response<String> response) {
                         try {
                             String json = response.body();
-                            LOG.i("echo-ConfigJson"+json);
+//                            LOG.i("echo-ConfigJson"+json);
                             if (switchApiCollectionIfNeeded(apiUrl, json)) {
                                 FileUtils.saveCache(cache,json);
                                 loadConfig(false, callback, activity);

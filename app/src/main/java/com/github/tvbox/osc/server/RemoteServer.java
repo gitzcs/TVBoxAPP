@@ -6,11 +6,13 @@ import android.annotation.SuppressLint;
 import android.content.Context;
 import android.net.wifi.WifiManager;
 import android.os.Environment;
+import android.text.TextUtils;
 import android.util.Base64;
 
 import com.github.tvbox.osc.R;
 import com.github.tvbox.osc.api.ApiConfig;
 import com.github.tvbox.osc.base.App;
+import com.github.tvbox.osc.bean.VodInfo;
 import com.github.tvbox.osc.event.RefreshEvent;
 import com.github.tvbox.osc.event.ServerEvent;
 import com.github.tvbox.osc.util.FileUtils;
@@ -18,6 +20,7 @@ import com.github.tvbox.osc.util.LOG;
 import com.github.tvbox.osc.util.OkGoHelper;
 import com.github.tvbox.osc.util.Proxy;
 import com.google.gson.JsonArray;
+import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 
 import org.greenrobot.eventbus.EventBus;
@@ -147,6 +150,7 @@ public class RemoteServer extends NanoHTTPD {
                     params.putAll(session.getHeaders());
                     if (params.containsKey("do")) {
                         boolean isDanmuProxy = "danmu".equals(params.get("do"));
+                        if (isDanmuProxy) normalizeDanmuParams(params);
                         if (isDanmuProxy) LOG.i("echo-proxy-danmu params: " + params.toString());
                         Object[] rs = ApiConfig.get().proxyLocal(params);
                         return getProxy(rs);
@@ -300,6 +304,44 @@ public class RemoteServer extends NanoHTTPD {
         }
         //default page: index.html
         return getRequestList.get(0).doResponse(session, "", null, null);
+    }
+
+    private void normalizeDanmuParams(Map<String, String> params) {
+        try {
+            VodInfo vodInfo = App.getInstance().getVodInfo();
+            if (vodInfo == null) return;
+            if (!TextUtils.isEmpty(vodInfo.name)) params.put("vodName", vodInfo.name);
+            if (!isNumeric(params.get("vodIndex"))) {
+                String episode = getCurrentEpisodeIndex(vodInfo);
+                if (!TextUtils.isEmpty(episode)) params.put("vodIndex", episode);
+            }
+        } catch (Throwable th) {
+            LOG.e("echo-proxy-danmu normalize error: " + th.getMessage());
+        }
+    }
+
+    private String getCurrentEpisodeIndex(VodInfo vodInfo) {
+        if (vodInfo.seriesMap != null && !TextUtils.isEmpty(vodInfo.playFlag)) {
+            java.util.List<VodInfo.VodSeries> series = vodInfo.seriesMap.get(vodInfo.playFlag);
+            if (series != null && vodInfo.playIndex >= 0 && vodInfo.playIndex < series.size()) {
+                VodInfo.VodSeries current = series.get(vodInfo.playIndex);
+                if (current != null && !TextUtils.isEmpty(current.name)) {
+                    String number = extractNumber(current.name);
+                    return TextUtils.isEmpty(number) ? current.name : number;
+                }
+            }
+        }
+        return String.valueOf(Math.max(0, vodInfo.playIndex) + 1);
+    }
+
+    private boolean isNumeric(String text) {
+        return !TextUtils.isEmpty(text) && text.matches("\\d+");
+    }
+
+    private String extractNumber(String text) {
+        if (TextUtils.isEmpty(text)) return "";
+        Matcher matcher = getPattern("\\d+").matcher(text);
+        return matcher.find() ? matcher.group() : "";
     }
 
     public void setDataReceiver(DataReceiver receiver) {
