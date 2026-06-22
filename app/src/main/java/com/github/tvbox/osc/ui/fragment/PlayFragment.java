@@ -130,7 +130,7 @@ public class PlayFragment extends BaseLazyFragment {
     private static final int MSG_PARSE_TIMEOUT = 100;
     private static final int MSG_RESOLVE_PLAY_URL_TIMEOUT = 101;
     private static final int MSG_SWITCH_LINE_PLAY_TIMEOUT = 102;
-    private static final long RESOLVE_PLAY_URL_TIMEOUT_MS = 10 * 1000L;
+    private static final long RESOLVE_PLAY_URL_TIMEOUT_MS = 12 * 1000L;
     private static final long SWITCH_LINE_PLAY_TIMEOUT_MS = 12 * 1000L;
     private MyVideoView mVideoView;
     private TextView mPlayLoadTip;
@@ -160,6 +160,8 @@ public class PlayFragment extends BaseLazyFragment {
         }
         if (event.type == RefreshEvent.TYPE_SET_DANMU_SETTINGS) {
             setDanmuViewSettings(event.obj instanceof Boolean && (Boolean) event.obj);
+        } else if (event.type == RefreshEvent.TYPE_DANMU_REFRESH) {
+            checkDanmu(event.obj instanceof String ? (String) event.obj : "");
         }
     }
 

@@ -199,6 +199,8 @@ public class RemoteServer extends NanoHTTPD {
                     }
                     EventBus.getDefault().post(new RefreshEvent(RefreshEvent.TYPE_PUSH_URL, url));
                     return NanoHTTPD.newFixedLengthResponse(NanoHTTPD.Response.Status.OK, NanoHTTPD.MIME_PLAINTEXT, "ok");    
+                } else if (fileName.equals("/action")) {
+                    return handleAction(session.getParms());
                 }  else if (fileName.startsWith("/proxyM3u8")) {
 //                    com.github.tvbox.osc.util.LOG.i("echo-proxyM3u8 length:" + (m3u8Content == null ? 0 : m3u8Content.length()));
                     return NanoHTTPD.newFixedLengthResponse(Response.Status.OK, "application/vnd.apple.mpegurl", m3u8Content == null ? "" : m3u8Content);
@@ -304,6 +306,23 @@ public class RemoteServer extends NanoHTTPD {
         }
         //default page: index.html
         return getRequestList.get(0).doResponse(session, "", null, null);
+    }
+
+    private Response handleAction(Map<String, String> params) {
+        if (params == null) return createPlainTextResponse(Response.Status.OK, "ok");
+        String action = params.get("do");
+        if ("refresh".equals(action)) {
+            handleRefreshAction(params);
+        }
+        return createPlainTextResponse(Response.Status.OK, "ok");
+    }
+
+    private void handleRefreshAction(Map<String, String> params) {
+        String type = params.get("type");
+        if ("danmaku".equals(type)) {
+            String path = params.get("path");
+            EventBus.getDefault().post(new RefreshEvent(RefreshEvent.TYPE_DANMU_REFRESH, path == null ? "" : path));
+        }
     }
 
     private void normalizeDanmuParams(Map<String, String> params) {
