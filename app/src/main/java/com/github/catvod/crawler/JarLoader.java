@@ -20,6 +20,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -86,6 +87,7 @@ public class JarLoader {
                 cacheDir.mkdirs();
             final DexClassLoader classLoader = new DexClassLoader(jar, cacheDir.getAbsolutePath(), null, App.getInstance().getClassLoader());
             injectProxyPort(classLoader);
+            injectProtectedClassLoader(classLoader);
             int count = 0;
             do {
                 try {
@@ -207,6 +209,51 @@ public class JarLoader {
         invokeSaveConfig(classInit);
         invokeNoArg(classInit, "replaceCloudDiskNames");
         invokeStartGoProxy(classInit);
+    }
+
+    private void injectProtectedClassLoader(DexClassLoader classLoader) {
+        if (classLoader == null) return;
+        injectClassLoaderFields(classLoader, "com.github.catvod.spider.Init");
+        injectClassLoaderFields(classLoader, "com.github.catvod.spider.DexNative");
+        injectClassLoaderFields(classLoader, "com.github.catvod.spider.BaseSpiderGuard");
+    }
+
+    private void injectClassLoaderFields(DexClassLoader classLoader, String className) {
+        try {
+            Class<?> cls = classLoader.loadClass(className);
+            setClassLoaderFields(cls, null, classLoader);
+            Object singleton = getSingleton(cls);
+            if (singleton != null) {
+                setClassLoaderFields(cls, singleton, classLoader);
+            }
+        } catch (Throwable ignored) {
+        }
+    }
+
+    private Object getSingleton(Class<?> cls) {
+        try {
+            Method get = cls.getMethod("get");
+            return get.invoke(null);
+        } catch (Throwable ignored) {
+            return null;
+        }
+    }
+
+    private void setClassLoaderFields(Class<?> cls, Object instance, DexClassLoader classLoader) {
+        try {
+            for (Field field : cls.getDeclaredFields()) {
+                if (!ClassLoader.class.isAssignableFrom(field.getType()) && field.getType() != Object.class) continue;
+                boolean isStatic = Modifier.isStatic(field.getModifiers());
+                if (instance == null && !isStatic) continue;
+                if (instance != null && isStatic) continue;
+                field.setAccessible(true);
+                Object current = field.get(instance);
+                if (current == null) {
+                    field.set(instance, classLoader);
+                }
+            }
+        } catch (Throwable ignored) {
+        }
     }
 
     private void invokeSaveConfig(Class<?> classInit) {
@@ -357,6 +404,7 @@ public class JarLoader {
         try {
             ensureDefaultConfig();
             Log.i("JarLoader", "echo-getSpider 加载spider: " + key);
+            injectProtectedClassLoader(classLoader);
             Spider sp = (Spider) classLoader.loadClass("com.github.catvod.spider." + clsKey).newInstance();
             sp.siteKey = key;
             sp.initApi(new SpiderApi());
