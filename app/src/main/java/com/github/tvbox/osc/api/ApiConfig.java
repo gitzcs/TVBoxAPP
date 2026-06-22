@@ -77,6 +77,7 @@ public class ApiConfig {
     private String spider = null;
     private String currentPyKey = "";
     private String currentLivePyKey = "";
+    private String currentPlaySourceKey = "";
     public String wallpaper = "";
     private String danmaku = "";
 
@@ -1092,20 +1093,34 @@ public class ApiConfig {
         if ("py".equals(param.get("do"))) {
             return pyLoader.proxyInvoke(param, getCurrentPyKey());
         }
-        SourceBean sourceBean = ApiConfig.get().getHomeSourceBean();
+        SourceBean sourceBean = getCurrentProxySource(param);
         String apiString = sourceBean.getApi();
         return apiString.contains(".py") ? pyLoader.proxyInvoke(param, getCurrentPyKey()) : jarLoader.proxyInvoke(param);
     }
 
-    private String getCurrentPyKey() {
-        if (!TextUtils.isEmpty(currentPyKey)) {
-            return currentPyKey;
+    private SourceBean getCurrentProxySource(Map<String, String> param) {
+        String siteKey = param.get("siteKey");
+        if (TextUtils.isEmpty(siteKey)) {
+            siteKey = currentPlaySourceKey;
+            if (!TextUtils.isEmpty(siteKey)) param.put("siteKey", siteKey);
         }
-        SourceBean sourceBean = ApiConfig.get().getHomeSourceBean();
+        SourceBean sourceBean = TextUtils.isEmpty(siteKey) ? null : getSource(siteKey);
+        return sourceBean == null ? ApiConfig.get().getHomeSourceBean() : sourceBean;
+    }
+
+    public void setCurrentPlaySourceKey(String sourceKey) {
+        currentPlaySourceKey = sourceKey == null ? "" : sourceKey;
+    }
+
+    private String getCurrentPyKey() {
+        SourceBean sourceBean = getCurrentProxySource(new HashMap<String, String>());
         if (sourceBean.getApi().contains(".py")) {
-            currentPyKey = sourceBean.getKey();
-            pyLoader.getSpider(currentPyKey, sourceBean.getApi(), sourceBean.getExt());
-            pyLoader.setRecentPyKey(currentPyKey);
+            if (!sourceBean.getKey().equals(currentPyKey)) {
+                currentPyKey = sourceBean.getKey();
+                pyLoader.getSpider(currentPyKey, sourceBean.getApi(), sourceBean.getExt());
+                pyLoader.setRecentPyKey(currentPyKey);
+            }
+            return currentPyKey;
         }
         return currentPyKey;
     }
