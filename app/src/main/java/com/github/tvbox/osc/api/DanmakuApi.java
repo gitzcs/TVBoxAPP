@@ -28,7 +28,8 @@ import okhttp3.Response;
 public class DanmakuApi {
     private static final String TAG = DanmakuApi.class.getSimpleName();
     private static final String BUILTIN_API = "https://saas-oa.shyeguang.cn";
-    private static final long BUILTIN_TIMEOUT = TimeUnit.SECONDS.toMillis(60);
+    private static final String USE_DEFAULT_KEY = "danmu_api_use_default";
+    private static final long BUILTIN_TIMEOUT = TimeUnit.SECONDS.toMillis(20);
     private static final int BUILTIN_MAX_RETRY = 2;
     private static final Handler handler = new Handler(Looper.getMainLooper());
 
@@ -40,13 +41,35 @@ public class DanmakuApi {
         return DanmuHelper.isOpen() && !TextUtils.isEmpty(getApiUrl());
     }
 
+    public static String getDisplayApiUrl() {
+        if (isUseDefault()) return "";
+        String custom = Hawk.get(HawkConfig.DANMU_API, "");
+        if (!TextUtils.isEmpty(custom)) return custom.trim();
+        String config = ApiConfig.get().getDanmaku().trim();
+        return TextUtils.isEmpty(config) ? "" : config;
+    }
+
+    public static boolean isUseDefault() {
+        return Hawk.get(USE_DEFAULT_KEY, false);
+    }
+
+    public static void setUseDefault(boolean useDefault) {
+        Hawk.put(USE_DEFAULT_KEY, useDefault);
+        if (useDefault) Hawk.put(HawkConfig.DANMU_API, "");
+    }
+
+    public static void setCustomApi(String api) {
+        Hawk.put(USE_DEFAULT_KEY, false);
+        Hawk.put(HawkConfig.DANMU_API, api);
+    }
+
     public static void search(String name, String episode, SearchCallback callback) {
         String apiUrl = getApiUrl();
 //        LOG.i("echo-danmaku search apiUrl: " + apiUrl);
         if (TextUtils.isEmpty(apiUrl) || callback == null) return;
         try {
             OkHttp.cancel(TAG);
-            if (isBuiltinApi(apiUrl)) {
+            if (!hasPlaceholder(apiUrl)) {
                 searchBuiltin(apiUrl, name, episode, callback, 0);
                 return;
             }
@@ -200,7 +223,7 @@ public class DanmakuApi {
     private static Call newCall(String apiUrl, String name, String episode) {
         name = Trans.t2s(name == null ? "" : name);
         episode = Trans.t2s(episode == null ? "" : episode);
-        if (apiUrl.contains("{name}") || apiUrl.contains("{episode}")) {
+        if (hasPlaceholder(apiUrl)) {
             return OkHttp.newCall(apiUrl.replace("{name}", name).replace("{episode}", episode), TAG);
         }
         ArrayMap<String, String> params = new ArrayMap<>();
@@ -210,15 +233,16 @@ public class DanmakuApi {
     }
 
     private static String getApiUrl() {
+        if (isUseDefault()) return BUILTIN_API;
         String custom = Hawk.get(HawkConfig.DANMU_API, "");
         if (!TextUtils.isEmpty(custom)) return custom.trim();
         String config = ApiConfig.get().getDanmaku().trim();
-        return TextUtils.isEmpty(config) ? BUILTIN_API : config;
+        if (!TextUtils.isEmpty(config)) return config;
+        return BUILTIN_API;
     }
 
-    private static boolean isBuiltinApi(String apiUrl) {
-        if (TextUtils.isEmpty(apiUrl)) return false;
-        return normalizeBaseUrl(apiUrl).equals(BUILTIN_API);
+    private static boolean hasPlaceholder(String apiUrl) {
+        return !TextUtils.isEmpty(apiUrl) && (apiUrl.contains("{name}") || apiUrl.contains("{episode}"));
     }
 
     private static String normalizeBaseUrl(String apiUrl) {

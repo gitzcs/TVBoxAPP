@@ -19,6 +19,7 @@ import androidx.recyclerview.widget.DiffUtil;
 
 import com.github.tvbox.osc.R;
 import com.github.tvbox.osc.api.ApiConfig;
+import com.github.tvbox.osc.api.DanmakuApi;
 import com.github.tvbox.osc.base.BaseActivity;
 import com.github.tvbox.osc.base.BaseLazyFragment;
 import com.github.tvbox.osc.bean.IJKCode;
@@ -892,8 +893,17 @@ public class ModelSettingFragment extends BaseLazyFragment {
 
     private void refreshDanmuApiText() {
         if (tvDanmuApiText == null) return;
-        String api = Hawk.get(HawkConfig.DANMU_API, "");
-        tvDanmuApiText.setText(api.isEmpty() ? "默认" : api);
+        if (DanmakuApi.isUseDefault()) {
+            tvDanmuApiText.setText("默认");
+            return;
+        }
+        String custom = Hawk.get(HawkConfig.DANMU_API, "");
+        if (!custom.isEmpty()) {
+            tvDanmuApiText.setText("自定义");
+            return;
+        }
+        String config = ApiConfig.get().getDanmaku();
+        tvDanmuApiText.setText(config.isEmpty() ? "默认" : "接口");
     }
 
     private void updateApiRowWeight(boolean showLine) {
