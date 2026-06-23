@@ -870,6 +870,16 @@ public class ModelSettingFragment extends BaseLazyFragment {
         }, 2500);
     }
 
+    private void restartAppAfterCacheCleared() {
+        Toast.makeText(mContext, "缓存已清空,即将重启到主页!", Toast.LENGTH_LONG).show();
+        new Handler().postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                restartApp();
+            }
+        }, 2500);
+    }
+
     private void refreshApiLineText() {
         if (tvApiLine == null) return;
         ArrayList<String> apiLines = Hawk.get(HawkConfig.API_LINE_LIST, new ArrayList<String>());
@@ -1096,9 +1106,17 @@ public class ModelSettingFragment extends BaseLazyFragment {
                 }
             } catch (Exception e) {
                 e.printStackTrace();
+            } finally {
+                if (mActivity != null) {
+                    mActivity.runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            restartAppAfterCacheCleared();
+                        }
+                    });
+                }
             }
         }).start();
-        Toast.makeText(getContext(), "播放&Spider缓存已清空", Toast.LENGTH_LONG).show();
     }
 
 
