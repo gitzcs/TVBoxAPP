@@ -19,6 +19,7 @@ import com.github.tvbox.osc.bean.LiveChannelItem;
 import com.github.tvbox.osc.bean.LiveSettingGroup;
 import com.github.tvbox.osc.bean.LiveSettingItem;
 import com.github.tvbox.osc.bean.ParseBean;
+import com.github.tvbox.osc.bean.ProxyRule;
 import com.github.tvbox.osc.bean.SourceBean;
 import com.github.tvbox.osc.server.ControlManager;
 import com.github.tvbox.osc.util.AES;
@@ -765,6 +766,8 @@ public class ApiConfig {
             }
         }
 
+        loadProxyRules(infoJson);
+
         //video parse rule for host
         if (infoJson.has("rules")) {
             VideoParseRuler.clearRule();
@@ -1472,6 +1475,19 @@ public class ApiConfig {
 
     public Map<String,String> getMyHost() {
         return myHosts;
+    }
+
+    private void loadProxyRules(JsonObject infoJson) {
+        if (!infoJson.has("proxy")) {
+            OkGoHelper.setProxyList(null);
+            return;
+        }
+        try {
+            OkGoHelper.setProxyList(ProxyRule.arrayFrom(infoJson.get("proxy")));
+        } catch (Throwable th) {
+            th.printStackTrace();
+            OkGoHelper.setProxyList(null);
+        }
     }
 
     public void clearJarLoader()
