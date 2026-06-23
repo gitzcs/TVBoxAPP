@@ -92,7 +92,7 @@ public class ApiConfig {
 
     private final String requestAccept = "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9";
 
-    private String defaultLiveObjString="{\"lives\":[{\"name\":\"txt_m3u\",\"type\":0,\"url\":\"txt_m3u_url\"}]}";
+    private final String defaultLiveObjString = "{\"lives\":[{\"name\":\"txt_m3u\",\"type\":0,\"url\":\"txt_m3u_url\"}]}";
     private ApiConfig() {
         clearLoader();
         sourceBeanList = new LinkedHashMap<>();
@@ -186,8 +186,7 @@ public class ApiConfig {
         if(!liveApiUrl.isEmpty() && !liveApiUrl.equals(apiUrl)){
             if(liveApiUrl.contains(".txt") || liveApiUrl.contains(".m3u") || liveApiUrl.contains("=txt") || liveApiUrl.contains("=m3u")){
                 initLiveSettings();
-                defaultLiveObjString = defaultLiveObjString.replace("txt_m3u_url",liveApiConfigUrl);
-                parseLiveJson(liveApiUrl,defaultLiveObjString);
+                parseLiveJson(liveApiUrl, defaultLiveObjString.replace("txt_m3u_url", liveApiConfigUrl));
             }else {
                 File live_cache = new File(App.getInstance().getFilesDir().getAbsolutePath() + "/" + MD5.encode(liveApiUrl));
                 LOG.i("echo-加载独立直播");
@@ -334,6 +333,91 @@ public class ApiConfig {
                         return result;
                     }
                 });
+    }
+
+    public void loadLiveConfig(boolean useCache, LoadConfigCallback callback) {
+        String apiUrl = Hawk.get(HawkConfig.LIVE_API_URL, "");
+        if (apiUrl.isEmpty()) {
+            callback.error("-1");
+            return;
+        }
+        String liveApiConfigUrl = configUrl(apiUrl);
+        if (apiUrl.contains(".txt") || apiUrl.contains(".m3u") || apiUrl.contains("=txt") || apiUrl.contains("=m3u")) {
+            initLiveSettings();
+            parseLiveJson(apiUrl, defaultLiveObjString.replace("txt_m3u_url", liveApiConfigUrl));
+            callback.success();
+            return;
+        }
+        File live_cache = new File(App.getInstance().getFilesDir().getAbsolutePath() + "/" + MD5.encode(apiUrl));
+        LOG.i("echo-load live config");
+        if (useCache && live_cache.exists()) {
+            try {
+                parseLiveJson(apiUrl, live_cache);
+                callback.success();
+                return;
+            } catch (Throwable th) {
+                th.printStackTrace();
+            }
+        }
+        OkGo.<String>get(liveApiConfigUrl)
+                .headers("User-Agent", userAgent)
+                .headers("Accept", requestAccept)
+                .execute(new AbsCallback<String>() {
+                    @Override
+                    public void onSuccess(Response<String> response) {
+                        try {
+                            String json = response.body();
+                            parseLiveJson(apiUrl, json);
+                            FileUtils.saveCache(live_cache, json);
+                            callback.success();
+                        } catch (Throwable th) {
+                            th.printStackTrace();
+                        }
+                    }
+
+                    @Override
+                    public void onError(Response<String> response) {
+                        super.onError(response);
+                        if (live_cache.exists()) {
+                            try {
+                                parseLiveJson(apiUrl, live_cache);
+                                callback.success();
+                            } catch (Throwable th) {
+                                th.printStackTrace();
+                            }
+                        }
+                    }
+
+                    public String convertResponse(okhttp3.Response response) throws Throwable {
+                        String result = "";
+                        if (response.body() == null) {
+                            result = "";
+                        } else {
+                            result = FindResult(response.body().string(), TempKey);
+                            if (apiUrl.startsWith("clan")) {
+                                result = clanContentFix(clanToAddress(apiUrl), result);
+                            }
+                            result = fixContentPath(apiUrl, result);
+                        }
+                        return result;
+                    }
+        });
+    }
+
+    public static String getLiveGroupIndexKey() {
+        String liveApiUrl = Hawk.get(HawkConfig.LIVE_API_URL, "");
+        if (liveApiUrl == null || liveApiUrl.length() == 0) {
+            return HawkConfig.LIVE_GROUP_INDEX;
+        }
+        return HawkConfig.LIVE_GROUP_INDEX + "_" + liveApiUrl;
+    }
+
+    public static int getLiveGroupIndex() {
+        return Hawk.get(getLiveGroupIndexKey(), 0);
+    }
+
+    public static void setLiveGroupIndex(int index) {
+        Hawk.put(getLiveGroupIndexKey(), index);
     }
 
     private static final int LOAD_JAR_MAX_RETRY = 1;
@@ -644,8 +728,8 @@ public class ApiConfig {
             initLiveSettings();
             if(infoJson.has("lives")){
                 JsonArray lives_groups=infoJson.get("lives").getAsJsonArray();
-                int live_group_index=Hawk.get(HawkConfig.LIVE_GROUP_INDEX,0);
-                if(live_group_index>lives_groups.size()-1)Hawk.put(HawkConfig.LIVE_GROUP_INDEX,0);
+                int live_group_index=getLiveGroupIndex();
+                if(live_group_index>lives_groups.size()-1)live_group_index=0;
                 Hawk.put(HawkConfig.LIVE_GROUP_LIST,lives_groups);
                 //加载多源配置
                 try {
@@ -832,8 +916,8 @@ public class ApiConfig {
         if(infoJson.has("lives")){
             JsonArray lives_groups=infoJson.get("lives").getAsJsonArray();
 
-            int live_group_index=Hawk.get(HawkConfig.LIVE_GROUP_INDEX,0);
-            if(live_group_index>lives_groups.size()-1)Hawk.put(HawkConfig.LIVE_GROUP_INDEX,0);
+            int live_group_index=getLiveGroupIndex();
+            if(live_group_index>lives_groups.size()-1)live_group_index=0;
             Hawk.put(HawkConfig.LIVE_GROUP_LIST,lives_groups);
             //加载多源配置
             try {
@@ -872,7 +956,7 @@ public class ApiConfig {
 
     private final List<LiveSettingGroup> liveSettingGroupList = new ArrayList<>();
     private void initLiveSettings() {
-        ArrayList<String> groupNames = new ArrayList<>(Arrays.asList("线路选择", "画面比例", "播放解码", "超时换源", "偏好设置", "多源切换"));
+        ArrayList<String> groupNames = new ArrayList<>(Arrays.asList("线路选择", "画面比例", "播放解码", "超时换源", "偏好设置", "多源切换", "配置切换"));
         ArrayList<ArrayList<String>> itemsArrayList = new ArrayList<>();
         ArrayList<String> sourceItems = new ArrayList<>();
         ArrayList<String> scaleItems = new ArrayList<>(Arrays.asList("默认", "16:9", "4:3", "填充", "原始", "裁剪"));
@@ -880,6 +964,7 @@ public class ApiConfig {
         ArrayList<String> timeoutItems = new ArrayList<>(Arrays.asList("5s", "10s", "15s", "20s", "25s", "30s"));
         ArrayList<String> personalSettingItems = new ArrayList<>(Arrays.asList("显示时间", "显示网速", "显分辨率", "换台反转", "跨选分类"));
         ArrayList<String> yumItems = new ArrayList<>();
+        ArrayList<String> liveApiHistoryItems = new ArrayList<>();
 
         itemsArrayList.add(sourceItems);
         itemsArrayList.add(scaleItems);
@@ -887,6 +972,7 @@ public class ApiConfig {
         itemsArrayList.add(timeoutItems);
         itemsArrayList.add(personalSettingItems);
         itemsArrayList.add(yumItems);
+        itemsArrayList.add(liveApiHistoryItems);
 
         liveSettingGroupList.clear();
         for (int i = 0; i < groupNames.size(); i++) {
@@ -903,10 +989,24 @@ public class ApiConfig {
             liveSettingGroup.setLiveSettingItems(liveSettingItemList);
             liveSettingGroupList.add(liveSettingGroup);
         }
+        refreshLiveApiHistoryItems();
     }
 
     public List<LiveSettingGroup> getLiveSettingGroupList() {
         return liveSettingGroupList;
+    }
+
+    public void refreshLiveApiHistoryItems() {
+        if (liveSettingGroupList.size() < 7) return;
+        ArrayList<LiveSettingItem> liveSettingItemList = new ArrayList<>();
+        ArrayList<String> history = Hawk.get(HawkConfig.LIVE_API_HISTORY, new ArrayList<String>());
+        for (int i = 0; i < history.size(); i++) {
+            LiveSettingItem liveSettingItem = new LiveSettingItem();
+            liveSettingItem.setItemIndex(i);
+            liveSettingItem.setItemName(history.get(i));
+            liveSettingItemList.add(liveSettingItem);
+        }
+        liveSettingGroupList.get(6).setLiveSettingItems(liveSettingItemList);
     }
 
     public void loadLives(JsonArray livesArray) {
