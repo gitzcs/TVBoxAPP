@@ -34,6 +34,7 @@ import com.github.tvbox.osc.util.LOG;
 import com.github.tvbox.osc.util.M3u8;
 import com.github.tvbox.osc.util.MD5;
 import com.github.tvbox.osc.util.OkGoHelper;
+import com.github.tvbox.osc.util.Proxy;
 import com.github.tvbox.osc.util.VideoParseRuler;
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
@@ -53,6 +54,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.net.URLDecoder;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -1434,6 +1436,23 @@ public class ApiConfig {
     }
 
     public Object[] proxyLocal(Map<String, String> param) {
+        SourceBean proxySourceBean = getCurrentProxySource(param);
+        String proxyApiString = proxySourceBean.getApi();
+        if (!TextUtils.isEmpty(param.get("siteKey")) && proxySourceBean.getType() == 3) {
+            try {
+                Spider spider = getCSP(proxySourceBean);
+                Object[] result = spider.proxy(param);
+                if (result != null) return result;
+                Object[] staticResult = jarLoader.proxyInvoke(param);
+                if (staticResult != null) return staticResult;
+                Object[] directResult = proxyDirect(param);
+                if (directResult != null) return directResult;
+                return staticResult;
+            } catch (Throwable th) {
+                LOG.e("echo-proxy siteKey error: " + th.getMessage());
+                return null;
+            }
+        }
         if ("js".equals(param.get("do"))) {
             return jsLoader.proxyInvoke(param);
         }
@@ -1450,9 +1469,27 @@ public class ApiConfig {
         if ("py".equals(param.get("do"))) {
             return pyLoader.proxyInvoke(param, getCurrentPyKey());
         }
-        SourceBean sourceBean = getCurrentProxySource(param);
-        String apiString = sourceBean.getApi();
-        return apiString.contains(".py") ? pyLoader.proxyInvoke(param, getCurrentPyKey()) : jarLoader.proxyInvoke(param);
+        return proxyApiString.contains(".py") ? pyLoader.proxyInvoke(param, getCurrentPyKey()) : jarLoader.proxyInvoke(param);
+    }
+
+    private Object[] proxyDirect(Map<String, String> param) {
+        try {
+            String url = param.get("url");
+            if (TextUtils.isEmpty(url)) return null;
+            url = URLDecoder.decode(url, "UTF-8");
+            if (!url.startsWith("http://") && !url.startsWith("https://")) return null;
+            if (!DefaultConfig.isVideoFormat(url)) return null;
+            if (url.contains(".m3u8")) {
+                param.put("url", url);
+                param.put("go", "live");
+                param.put("type", "m3u8");
+                return Proxy.itv(param);
+            }
+            return null;
+        } catch (Throwable th) {
+            LOG.e("echo-proxy direct fallback error: " + th.getMessage());
+            return null;
+        }
     }
 
     private SourceBean getCurrentProxySource(Map<String, String> param) {
