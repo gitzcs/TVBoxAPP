@@ -346,6 +346,10 @@ public class ApiConfig {
         if (apiUrl.contains(".txt") || apiUrl.contains(".m3u") || apiUrl.contains("=txt") || apiUrl.contains("=m3u")) {
             initLiveSettings();
             parseLiveJson(apiUrl, defaultLiveObjString.replace("txt_m3u_url", liveApiConfigUrl));
+            if (!hasLiveConfigResult()) {
+                callback.error("直播配置解析失败");
+                return;
+            }
             callback.success();
             return;
         }
@@ -354,8 +358,10 @@ public class ApiConfig {
         if (useCache && live_cache.exists()) {
             try {
                 parseLiveJson(apiUrl, live_cache);
-                callback.success();
-                return;
+                if (hasLiveConfigResult()) {
+                    callback.success();
+                    return;
+                }
             } catch (Throwable th) {
                 th.printStackTrace();
             }
@@ -369,10 +375,15 @@ public class ApiConfig {
                         try {
                             String json = response.body();
                             parseLiveJson(apiUrl, json);
+                            if (!hasLiveConfigResult()) {
+                                callback.error("直播配置解析失败");
+                                return;
+                            }
                             FileUtils.saveCache(live_cache, json);
                             callback.success();
                         } catch (Throwable th) {
                             th.printStackTrace();
+                            callback.error("直播配置解析失败");
                         }
                     }
 
@@ -382,11 +393,15 @@ public class ApiConfig {
                         if (live_cache.exists()) {
                             try {
                                 parseLiveJson(apiUrl, live_cache);
-                                callback.success();
+                                if (hasLiveConfigResult()) {
+                                    callback.success();
+                                    return;
+                                }
                             } catch (Throwable th) {
                                 th.printStackTrace();
                             }
                         }
+                        callback.error("直播配置拉取失败");
                     }
 
                     public String convertResponse(okhttp3.Response response) throws Throwable {
@@ -403,6 +418,10 @@ public class ApiConfig {
                         return result;
                     }
         });
+    }
+
+    private boolean hasLiveConfigResult() {
+        return liveChannelGroupList != null && !liveChannelGroupList.isEmpty();
     }
 
     public static String getLiveGroupIndexKey() {
@@ -911,6 +930,7 @@ public class ApiConfig {
 
     private String liveSpider="";
     private void parseLiveJson(String apiUrl, String jsonStr) {
+        liveChannelGroupList.clear();
         JsonObject infoJson = gson.fromJson(jsonStr, JsonObject.class);
         // spider
         liveSpider = DefaultConfig.safeJsonString(infoJson, "spider", "");
