@@ -116,7 +116,7 @@ public class SourceBean {
     public void setTimeout(int timeout) { this.timeout = timeout; }
 
     public int getPlayTimeoutSeconds() {
-        return timeout > 0 ? Math.max(5, Math.min(60, timeout)) : 10;
+        return timeout > 0 ? Math.max(5, Math.min(60, timeout)) : 15;
     }
 
     public String getClickSelector() { return clickSelector; }
