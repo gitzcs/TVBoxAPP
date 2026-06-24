@@ -2734,10 +2734,9 @@ public class LivePlayActivity extends BaseActivity {
                     Future<String> future = executor.submit(new Callable<String>() {
                         @Override
                         public String call() {
-                            LOG.i("echo--loadProxyLives-json--");
                             Spider sp = ApiConfig.get().getLiveCSP(finalUrl);
                             String json=sp.liveContent(finalUrl);
-                            LOG.i("echo--loadProxyLives-json--"+json);
+//                            LOG.i("echo--loadProxyLives-json--"+json);
                             return json;
                         }
                     });
