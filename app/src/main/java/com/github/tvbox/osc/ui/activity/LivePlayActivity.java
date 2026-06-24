@@ -115,6 +115,7 @@ import java.util.regex.Pattern;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 
+import xyz.doikki.videoplayer.exo.ExoMediaSourceHelper;
 import xyz.doikki.videoplayer.player.VideoView;
 
 /**
@@ -1591,6 +1592,9 @@ public class LivePlayActivity extends BaseActivity {
         if (currentLiveChannelItem.getHeaders() != null) {
             header.putAll(currentLiveChannelItem.getHeaders());
         }
+        if (!currentLiveChannelItem.getChannelFormat().isEmpty()) {
+            header.put(ExoMediaSourceHelper.HEADER_FORMAT, currentLiveChannelItem.getChannelFormat());
+        }
         if (header.isEmpty()) return null;
         return header;
     }
@@ -2639,7 +2643,6 @@ public class LivePlayActivity extends BaseActivity {
         refreshingLiveChannelList = true;
         pendingLiveRefreshChannelName = channelName;
         pendingLiveRefreshSourceIndex = sourceIndex;
-        currentLiveChannelIndex = -1;
         currentLiveLookBackIndex = -1;
         currentLiveChangeSourceTimes = 0;
         allowLiveSwitchPlayer = true;
@@ -2673,7 +2676,7 @@ public class LivePlayActivity extends BaseActivity {
     private void initLiveChannelList() {
         List<LiveChannelGroup> list = ApiConfig.get().getChannelGroupList();
         if (list.isEmpty()) {
-            setDefaultLiveChannelList();
+            setEmptyLiveChannelList();
             return;
         }
         initLiveObj();
@@ -2693,7 +2696,7 @@ public class LivePlayActivity extends BaseActivity {
             url = new String(Base64.decode(parsedUrl.getQueryParameter("ext"), Base64.DEFAULT | Base64.URL_SAFE | Base64.NO_WRAP), "UTF-8");
         } catch (Throwable th) {
             if (!url.startsWith("http://127.0.0.1")) {
-                setDefaultLiveChannelList();
+                setEmptyLiveChannelList();
                 return;
             }
         }
@@ -2707,7 +2710,7 @@ public class LivePlayActivity extends BaseActivity {
             if (!hasPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE)) {
                 // 权限不足时，直接设置默认播放列表
                 Toast.makeText(App.getInstance(), "该源需要存储权限", Toast.LENGTH_SHORT).show();
-                setDefaultLiveChannelList();
+                setEmptyLiveChannelList();
                 return;
             }
             String finalUrl = url;
@@ -2739,7 +2742,7 @@ public class LivePlayActivity extends BaseActivity {
                             mHandler.post(new Runnable() {
                                 @Override
                                 public void run() {
-                                    setDefaultLiveChannelList();
+                                    setEmptyLiveChannelList();
                                 }
                             });
                             return;
@@ -2752,7 +2755,7 @@ public class LivePlayActivity extends BaseActivity {
                             mHandler.post(new Runnable() {
                                 @Override
                                 public void run() {
-                                    setDefaultLiveChannelList();
+                                    setEmptyLiveChannelList();
                                 }
                             });
                             return;
@@ -2795,7 +2798,7 @@ public class LivePlayActivity extends BaseActivity {
                         mHandler.post(new Runnable() {
                             @Override
                             public void run() {
-                                setDefaultLiveChannelList();
+                                setEmptyLiveChannelList();
                             }
                         });
                         return;
@@ -2817,7 +2820,7 @@ public class LivePlayActivity extends BaseActivity {
                     mHandler.post(new Runnable() {
                         @Override
                         public void run() {
-                            setDefaultLiveChannelList();
+                            setEmptyLiveChannelList();
                         }
                     });
                 }
@@ -2867,6 +2870,7 @@ public class LivePlayActivity extends BaseActivity {
         tvRightSettingLayout.setVisibility(View.INVISIBLE);
 
         liveChannelGroupAdapter.setNewData(liveChannelGroupList);
+        currentLiveChannelIndex = -1;
         selectChannelGroup(lastChannelGroupIndex, false, lastLiveChannelIndex);
     }
 
@@ -3329,30 +3333,24 @@ public class LivePlayActivity extends BaseActivity {
     /**
      * 当播放列表为空或加载失败时，设置一个默认的播放列表，保证播放界面不会崩溃
      */
-    private void setDefaultLiveChannelList() {
+    private void setEmptyLiveChannelList() {
+        refreshingLiveChannelList = false;
+        pendingLiveRefreshChannelName = null;
+        pendingLiveRefreshSourceIndex = -1;
         liveChannelGroupList.clear();
-        // 创建默认直播分组
-        LiveChannelGroup defaultGroup = new LiveChannelGroup();
-        defaultGroup.setGroupIndex(0);
-        defaultGroup.setGroupName("default group");
-        defaultGroup.setGroupPassword("");
-        LiveChannelItem defaultChannel = new LiveChannelItem();
-        defaultChannel.setChannelName("default channel");
-        defaultChannel.setChannelIndex(0);
-        defaultChannel.setChannelNum(1);
-        ArrayList<String> defaultSourceNames = new ArrayList<>();
-        ArrayList<String> defaultSourceUrls = new ArrayList<>();
-        defaultSourceNames.add("default source");
-        defaultSourceUrls.add("http://default.play.url/stream");
-        defaultChannel.setChannelSourceNames(defaultSourceNames);
-        defaultChannel.setChannelUrls(defaultSourceUrls);
-        // 将默认频道添加到分组内
-        ArrayList<LiveChannelItem> channels = new ArrayList<>();
-        channels.add(defaultChannel);
-        defaultGroup.setLiveChannels(channels);
-        // 添加分组到全局列表
-        liveChannelGroupList.add(defaultGroup);
         showSuccess();
-        initLiveState();
+        if (liveChannelGroupAdapter != null) {
+            liveChannelGroupAdapter.setFocusedGroupIndex(-1);
+            liveChannelGroupAdapter.setSelectedGroupIndex(-1);
+            liveChannelGroupAdapter.setNewData(liveChannelGroupList);
+        }
+        if (liveChannelItemAdapter != null) {
+            liveChannelItemAdapter.setFocusedChannelIndex(-1);
+            liveChannelItemAdapter.setSelectedChannelIndex(-1);
+            liveChannelItemAdapter.setNewData(new ArrayList<LiveChannelItem>());
+        }
+        if (tvLeftChannelListLayout != null) tvLeftChannelListLayout.setVisibility(View.INVISIBLE);
+        if (tvRightSettingLayout != null) tvRightSettingLayout.setVisibility(View.INVISIBLE);
+        Toast.makeText(App.getInstance(), "源异常,请切换到其他源", Toast.LENGTH_SHORT).show();
     }
 }
