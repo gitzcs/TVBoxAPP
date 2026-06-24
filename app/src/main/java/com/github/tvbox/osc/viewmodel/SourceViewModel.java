@@ -203,7 +203,7 @@ public class SourceViewModel extends ViewModel {
                     });
                     String sortJson = null;
                     try {
-                        sortJson = future.get(20, TimeUnit.SECONDS);
+                        sortJson = future.get(30, TimeUnit.SECONDS);
                     } catch (TimeoutException e) {
                         LOG.i("echo--getSort-timeout--" + sourceBean.getKey());
                         e.printStackTrace();
@@ -958,11 +958,11 @@ public class SourceViewModel extends ViewModel {
                     });
 
                     try {
-                        String json = future.get(10, TimeUnit.SECONDS);
+                        String json = future.get(sourceBean.getPlayTimeoutSeconds(), TimeUnit.SECONDS);
                         LOG.i("echo--getPlay--result:" + json);
                         // 处理返回的 JSON
                         if (!TextUtils.isEmpty(json)) {
-                            JSONObject result = new JSONObject(json);
+                            JSONObject result = normalizePlayerResult(new JSONObject(json));
                             result.put("key", url);
                             result.put("proKey", progressKey);
                             result.put("subtKey", subtitleKey);
@@ -1034,7 +1034,7 @@ public class SourceViewModel extends ViewModel {
                         String json = response.body();
                         LOG.i(json);
                         try {
-                            JSONObject result = new JSONObject(json);
+                            JSONObject result = normalizePlayerResult(new JSONObject(json));
                             result.put("key", url);
                             result.put("proKey", progressKey);
                             result.put("subtKey", subtitleKey);
@@ -1060,6 +1060,29 @@ public class SourceViewModel extends ViewModel {
 
     public void cancelPlayRequest() {
         playRequestSeq.incrementAndGet();
+    }
+
+    private JSONObject normalizePlayerResult(JSONObject result) {
+        if (result == null) return null;
+        try {
+            String playUrl = result.optString("playUrl", "");
+            String url = result.optString("url", "");
+            if (TextUtils.isEmpty(url)) return result;
+            if (url.startsWith("video://")) {
+                url = url.substring(8);
+                result.put("url", url);
+                result.put("parse", 1);
+            } else if (url.startsWith("proxy://")) {
+                url = DefaultConfig.checkReplaceProxy(url);
+                result.put("url", url);
+                result.put("parse", 0);
+            } else if (playUrl.length() == 0 && DefaultConfig.isVideoFormat(url) && !result.has("parse") && !result.has("jx")) {
+                result.put("parse", 0);
+            }
+        } catch (Throwable th) {
+            th.printStackTrace();
+        }
+        return result;
     }
 
     private void postPlayResult(int requestSeq, JSONObject result) {
