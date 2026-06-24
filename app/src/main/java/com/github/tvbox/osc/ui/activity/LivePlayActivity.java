@@ -2719,8 +2719,8 @@ public class LivePlayActivity extends BaseActivity {
 
         LOG.i("echo-live-url:"+url);
 
-        if(url.contains(".py")){
-            if (!hasPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE)) {
+        if(url.contains(".py") || url.contains(".js")){
+            if ((url.contains(".py") || url.contains(".js")) && !hasPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE)) {
                 // 权限不足时，直接设置默认播放列表
                 Toast.makeText(App.getInstance(), "该源需要存储权限", Toast.LENGTH_SHORT).show();
                 setEmptyLiveChannelList();
@@ -2735,7 +2735,7 @@ public class LivePlayActivity extends BaseActivity {
                         @Override
                         public String call() {
                             LOG.i("echo--loadProxyLives-json--");
-                            Spider sp = ApiConfig.get().getPyCSP(finalUrl);
+                            Spider sp = ApiConfig.get().getLiveCSP(finalUrl);
                             String json=sp.liveContent(finalUrl);
                             LOG.i("echo--loadProxyLives-json--"+json);
                             return json;
@@ -2743,7 +2743,7 @@ public class LivePlayActivity extends BaseActivity {
                     });
                     String sortJson = null;
                     try {
-                        sortJson = future.get(10, TimeUnit.SECONDS);
+                        sortJson = future.get(ApiConfig.get().getLiveConnectTimeoutSeconds(), TimeUnit.SECONDS);
                     } catch (TimeoutException e) {
                         e.printStackTrace();
                         future.cancel(true);
