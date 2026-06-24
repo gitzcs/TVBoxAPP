@@ -1299,12 +1299,12 @@ public class LivePlayActivity extends BaseActivity {
     }
 
     private void showChannelList() {
-        if(liveChannelGroupList.isEmpty()) return;
         if (tvRightSettingLayout.getVisibility() == View.VISIBLE) {
             mHandler.removeCallbacks(mHideSettingLayoutRun);
             mHandler.post(mHideSettingLayoutRun);
             return;
         }
+        if(liveChannelGroupList.isEmpty()) return;
         if (tvLeftChannelListLayout.getVisibility() == View.INVISIBLE) {
             if(currentLiveLookBackIndex>-1){
                 mRightEpgList.setSelectedPosition(currentLiveLookBackIndex);
@@ -2582,6 +2582,11 @@ public class LivePlayActivity extends BaseActivity {
                 liveSettingItemAdapter.selectItem(position, true, true);
                 ApiConfig.setLiveGroupIndex(position);
                 ApiConfig.get().loadLiveApi(livesOBJ);
+                if (ApiConfig.get().getChannelGroupList().isEmpty()) {
+                    if (mVideoView != null) mVideoView.release();
+                    setEmptyLiveChannelList(false);
+                    break;
+                }
                 refreshLiveChannelListAndPlay(currentChannelName, currentSourceIndex);
                 break;
             case 6: {//配置切换

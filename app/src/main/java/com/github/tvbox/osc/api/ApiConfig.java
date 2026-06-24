@@ -1162,6 +1162,7 @@ public class ApiConfig {
     public void loadLiveApi(JsonObject livesOBJ) {
         try {
             LOG.i("echo-loadLiveApi");
+            liveChannelGroupList.clear();
             currentLiveSpider = "";
             currentLivePyKey = "";
             String lives = livesOBJ.toString();
