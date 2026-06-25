@@ -1436,28 +1436,53 @@ public class ApiConfig {
     }
 
     public Object[] proxyLocal(Map<String, String> param) {
-        SourceBean proxySourceBean = getCurrentProxySource(param);
-        String proxyApiString = proxySourceBean.getApi();
-        if (!TextUtils.isEmpty(param.get("siteKey")) && proxySourceBean.getType() == 3) {
+        SourceBean source = getCurrentProxySource(param);
+        String api = source.getApi();
+
+        String siteKey = param.get("siteKey");
+        String action = param.get("do");
+
+        boolean isJs = "js".equals(action);
+        boolean isPy = "py".equals(action);
+        boolean isLive = Hawk.get(HawkConfig.PLAYER_IS_LIVE, false);
+        boolean isApiJs = api.contains(".js");
+        boolean isApiPy = api.contains(".py");
+
+        boolean canUseType3 = !TextUtils.isEmpty(siteKey)
+                && source.getType() == 3
+                && !isJs
+                && !isPy
+                && !isLive
+                && !isApiJs
+                && !isApiPy;
+
+        if (canUseType3) {
             try {
-                Spider spider = getCSP(proxySourceBean);
+                Spider spider = getCSP(source);
+
                 Object[] result = spider.proxy(param);
                 if (result != null) return result;
-                Object[] staticResult = jarLoader.proxyInvoke(param);
-                if (staticResult != null) return staticResult;
-                Object[] directResult = proxyDirect(param);
-                if (directResult != null) return directResult;
-                return staticResult;
+
+                result = jarLoader.proxyInvoke(param);
+                if (result != null) return result;
+
+                result = proxyDirect(param);
+                if (result != null) return result;
+
+                return null;
             } catch (Throwable th) {
                 LOG.e("echo-proxy siteKey error: " + th.getMessage());
                 return null;
             }
         }
-        if ("js".equals(param.get("do"))) {
+
+        if (isJs) {
             return jsLoader.proxyInvoke(param);
         }
-        if (Hawk.get(HawkConfig.PLAYER_IS_LIVE, false)) {
+
+        if (isLive) {
             String liveApi = currentLiveSpider != null ? currentLiveSpider : "";
+
             if (liveApi.contains(".py")) {
                 return pyLoader.proxyInvoke(param, currentLivePyKey);
             }
@@ -1466,10 +1491,16 @@ public class ApiConfig {
             }
             return jarLoader.proxyInvoke(param);
         }
-        if ("py".equals(param.get("do"))) {
+
+        if (isPy) {
             return pyLoader.proxyInvoke(param, getCurrentPyKey());
         }
-        return proxyApiString.contains(".py") ? pyLoader.proxyInvoke(param, getCurrentPyKey()) : jarLoader.proxyInvoke(param);
+
+        if (isApiPy) {
+            return pyLoader.proxyInvoke(param, getCurrentPyKey());
+        }
+
+        return jarLoader.proxyInvoke(param);
     }
 
     private Object[] proxyDirect(Map<String, String> param) {
