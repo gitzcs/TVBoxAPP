@@ -301,6 +301,7 @@ public class HomeActivity extends BaseActivity {
 
     private boolean dataInitOk = false;
     private boolean jarInitOk = false;
+    private TipDialog mConfigErrorDialog;
 
     private void initData() {
         if (dataInitOk && jarInitOk) {
@@ -359,8 +360,6 @@ public class HomeActivity extends BaseActivity {
             return;
         }
         ApiConfig.get().loadConfig(useCacheConfig, new ApiConfig.LoadConfigCallback() {
-            TipDialog dialog = null;
-
             @Override
             public void notice(String msg) {
                 mHandler.post(new Runnable() {
@@ -401,15 +400,18 @@ public class HomeActivity extends BaseActivity {
                 mHandler.post(new Runnable() {
                     @Override
                     public void run() {
-                        if (dialog == null)
-                            dialog = new TipDialog(HomeActivity.this, msg, "重试", "取消", new TipDialog.OnListener() {
+                        if (isActivityUnavailable()) {
+                            return;
+                        }
+                        if (mConfigErrorDialog == null)
+                            mConfigErrorDialog = new TipDialog(HomeActivity.this, msg, "重试", "取消", new TipDialog.OnListener() {
                                 @Override
                                 public void left() {
                                     mHandler.post(new Runnable() {
                                         @Override
                                         public void run() {
+                                            dismissConfigErrorDialog();
                                             initData();
-                                            dialog.hide();
                                         }
                                     });
                                 }
@@ -421,8 +423,8 @@ public class HomeActivity extends BaseActivity {
                                     mHandler.post(new Runnable() {
                                         @Override
                                         public void run() {
+                                            dismissConfigErrorDialog();
                                             initData();
-                                            dialog.hide();
                                         }
                                     });
                                 }
@@ -434,14 +436,14 @@ public class HomeActivity extends BaseActivity {
                                     mHandler.post(new Runnable() {
                                         @Override
                                         public void run() {
+                                            dismissConfigErrorDialog();
                                             initData();
-                                            dialog.hide();
                                         }
                                     });
                                 }
                             });
-                        if (!dialog.isShowing())
-                            dialog.show();
+                        if (!mConfigErrorDialog.isShowing())
+                            mConfigErrorDialog.show();
                     }
                 });
             }
@@ -679,6 +681,8 @@ public class HomeActivity extends BaseActivity {
 
     @Override
     protected void onDestroy() {
+        dismissHomeDialogs();
+        mHandler.removeCallbacksAndMessages(null);
         super.onDestroy();
         unregisterEventBus();
         if (isFinishing()) {
@@ -696,6 +700,7 @@ public class HomeActivity extends BaseActivity {
     private SelectDialog<SourceBean> mSiteSwitchDialog;
 
     void showSiteSwitch() {
+        if (isActivityUnavailable()) return;
         List<SourceBean> sites = ApiConfig.get().getSwitchSourceBeanList();
         if (sites.isEmpty()) return;
         int select = sites.indexOf(ApiConfig.get().getHomeSourceBean());
@@ -716,6 +721,7 @@ public class HomeActivity extends BaseActivity {
         mSiteSwitchDialog.setAdapter(new SelectDialogAdapter.SelectDialogInterface<SourceBean>() {
             @Override
             public void click(SourceBean value, int pos) {
+                dismissSiteSwitchDialog();
                 ApiConfig.get().setSourceBean(value);
                 refreshHome();
             }
@@ -733,17 +739,58 @@ public class HomeActivity extends BaseActivity {
                 return oldItem.getKey().equals(newItem.getKey());
             }
         }, sites, select);
-        mSiteSwitchDialog.show();
+        if (!mSiteSwitchDialog.isShowing())
+            mSiteSwitchDialog.show();
     }
 
     private void refreshHome()
     {
+        if (Thread.currentThread() != android.os.Looper.getMainLooper().getThread()) {
+            mHandler.post(new Runnable() {
+                @Override
+                public void run() {
+                    refreshHome();
+                }
+            });
+            return;
+        }
+        if (isActivityUnavailable()) {
+            return;
+        }
+        dismissHomeDialogs();
         Intent intent = new Intent(getApplicationContext(), HomeActivity.class);
         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
         Bundle bundle = new Bundle();
         bundle.putBoolean("useCache", true);
         intent.putExtras(bundle);
         HomeActivity.this.startActivity(intent);
+    }
+
+    private boolean isActivityUnavailable() {
+        return isFinishing() || (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.JELLY_BEAN_MR1 && isDestroyed());
+    }
+
+    private void dismissHomeDialogs() {
+        dismissConfigErrorDialog();
+        dismissSiteSwitchDialog();
+    }
+
+    private void dismissConfigErrorDialog() {
+        if (mConfigErrorDialog != null) {
+            if (mConfigErrorDialog.isShowing()) {
+                mConfigErrorDialog.dismiss();
+            }
+            mConfigErrorDialog = null;
+        }
+    }
+
+    private void dismissSiteSwitchDialog() {
+        if (mSiteSwitchDialog != null) {
+            if (mSiteSwitchDialog.isShowing()) {
+                mSiteSwitchDialog.dismiss();
+            }
+            mSiteSwitchDialog = null;
+        }
     }
 
     private void refreshEmpty()
