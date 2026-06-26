@@ -451,13 +451,16 @@ public class JarLoader {
         try {
             ConcurrentHashMap<String, Method> methods = longClick ? danmuLongClickMethods : danmuClickMethods;
             Method method = methods.get(recentJarKey);
-            if (method == null) method = methods.get("main");
             if (method == null) return;
             method.invoke(null, name, episode);
         } catch (Throwable th) {
             Log.i("JarLoader", "echo-searchDanmuUi error key=" + name + ", episode=" + episode + ", longClick=" + longClick + ", msg=" + th.getMessage());
             th.printStackTrace();
         }
+    }
+
+    public boolean hasDanmuSearchUi() {
+        return danmuClickMethods.containsKey(recentJarKey) || danmuLongClickMethods.containsKey(recentJarKey);
     }
 
     private String getJarKey(String jar) {

@@ -1439,6 +1439,10 @@ public class ApiConfig {
         });
     }
 
+    public boolean hasDanmuSearchUi() {
+        return jarLoader.hasDanmuSearchUi();
+    }
+
     public int getLiveConnectTimeoutSeconds() {
         return (Hawk.get(HawkConfig.LIVE_CONNECT_TIMEOUT, 1) + 1) * 5;
     }

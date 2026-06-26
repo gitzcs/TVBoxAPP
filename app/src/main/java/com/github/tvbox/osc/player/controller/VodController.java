@@ -92,6 +92,7 @@ public class VodController extends BaseController {
                         break;
                     }
                     case 1002: { // 显示底部菜单
+                        updateDanmuSearchUiBtn();
                         mBottomRoot.setVisibility(VISIBLE);
                         mTopRoot1.setVisibility(VISIBLE);
                         mTopRoot2.setVisibility(VISIBLE);
@@ -257,6 +258,7 @@ public class VodController extends BaseController {
         mAudioTrackBtn = findViewById(R.id.audio_track_select);
         mDanmuSettingBtn = findViewById(R.id.danmu_setting);
         mDanmuSearchUiBtn = findViewById(R.id.danmu_search_ui);
+        updateDanmuSearchUiBtn();
         mLandscapePortraitBtn = findViewById(R.id.landscape_portrait);
         backBtn = findViewById(R.id.tv_back);
         seekTime = findViewById(R.id.tv_seek_time);
@@ -839,6 +841,11 @@ public class VodController extends BaseController {
     public void updateDanmuBtn() {
         if (mDanmuSettingBtn == null) return;
         mDanmuSettingBtn.setVisibility(hasDanmu ? VISIBLE : GONE);
+    }
+
+    public void updateDanmuSearchUiBtn() {
+        if (mDanmuSearchUiBtn == null) return;
+        mDanmuSearchUiBtn.setVisibility(ApiConfig.get().hasDanmuSearchUi() ? VISIBLE : GONE);
     }
 
     public interface VodControlListener {
