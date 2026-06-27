@@ -98,6 +98,7 @@ public class HomeActivity extends BaseActivity {
     public View sortFocusView = null;
     private String loadingSourceKey;
     private String previousHomeName;
+    private SourceBean previousHomeSource;
     private boolean homeSortLoading = false;
     private final Handler mHandler = new Handler();
     private long mExitTime = 0;
@@ -314,6 +315,7 @@ public class HomeActivity extends BaseActivity {
                 homeSortLoading = false;
                 loadingSourceKey = null;
                 previousHomeName = null;
+                previousHomeSource = null;
             }
         });
     }
@@ -817,6 +819,7 @@ public class HomeActivity extends BaseActivity {
             @Override
             public void click(SourceBean value, int pos) {
                 dismissSiteSwitchDialog();
+                previousHomeSource = ApiConfig.get().getHomeSourceBean();
                 ApiConfig.get().setSourceBean(value);
                 refreshHome(false);
             }
@@ -912,9 +915,13 @@ public class HomeActivity extends BaseActivity {
         homeSortLoading = false;
         loadingSourceKey = null;
         tvName.clearAnimation();
+        if (previousHomeSource != null) {
+            ApiConfig.get().setSourceBean(previousHomeSource);
+        }
         if (previousHomeName != null && !previousHomeName.isEmpty()) {
             tvName.setText(previousHomeName);
         }
+        previousHomeSource = null;
         previousHomeName = null;
     }
 
