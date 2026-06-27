@@ -993,8 +993,19 @@ public class ApiConfig {
     }
 
     private void parseLiveConfigContent(String apiUrl, String content) {
+        String jsonContent = trimJsonObject(content);
+        if (!TextUtils.isEmpty(jsonContent)) {
+            try {
+                JsonObject infoJson = gson.fromJson(jsonContent, JsonObject.class);
+                if (infoJson != null && infoJson.has("lives")) {
+                    parseLiveJson(apiUrl, jsonContent);
+                    return;
+                }
+            } catch (Throwable ignored) {
+            }
+        }
         if (isLiveJsonContent(content)) {
-            parseLiveJson(apiUrl, content);
+            parseLiveJson(apiUrl, jsonContent);
         } else {
             parseLiveText(apiUrl, content);
         }
