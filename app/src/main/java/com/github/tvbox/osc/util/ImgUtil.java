@@ -111,6 +111,7 @@ public class ImgUtil {
         view.setScaleType(ImageView.ScaleType.CENTER_CROP);
         if (roundingRadius <= 0) roundingRadius = 1;
         Drawable fallback = createTextDrawable(TextUtils.isEmpty(label) ? "TVBox" : label, newWidth, newHeight, roundingRadius);
+        Drawable placeholder = createImagePlaceholderDrawable(newWidth, newHeight, roundingRadius);
         if (TextUtils.isEmpty(url)) {
             view.setImageDrawable(fallback);
             return;
@@ -126,7 +127,7 @@ public class ImgUtil {
         Glide.with(App.getInstance())
                 .asBitmap()
                 .load(getUrl(url))
-                .placeholder(com.github.tvbox.osc.R.drawable.img_loading_placeholder)
+                .placeholder(placeholder)
                 .error(fallback)
                 .listener(getListener(view, ImageView.ScaleType.CENTER_CROP, fallback))
                 .apply(options)
@@ -173,12 +174,34 @@ public class ImgUtil {
         RectF rectF = new RectF(0, 0, width, height);
         canvas.drawRoundRect(rectF, cornerRadius, cornerRadius, paint);
         paint.setColor(Color.WHITE);
-        paint.setTextSize(120);
+        paint.setTextSize(60);
         paint.setTextAlign(Paint.Align.CENTER);
         Paint.FontMetrics fontMetrics = paint.getFontMetrics();
         float x = width / 2f;
         float y = (height - fontMetrics.bottom - fontMetrics.top) / 2f;
         canvas.drawText(text, x, y, paint);
+        Drawable drawable = new BitmapDrawable(App.getInstance().getResources(), bitmap);
+        drawableCache.put(key, drawable);
+        return drawable;
+    }
+
+    private static Drawable createImagePlaceholderDrawable(int width, int height, float cornerRadius) {
+        if (width <= 0) width = 180;
+        if (height <= 0) height = 240;
+        if (cornerRadius <= 0) cornerRadius = 1;
+        String key = "placeholder_" + width + "x" + height + "_" + (int) cornerRadius;
+        if (drawableCache.containsKey(key)) return drawableCache.get(key);
+
+        Bitmap bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
+        Canvas canvas = new Canvas(bitmap);
+
+        Bitmap icon = BitmapFactory.decodeResource(App.getInstance().getResources(), com.github.tvbox.osc.R.drawable.icon_img_placeholder);
+        if (icon != null) {
+            float left = (width - icon.getWidth()) / 2f;
+            float top = (height - icon.getHeight()) / 2f;
+            canvas.drawBitmap(icon, left, top, null);
+        }
+
         Drawable drawable = new BitmapDrawable(App.getInstance().getResources(), bitmap);
         drawableCache.put(key, drawable);
         return drawable;
