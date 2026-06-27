@@ -10,6 +10,7 @@ import androidx.annotation.NonNull;
 import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.ViewModel;
 
+import com.github.catvod.net.OkHttp;
 import com.github.catvod.crawler.Spider;
 import com.github.tvbox.osc.api.ApiConfig;
 import com.github.tvbox.osc.base.App;
@@ -28,7 +29,6 @@ import com.github.tvbox.osc.util.HawkConfig;
 import com.github.tvbox.osc.util.LOG;
 import com.github.tvbox.osc.util.MD5;
 import com.github.tvbox.osc.util.thunder.Thunder;
-import com.github.tvbox.osc.util.urlhttp.OkHttpUtil;
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
@@ -1162,7 +1162,7 @@ public class SourceViewModel extends ViewModel {
                     result = tryMinifyJson(result);
                     extendCache.putIfAbsent(key, result);
                 } else if (extend.startsWith("http")) {
-                    result = OkHttpUtil.string(extend, null);
+                    result = OkHttp.string(extend, null);
                     if (!result.isEmpty()) {
                         result = tryMinifyJson(result);
                         if(result.length()>2500)result = extend;
@@ -1621,7 +1621,7 @@ public class SourceViewModel extends ViewModel {
                 result = tryMinifyJson(result);
                 extendCache.putIfAbsent(key, result);
             } else {
-                result = OkHttpUtil.string(extend, null);
+                result = OkHttp.string(extend, null);
                 if (!TextUtils.isEmpty(result)) {
                     result = tryMinifyJson(result);
                     if (result.length() > 2500) result = extend;
