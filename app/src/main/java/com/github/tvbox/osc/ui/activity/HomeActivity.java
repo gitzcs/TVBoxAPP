@@ -305,10 +305,12 @@ public class HomeActivity extends BaseActivity {
 
     private boolean dataInitOk = false;
     private boolean jarInitOk = false;
+    private boolean searchSpiderWarmStarted = false;
     private TipDialog mConfigErrorDialog;
 
     private void initData() {
         if (dataInitOk && jarInitOk) {
+            warmSearchSpidersOnce();
             sourceViewModel.getSort(ApiConfig.get().getHomeSourceBean().getKey());
             if (hasPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE)) {
                 LOG.e("有");
@@ -452,6 +454,12 @@ public class HomeActivity extends BaseActivity {
                 });
             }
         }, this);
+    }
+
+    private void warmSearchSpidersOnce() {
+        if (searchSpiderWarmStarted) return;
+        searchSpiderWarmStarted = true;
+        ApiConfig.get().warmSearchSpiders();
     }
 
     private void initViewPager(AbsSortXml absXml) {
