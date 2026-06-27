@@ -22,6 +22,7 @@
             android:paddingBottom="@dimen/vs_10">
 
             <FrameLayout
+                android:id="@+id/thumbContainer"
                 android:layout_width="@dimen/vs_480"
                 android:layout_height="@dimen/vs_320"
                 android:layout_marginLeft="@dimen/vs_10"
