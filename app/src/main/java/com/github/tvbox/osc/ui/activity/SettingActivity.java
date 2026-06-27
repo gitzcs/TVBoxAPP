@@ -178,7 +178,7 @@ public class SettingActivity extends BaseActivity {
     @Override
     public void onBackPressed() {
         if (currentApi.equals(Hawk.get(HawkConfig.API_URL, ""))) {
-            if ((homeSourceKey != null && !homeSourceKey.equals(Hawk.get(HawkConfig.HOME_API, "")))  || homeRec != Hawk.get(HawkConfig.HOME_REC, 0)) {
+            if (homeRec != Hawk.get(HawkConfig.HOME_REC, 0)) {
                 jumpActivity(HomeActivity.class, createBundle());
             }else if(!currentLiveApi.equals(Hawk.get(HawkConfig.LIVE_API_URL, ""))){
                 jumpActivity(HomeActivity.class, createBundle());
