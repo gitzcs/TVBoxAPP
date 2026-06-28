@@ -31,7 +31,7 @@ public class HistoryAdapter extends BaseQuickAdapter<VodInfo, BaseViewHolder> {
 
         TextView tvYear = helper.getView(R.id.tvYear);
         SourceBean bean = ApiConfig.get().getSource(item.sourceKey);
-        tvYear.setText(bean != null ? bean.getName() : "");
+        tvYear.setText(bean != null ? bean.getName() : "搜");
         helper.setVisible(R.id.tvLang, false);
         helper.setVisible(R.id.tvArea, false);
         if (item.note == null || item.note.isEmpty()) {

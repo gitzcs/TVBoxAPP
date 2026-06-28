@@ -70,6 +70,8 @@ public class FastSearchActivity extends BaseActivity {
     private static final int SEARCH_PUMP_SECONDS = 2;
     private static final int SEARCH_NEXT_BATCH_SECONDS = 3;
     private static final int SEARCH_SITE_TIMEOUT_SECONDS = 10;
+    private static final long POSTER_FOCUS_ANIM_DURATION = 300L;
+    private static final float POSTER_FOCUS_SCALE = 1.05f;
     private static final String SEARCH_ALL_NAME = "\u5168\u90e8";
     private LinearLayout llLayout;
     private TextView mSearchTitle;
@@ -166,12 +168,12 @@ public class FastSearchActivity extends BaseActivity {
         mGridView.setOnItemListener(new TvRecyclerView.OnItemListener() {
             @Override
             public void onItemPreSelected(TvRecyclerView parent, View itemView, int position) {
-                itemView.animate().scaleX(1.0f).scaleY(1.0f).setDuration(300).setInterpolator(new BounceInterpolator()).start();
+                setPosterFocusScale(itemView, false);
             }
 
             @Override
             public void onItemSelected(TvRecyclerView parent, View itemView, int position) {
-                itemView.animate().scaleX(1.05f).scaleY(1.05f).setDuration(300).setInterpolator(new BounceInterpolator()).start();
+                setPosterFocusScale(itemView, true);
             }
 
             @Override
@@ -203,12 +205,12 @@ public class FastSearchActivity extends BaseActivity {
         mGridViewFilter.setOnItemListener(new TvRecyclerView.OnItemListener() {
             @Override
             public void onItemPreSelected(TvRecyclerView parent, View itemView, int position) {
-                itemView.animate().scaleX(1.0f).scaleY(1.0f).setDuration(300).setInterpolator(new BounceInterpolator()).start();
+                setPosterFocusScale(itemView, false);
             }
 
             @Override
             public void onItemSelected(TvRecyclerView parent, View itemView, int position) {
-                itemView.animate().scaleX(1.05f).scaleY(1.05f).setDuration(300).setInterpolator(new BounceInterpolator()).start();
+                setPosterFocusScale(itemView, true);
             }
 
             @Override
@@ -247,6 +249,20 @@ public class FastSearchActivity extends BaseActivity {
             }
         });
         searchWordAdapter.setNewData(new ArrayList<>());
+    }
+
+    private void setPosterFocusScale(View itemView, boolean focused) {
+        if (itemView == null) return;
+        if (focused) {
+            itemView.bringToFront();
+        }
+        float scale = focused ? POSTER_FOCUS_SCALE : 1.0f;
+        itemView.animate()
+                .scaleX(scale)
+                .scaleY(scale)
+                .setDuration(POSTER_FOCUS_ANIM_DURATION)
+                .setInterpolator(new BounceInterpolator())
+                .start();
     }
 
     private void initViewModel() {

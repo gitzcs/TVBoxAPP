@@ -4,6 +4,8 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:clipChildren="false"
+    android:clipToPadding="false"
     android:orientation="vertical">
 
 
@@ -46,6 +48,8 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
+        android:clipChildren="false"
+        android:clipToPadding="false"
         android:orientation="horizontal">
 
         <LinearLayout
@@ -72,10 +76,12 @@
             android:id="@+id/llLayout"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
+            android:clipChildren="false"
+            android:clipToPadding="false"
             android:orientation="vertical"
             android:paddingLeft="40mm"
             android:paddingBottom="@dimen/vs_20"
-            android:paddingRight="@dimen/vs_120"
+            android:paddingRight="@dimen/vs_60"
             tools:ignore="InOrMmUsage">
 
 
@@ -85,10 +91,12 @@
                 android:layout_height="match_parent"
                 android:clipChildren="false"
                 android:clipToPadding="false"
+                android:paddingTop="@dimen/vs_10"
+                android:paddingBottom="@dimen/vs_10"
                 android:visibility="invisible"
-                app:tv_horizontalSpacingWithMargins="@dimen/vs_24"
+                app:tv_horizontalSpacingWithMargins="@dimen/vs_10"
                 app:tv_selectedItemIsCentered="true"
-                app:tv_verticalSpacingWithMargins="@dimen/vs_24" />
+                app:tv_verticalSpacingWithMargins="@dimen/vs_10" />
 
             <com.owen.tvrecyclerview.widget.TvRecyclerView
                 android:id="@+id/mGridViewFilter"
@@ -96,10 +104,12 @@
                 android:layout_height="match_parent"
                 android:clipChildren="false"
                 android:clipToPadding="false"
+                android:paddingTop="@dimen/vs_10"
+                android:paddingBottom="@dimen/vs_10"
                 android:visibility="invisible"
-                app:tv_horizontalSpacingWithMargins="@dimen/vs_10"
+                app:tv_horizontalSpacingWithMargins="@dimen/vs_5"
                 app:tv_selectedItemIsCentered="true"
-                app:tv_verticalSpacingWithMargins="@dimen/vs_10" />
+                app:tv_verticalSpacingWithMargins="@dimen/vs_5" />
 
 
         </LinearLayout>
