@@ -41,7 +41,7 @@ public class HomeHotVodAdapter extends BaseQuickAdapter<Movie.Video, BaseViewHol
         tvDel.setVisibility(HawkConfig.hotVodDelete ? View.VISIBLE : View.GONE);
 
         TextView tvRate = helper.getView(R.id.tvRate);
-        if (Hawk.get(HawkConfig.HOME_REC, 0) == 2) {
+        if (Hawk.get(HawkConfig.HOME_REC, HawkConfig.DEFAULT_HOME_REC) == 2) {
             SourceBean bean = ApiConfig.get().getSource(item.sourceKey);
             tvRateValue = bean != null ? bean.getName() : "";
         }

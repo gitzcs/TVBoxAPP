@@ -191,6 +191,25 @@ public class FileUtils {
         }
     }
 
+    public static void clearSpiderCacheFiles() {
+        cleanDirectory(new File(getFilePath() + "/csp/"));
+        cleanDirectory(new File(getCachePath() + "/jar/"));
+        cleanDirectory(new File(getCachePath() + "/py/"));
+        cleanDirectory(new File(getCachePath() + "/catvod_jsapi/"));
+        clearJsModuleCache();
+    }
+
+    private static void clearJsModuleCache() {
+        File externalCacheDir = new File(getExternalCachePath());
+        File[] files = externalCacheDir.listFiles();
+        if (files == null) return;
+        for (File file : files) {
+            if (file != null && file.getName().startsWith("qjscache_")) {
+                deleteFile(file);
+            }
+        }
+    }
+
     public static String read(String path) {
         try {
             BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream(getLocal(path))));

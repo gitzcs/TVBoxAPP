@@ -108,7 +108,7 @@ public class SettingActivity extends BaseActivity {
     private void initData() {
         currentApi = Hawk.get(HawkConfig.API_URL, "");
         homeSourceKey = ApiConfig.get().getHomeSourceBean().getKey();
-        homeRec = Hawk.get(HawkConfig.HOME_REC, 0);
+        homeRec = Hawk.get(HawkConfig.HOME_REC, HawkConfig.DEFAULT_HOME_REC);
         currentLiveApi = Hawk.get(HawkConfig.LIVE_API_URL, "");
         List<String> sortList = new ArrayList<>();
         sortList.add("设置其他");
@@ -178,7 +178,7 @@ public class SettingActivity extends BaseActivity {
     @Override
     public void onBackPressed() {
         if (currentApi.equals(Hawk.get(HawkConfig.API_URL, ""))) {
-            if (homeRec != Hawk.get(HawkConfig.HOME_REC, 0)) {
+            if (homeRec != Hawk.get(HawkConfig.HOME_REC, HawkConfig.DEFAULT_HOME_REC)) {
                 jumpActivity(HomeActivity.class, createBundle());
             }else if(!currentLiveApi.equals(Hawk.get(HawkConfig.LIVE_API_URL, ""))){
                 jumpActivity(HomeActivity.class, createBundle());

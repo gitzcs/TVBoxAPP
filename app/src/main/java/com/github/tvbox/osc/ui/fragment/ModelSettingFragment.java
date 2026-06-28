@@ -155,7 +155,7 @@ public class ModelSettingFragment extends BaseLazyFragment {
         refreshApiLineText();
 
         tvDns.setText(OkGoHelper.dnsHttpsList.get(Hawk.get(HawkConfig.DOH_URL, 0)));
-        tvHomeRec.setText(getHomeRecName(Hawk.get(HawkConfig.HOME_REC, 0)));
+        tvHomeRec.setText(getHomeRecName(Hawk.get(HawkConfig.HOME_REC, HawkConfig.DEFAULT_HOME_REC)));
         tvHistoryNum.setText(HistoryHelper.getHistoryNumName(Hawk.get(HawkConfig.HISTORY_NUM, 0)));
         tvSearchView.setText(getSearchView(Hawk.get(HawkConfig.SEARCH_VIEW, 0)));
         tvHomeApi.setText(ApiConfig.get().getHomeSourceBean().getName());
@@ -608,7 +608,7 @@ public class ModelSettingFragment extends BaseLazyFragment {
             @Override
             public void onClick(View v) {
                 FastClickCheckUtil.check(v);
-                int defaultPos = Hawk.get(HawkConfig.HOME_REC, 0);
+                int defaultPos = Hawk.get(HawkConfig.HOME_REC, HawkConfig.DEFAULT_HOME_REC);
                 ArrayList<Integer> types = new ArrayList<>();
                 types.add(0);
                 types.add(1);
@@ -856,7 +856,7 @@ public class ModelSettingFragment extends BaseLazyFragment {
     }
 
     private void restartAppAfterConfigChanged() {
-        Toast.makeText(mContext, "配置已切换,即将自动重启应用!", Toast.LENGTH_SHORT).show();
+        Toast.makeText(mContext, "配置已切换,即将自动重启到主页!", Toast.LENGTH_SHORT).show();
         new Handler().postDelayed(new Runnable() {
             @Override
             public void run() {
@@ -1090,15 +1090,11 @@ public class ModelSettingFragment extends BaseLazyFragment {
         FastClickCheckUtil.check(v);
         String cachePath = FileUtils.getCachePath();
         File cacheDir = new File(cachePath);
-        String cspCachePath = FileUtils.getFilePath()+"/csp/";
-        File cspCacheDir = new File(cspCachePath);
-        ApiConfig.get().clearSpiderCache();
         new Thread(() -> {
             try {
+                ApiConfig.get().clearSpiderCache();
                 if(cacheDir.exists())FileUtils.cleanDirectory(cacheDir);
-                if(cspCacheDir.exists()){
-                    FileUtils.cleanDirectory(cspCacheDir);
-                }
+                FileUtils.clearSpiderCacheFiles();
             } catch (Exception e) {
                 e.printStackTrace();
             } finally {
