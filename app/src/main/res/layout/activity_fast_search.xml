@@ -16,10 +16,10 @@
 
         <TextView
             android:id="@+id/mSearchTitle"
-            android:layout_width="@dimen/vs_180"
+            android:layout_width="@dimen/vs_220"
             android:layout_height="match_parent"
             android:layout_gravity="center_vertical"
-            android:layout_marginRight="@dimen/vs_20"
+            android:layout_marginRight="@dimen/vs_40"
             android:background="@drawable/bg_fast_search_status"
             android:gravity="center"
             android:includeFontPadding="false"
@@ -50,7 +50,7 @@
 
         <LinearLayout
             android:id="@+id/llWord"
-            android:layout_width="@dimen/vs_200"
+            android:layout_width="@dimen/vs_240"
             android:layout_height="match_parent"
             android:orientation="vertical"
             android:paddingLeft="20mm"
@@ -73,9 +73,9 @@
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:orientation="vertical"
-            android:paddingLeft="20mm"
+            android:paddingLeft="40mm"
             android:paddingBottom="@dimen/vs_20"
-            android:paddingRight="20mm"
+            android:paddingRight="@dimen/vs_120"
             tools:ignore="InOrMmUsage">
 
 
@@ -86,9 +86,9 @@
                 android:clipChildren="false"
                 android:clipToPadding="false"
                 android:visibility="invisible"
-                app:tv_horizontalSpacingWithMargins="@dimen/vs_5"
+                app:tv_horizontalSpacingWithMargins="@dimen/vs_24"
                 app:tv_selectedItemIsCentered="true"
-                app:tv_verticalSpacingWithMargins="@dimen/vs_5" />
+                app:tv_verticalSpacingWithMargins="@dimen/vs_24" />
 
             <com.owen.tvrecyclerview.widget.TvRecyclerView
                 android:id="@+id/mGridViewFilter"
@@ -97,9 +97,9 @@
                 android:clipChildren="false"
                 android:clipToPadding="false"
                 android:visibility="invisible"
-                app:tv_horizontalSpacingWithMargins="@dimen/vs_5"
+                app:tv_horizontalSpacingWithMargins="@dimen/vs_10"
                 app:tv_selectedItemIsCentered="true"
-                app:tv_verticalSpacingWithMargins="@dimen/vs_5" />
+                app:tv_verticalSpacingWithMargins="@dimen/vs_10" />
 
 
         </LinearLayout>
