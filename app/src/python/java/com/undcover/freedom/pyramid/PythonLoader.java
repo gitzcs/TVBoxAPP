@@ -95,12 +95,16 @@ public class PythonLoader {
         this.app = app;
         setSdk(this.app);
         if (pyInstance == null) {
-            if (!Python.isStarted()) {
-                androidPlatform = new AndroidPlatform(app);
-                Python.start(androidPlatform);
+            try {
+                if (!Python.isStarted()) {
+                    androidPlatform = new AndroidPlatform(app);
+                    Python.start(androidPlatform);
+                }
+                pyInstance = Python.getInstance();
+                pyApp = pyInstance.getModule("app");
+            } catch (Throwable th) {
+                throw new RuntimeException(th);
             }
-            pyInstance = Python.getInstance();
-            pyApp = pyInstance.getModule("app");
         }
         File pyCache = new File(app.getCacheDir(), "py");
         if (!pyCache.exists()) pyCache.mkdirs();

@@ -716,7 +716,7 @@ public class DetailActivity extends BaseActivity {
         thumbContainer.setVisibility(showPreview ? View.GONE : View.VISIBLE);
         llPlayerPlace.setVisibility(showPreview ? View.VISIBLE : View.GONE);
         ivThumb.setVisibility(!showPreview ? View.VISIBLE : View.GONE);
-        thumbContainer.setBackgroundResource(showPreview ? R.drawable.shape_detail_thumb_bg : R.drawable.preview_player_round);
+        thumbContainer.setBackgroundResource(showPreview ? R.drawable.shape_detail_thumb_bg : R.drawable.shape_detail_thumb_idle_bg);
     }
 
     private void setPreviewRoundClip(boolean enable) {
