@@ -1295,6 +1295,7 @@ public class DetailActivity extends BaseActivity {
         fullWindows = full;
         if (playFragment != null) {
             playFragment.setAutoSwitchLineEnabled(!fullWindows);
+            playFragment.setPreviewMode(!fullWindows);
         }
         llPlayerFragmentContainer.setVisibility(fullWindows || showPreview ? View.VISIBLE : View.GONE);
         llPlayerFragmentContainer.setLayoutParams(fullWindows ? windowsFull : windowsPreview);

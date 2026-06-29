@@ -1579,6 +1579,12 @@ public class PlayFragment extends BaseLazyFragment {
         }
     }
 
+    public void setPreviewMode(boolean previewMode) {
+        if (mController != null) {
+            mController.setPreviewMode(previewMode);
+        }
+    }
+
     public void pauseForHidden() {
         cancelPlayTimeout();
         stopParse();
