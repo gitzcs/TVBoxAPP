@@ -332,7 +332,6 @@ public class HomeActivity extends BaseActivity {
 
     private void initData() {
         if (dataInitOk && jarInitOk) {
-            warmSearchSpidersOnce();
             loadHomeSort(false);
             if (hasPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE)) {
                 LOG.e("有");
@@ -342,6 +341,8 @@ public class HomeActivity extends BaseActivity {
             if (!useCacheConfig && Hawk.get(HawkConfig.DEFAULT_LOAD_LIVE, false)) {
                 jumpActivity(LivePlayActivity.class);
             }
+            //爬虫预热 仅首次加载
+            if(!useCacheConfig)warmSearchSpidersOnce();
             return;
         }
         tvNameAnimation();

@@ -581,7 +581,7 @@ public class SourceViewModel extends ViewModel {
                     });
                     String sortJson = null;
                     try {
-                        sortJson = future.get(10, TimeUnit.SECONDS);
+                        sortJson = future.get(20, TimeUnit.SECONDS);
                     } catch (TimeoutException e) {
                         e.printStackTrace();
                         future.cancel(true);
@@ -692,7 +692,7 @@ public class SourceViewModel extends ViewModel {
 
                     String json = null;
                     try {
-                        json = future.get(15, TimeUnit.SECONDS);
+                        json = future.get(20, TimeUnit.SECONDS);
                         LOG.i("echo--getDetail--result:" + json);
                     } catch (TimeoutException e) {
                         LOG.i("echo--getDetail--timeout");
@@ -1205,7 +1205,7 @@ public class SourceViewModel extends ViewModel {
         });
 
         try {
-            return future.get(5, TimeUnit.SECONDS);
+            return future.get(20, TimeUnit.SECONDS);
         } catch (TimeoutException te) {
             te.printStackTrace();
             future.cancel(true);
