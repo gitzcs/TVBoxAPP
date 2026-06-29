@@ -21,6 +21,7 @@ import com.bumptech.glide.load.engine.GlideException;
 import com.bumptech.glide.load.model.GlideUrl;
 import com.bumptech.glide.load.model.LazyHeaders;
 import com.bumptech.glide.load.resource.bitmap.CenterCrop;
+import com.bumptech.glide.load.resource.bitmap.FitCenter;
 import com.bumptech.glide.load.resource.bitmap.RoundedCorners;
 import com.bumptech.glide.request.RequestListener;
 import com.bumptech.glide.request.RequestOptions;
@@ -105,6 +106,33 @@ public class ImgUtil {
 
     public static void load(String url, ImageView view, int roundingRadius, int newWidth, int newHeight) {
         load(url, view, roundingRadius, newWidth, newHeight, null);
+    }
+
+    public static void load(String url, ImageView view, int roundingRadius, int newWidth, int newHeight, String label, ImageView.ScaleType scaleType) {
+        view.setScaleType(scaleType);
+        if (roundingRadius <= 0) roundingRadius = 1;
+        Drawable fallback = createTextDrawable(TextUtils.isEmpty(label) ? "TVBox" : label, newWidth, newHeight, roundingRadius);
+        Drawable placeholder = createImagePlaceholderDrawable(newWidth, newHeight, roundingRadius);
+        if (TextUtils.isEmpty(url)) {
+            view.setImageDrawable(fallback);
+            return;
+        }
+        RequestOptions options = new RequestOptions()
+                .format(DecodeFormat.PREFER_RGB_565)
+                .diskCacheStrategy(DiskCacheStrategy.AUTOMATIC)
+                .dontAnimate()
+                .transform(new FitCenter(), new RoundedCorners(roundingRadius));
+        if (newWidth > 0 && newHeight > 0) {
+            options = options.override(newWidth, newHeight);
+        }
+        Glide.with(App.getInstance())
+                .asBitmap()
+                .load(getUrl(url))
+                .placeholder(placeholder)
+                .error(fallback)
+                .listener(getListener(view, scaleType, fallback))
+                .apply(options)
+                .into(view);
     }
 
     public static void load(String url, ImageView view, int roundingRadius, int newWidth, int newHeight, String label) {
