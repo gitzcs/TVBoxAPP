@@ -714,6 +714,16 @@ public class ApiConfig {
         return trimContent;
     }
 
+    private void resetConfigData() {
+        clearSpiderCache();
+        currentPlaySourceKey = "";
+        sourceBeanList.clear();
+        liveChannelGroupList.clear();
+        parseBeanList.clear();
+        searchSourceBeanList = new ArrayList<>();
+        Hawk.put(HawkConfig.LIVE_GROUP_LIST,new JsonArray());
+    }
+
     private void clearApiLinesIfUnmatched(String apiUrl) {
         ArrayList<String> apiLines = Hawk.get(HawkConfig.API_LINE_LIST, new ArrayList<String>());
         if (apiLines.isEmpty()) {
@@ -729,7 +739,7 @@ public class ApiConfig {
 
     private static  String jarCache ="true";
     private void parseJson(String apiUrl, String jsonStr) {
-//        pyLoader.setConfig(jsonStr);
+        resetConfigData();
         JsonObject infoJson = gson.fromJson(jsonStr, JsonObject.class);
         // spider
         spider = DefaultConfig.safeJsonString(infoJson, "spider", "");

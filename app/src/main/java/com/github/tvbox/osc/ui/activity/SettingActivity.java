@@ -184,8 +184,10 @@ public class SettingActivity extends BaseActivity {
                 jumpActivity(HomeActivity.class, createBundle());
             }
         } else {
-            AppManager.getInstance().finishAllActivity();
+            AppManager.getInstance().finishActivity(HomeActivity.class);
             jumpActivity(HomeActivity.class);
+            finish();
+            return;
         }
         super.onBackPressed();
     }
