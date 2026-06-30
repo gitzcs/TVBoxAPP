@@ -653,6 +653,10 @@ public class PlayFragment extends BaseLazyFragment {
     }
     public void goPlayUrl(String url, HashMap<String, String> headers) {
         LOG.i("echo-goPlayUrl:" + url);
+        if (TextUtils.isEmpty(url)) {
+            handleResolvePlayUrlFailed("获取播放地址为空", true);
+            return;
+        }
         if(autoRetryCount==0)webPlayUrl=url;
         if (mActivity == null) return;
         if (!isAdded()) return;
