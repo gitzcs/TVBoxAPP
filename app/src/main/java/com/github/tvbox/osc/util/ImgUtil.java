@@ -113,7 +113,7 @@ public class ImgUtil {
         if (roundingRadius <= 0) roundingRadius = 1;
         Drawable fallback = createTextDrawable(TextUtils.isEmpty(label) ? "TVBox" : label, newWidth, newHeight, roundingRadius);
         Drawable placeholder = createImagePlaceholderDrawable(newWidth, newHeight, roundingRadius);
-        if (TextUtils.isEmpty(url)) {
+        if (isInvalidImageUrl(url)) {
             view.setImageDrawable(fallback);
             return;
         }
@@ -140,7 +140,7 @@ public class ImgUtil {
         if (roundingRadius <= 0) roundingRadius = 1;
         Drawable fallback = createTextDrawable(TextUtils.isEmpty(label) ? "TVBox" : label, newWidth, newHeight, roundingRadius);
         Drawable placeholder = createImagePlaceholderDrawable(newWidth, newHeight, roundingRadius);
-        if (TextUtils.isEmpty(url)) {
+        if (isInvalidImageUrl(url)) {
             view.setImageDrawable(fallback);
             return;
         }
@@ -274,6 +274,28 @@ public class ImgUtil {
         if (!TextUtils.isEmpty(referer)) putHeader(headers, "Referer", referer);
         for (Map.Entry<String, String> entry : headers.entrySet()) builder.setHeader(entry.getKey(), entry.getValue());
         return new GlideUrl(url, builder.build());
+    }
+
+    private static boolean isInvalidImageUrl(String url) {
+        if (TextUtils.isEmpty(url)) return true;
+        url = url.trim();
+        if (TextUtils.isEmpty(url)) return true;
+        return hasEmptyProxyParam(url, "img");
+    }
+
+    private static boolean hasEmptyProxyParam(String url, String key) {
+        if (!url.startsWith("proxy://") && !url.contains("/proxy?")) return false;
+        int queryIndex = url.indexOf('?');
+        String query = queryIndex >= 0 ? url.substring(queryIndex + 1) : url.substring("proxy://".length());
+        String[] pairs = query.split("&");
+        for (String pair : pairs) {
+            int eqIndex = pair.indexOf('=');
+            if (eqIndex < 0) continue;
+            if (key.equals(pair.substring(0, eqIndex)) && TextUtils.isEmpty(pair.substring(eqIndex + 1))) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static void putHeader(Map<String, String> headers, String key, String value) {
