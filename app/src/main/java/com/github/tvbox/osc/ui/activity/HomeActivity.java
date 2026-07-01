@@ -680,6 +680,9 @@ public class HomeActivity extends BaseActivity {
             }
         } else if (event.type == RefreshEvent.TYPE_HOME_SOURCE_CHANGE) {
             refreshHome(false);
+        } else if (event.type == RefreshEvent.TYPE_HOME_RESTART) {
+            LOG.i("echo-home-restart");
+            refreshHome();
         }
     }
 
