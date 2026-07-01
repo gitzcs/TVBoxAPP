@@ -29,10 +29,11 @@ public class ExoPlayer extends ExoMediaPlayer {
     public ExoPlayer(Context context) {
         super(context);
         setLoadControl(new DefaultLoadControl.Builder()
-                .setBufferDurationsMs(2_000, 6_000, 500, 1_000)
-                .setTargetBufferBytes(2 * 1024 * 1024)
-                .setPrioritizeTimeOverSizeThresholds(false)
-                .setBackBuffer(0, false)
+                .setBufferDurationsMs(
+                        DefaultLoadControl.DEFAULT_MIN_BUFFER_MS,
+                        DefaultLoadControl.DEFAULT_MAX_BUFFER_MS,
+                        DefaultLoadControl.DEFAULT_BUFFER_FOR_PLAYBACK_MS,
+                        DefaultLoadControl.DEFAULT_BUFFER_FOR_PLAYBACK_AFTER_REBUFFER_MS)
                 .build());
         setRenderersFactory(buildRenderersFactory(context));
         LOG.i("echo-exo-low-memory-load-control");
