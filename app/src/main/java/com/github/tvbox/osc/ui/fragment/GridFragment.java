@@ -268,7 +268,6 @@ public class GridFragment extends BaseLazyFragment {
                             }
                         }else {
                             bundle.putString("picture", video.pic);
-                            markDetailPending();
                             jumpActivity(DetailActivity.class, bundle);
                         }
                     }
@@ -373,10 +372,6 @@ public class GridFragment extends BaseLazyFragment {
         return false;
     }
 
-    private void markDetailPending() {
-        Hawk.put(HawkConfig.GRID_DETAIL_PENDING, System.currentTimeMillis());
-    }
-
     private void toggleFilterColor() {
         if (sortData!=null && sortData.filters != null && !sortData.filters.isEmpty()) {
             int count = sortData.filterSelectCount();
@@ -390,7 +385,6 @@ public class GridFragment extends BaseLazyFragment {
 
     public void scrollTop() {
         isTop = true;
-        if (mGridView == null) return;
         mGridView.scrollToPosition(0);
     }
 
@@ -467,7 +461,6 @@ public class GridFragment extends BaseLazyFragment {
     }
 
     public void forceRefresh() {
-        if (mGridView == null || gridAdapter == null || sourceViewModel == null) return;
         if (isRequesting) return;
         page = 1;
         initData();

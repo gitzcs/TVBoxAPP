@@ -78,7 +78,6 @@ import okhttp3.Call;
  * @description:
  */
 public class SourceViewModel extends ViewModel {
-    private static final long GRID_DETAIL_PENDING_MAX_AGE = 30L * 60L * 1000L;
     public MutableLiveData<AbsSortXml> sortResult;
     public MutableLiveData<AbsXml> listResult;
     public MutableLiveData<AbsXml> searchResult;
@@ -453,12 +452,10 @@ public class SourceViewModel extends ViewModel {
                     } catch (InterruptedException | ExecutionException e) {
                         Throwable cause = e.getCause();
                         LOG.i("echo--getList-error--" + homeSourceBean.getKey() + "--" + e.getClass().getSimpleName() + "--" + (cause != null ? cause.getClass().getSimpleName() + ":" + cause.getMessage() : e.getMessage()));
-                        restartHomeIfDetailReturnSortLost(sortData, cause);
                         e.printStackTrace();
                     } finally {
                         executor.shutdown();
                         if (json != null) {
-                            clearGridDetailPending();
                             json(listResult, json,homeSourceBean.getKey());
                         } else {
                             listResult.postValue(null);
@@ -560,32 +557,6 @@ public class SourceViewModel extends ViewModel {
         } else {
             listResult.postValue(null);
         }
-    }
-
-    private void restartHomeIfDetailReturnSortLost(MovieSort.SortData sortData, Throwable cause) {
-        if (sortData != null || !(cause instanceof NullPointerException)) {
-            return;
-        }
-        if (!consumeGridDetailPending()) {
-            return;
-        }
-        LOG.i("echo-getList-sortData-null-restart");
-        mainHandler.post(new Runnable() {
-            @Override
-            public void run() {
-                EventBus.getDefault().post(new RefreshEvent(RefreshEvent.TYPE_HOME_RESTART));
-            }
-        });
-    }
-
-    private static boolean consumeGridDetailPending() {
-        long pendingTime = Hawk.get(HawkConfig.GRID_DETAIL_PENDING, 0L);
-        clearGridDetailPending();
-        return pendingTime > 0 && System.currentTimeMillis() - pendingTime < GRID_DETAIL_PENDING_MAX_AGE;
-    }
-
-    private static void clearGridDetailPending() {
-        Hawk.put(HawkConfig.GRID_DETAIL_PENDING, 0L);
     }
 
     interface HomeRecCallback {
