@@ -163,6 +163,7 @@ public class VodController extends BaseController {
     TvRecyclerView mGridParseView;
     TextView mPlayTitle;
     TextView mPlayTitle1;
+    TextView mPlayLabel;
     TextView mPlayLoadNetSpeedRightTop;
     TextView mNextBtn;
     TextView mPreBtn;
@@ -255,6 +256,7 @@ public class VodController extends BaseController {
         mTotalTime = findViewById(R.id.total_time);
         mPlayTitle = findViewById(R.id.tv_info_name);
         mPlayTitle1 = findViewById(R.id.tv_info_name1);
+        mPlayLabel = findViewById(R.id.play_label);
         mPlayLoadNetSpeedRightTop = findViewById(R.id.tv_play_load_net_speed_right_top);
         mSeekBar = findViewById(R.id.seekBar);
         CircleThumbDrawable seekThumb = new CircleThumbDrawable(getContext());
@@ -291,12 +293,12 @@ public class VodController extends BaseController {
         mAudioTrackBtn = findViewById(R.id.audio_track_select);
         mDanmuSettingBtn = findViewById(R.id.danmu_setting);
         mDanmuSearchUiBtn = findViewById(R.id.danmu_search_ui);
-        updateDanmuSearchUiBtn();
         mLandscapePortraitBtn = findViewById(R.id.landscape_portrait);
         backBtn = findViewById(R.id.tv_back);
         seekTime = findViewById(R.id.tv_seek_time);
         mScreenDisplay = findViewById(R.id.screen_display);
         mCastBtn = findViewById(R.id.play_cast);
+        updateDanmuSearchUiBtn();
         backBtn.setOnClickListener(new OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -845,10 +847,13 @@ public class VodController extends BaseController {
                 if (listener != null) listener.clickCast();
             }
         });
-        mNextBtn.setNextFocusLeftId(R.id.play_cast);
-        mScreenDisplay.setNextFocusRightId(R.id.play_cast);
-        mCastBtn.setNextFocusLeftId(R.id.screen_display);
-        mCastBtn.setNextFocusRightId(R.id.play_next);
+        if (Build.VERSION.SDK_INT < 30) {
+            mCastBtn.setVisibility(GONE);
+        } else {
+            mCastBtn.setVisibility(VISIBLE);
+        }
+        mScreenDisplay.setNextFocusRightId(R.id.play_next);
+        mNextBtn.setNextFocusLeftId(R.id.screen_display);
     }
 
     private void hideLiveAboutBtn() {
@@ -970,7 +975,9 @@ public class VodController extends BaseController {
 
     public void updateDanmuSearchUiBtn() {
         if (mDanmuSearchUiBtn == null) return;
-        mDanmuSearchUiBtn.setVisibility(ApiConfig.get().hasDanmuSearchUi() ? VISIBLE : GONE);
+        boolean hasDanmuSearchUi = ApiConfig.get().hasDanmuSearchUi();
+        mDanmuSearchUiBtn.setVisibility(hasDanmuSearchUi ? VISIBLE : GONE);
+        if (mPlayLabel != null) mPlayLabel.setVisibility(hasDanmuSearchUi ? GONE : VISIBLE);
     }
 
     public interface VodControlListener {
