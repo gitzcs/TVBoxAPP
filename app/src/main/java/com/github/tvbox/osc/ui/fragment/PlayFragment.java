@@ -50,6 +50,7 @@ import com.github.tvbox.osc.bean.SourceBean;
 import com.github.tvbox.osc.bean.Subtitle;
 import com.github.tvbox.osc.bean.VodInfo;
 import com.github.tvbox.osc.cache.CacheManager;
+import com.github.tvbox.osc.dlna.CastVideo;
 import com.github.tvbox.osc.event.RefreshEvent;
 import com.github.tvbox.osc.player.ExoPlayer;
 import com.github.tvbox.osc.player.IjkMediaPlayer;
@@ -60,6 +61,7 @@ import com.github.tvbox.osc.player.controller.VodController;
 import com.github.tvbox.osc.player.danmu.DanmuLoadController;
 import com.github.tvbox.osc.server.ControlManager;
 import com.github.tvbox.osc.ui.adapter.SelectDialogAdapter;
+import com.github.tvbox.osc.ui.dialog.CastDeviceDialog;
 import com.github.tvbox.osc.ui.dialog.DanmuSettingDialog;
 import com.github.tvbox.osc.ui.dialog.SearchSubtitleDialog;
 import com.github.tvbox.osc.ui.dialog.SelectDialog;
@@ -360,10 +362,65 @@ public class PlayFragment extends BaseLazyFragment {
             public void startPlayUrl(String url, HashMap<String, String> headers) {
                 goPlayUrl(url, headers);
             }
+
+            @Override
+            public void clickCast() {
+                showCastDialog();
+            }
+
             @Override
             public void setAllowSwitchPlayer(boolean isAllow){allowSwitchPlayer=isAllow;}
         });
         mVideoView.setVideoController(mController);
+    }
+
+    private void showCastDialog() {
+        if (TextUtils.isEmpty(webPlayUrl)) {
+            Toast.makeText(mContext, "暂无可投屏播放地址", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        HashMap<String, String> headers = webHeaderMap == null ? null : new HashMap<>(webHeaderMap);
+        CastVideo video = new CastVideo(getCastUrl(webPlayUrl), getCastTitle(), headers, getCastPosition());
+        CastDeviceDialog dialog = new CastDeviceDialog(requireActivity(), video);
+        dialog.setOnCastListener(new CastDeviceDialog.OnCastListener() {
+            @Override
+            public void onCastSuccess() {
+                if (mVideoView != null) mVideoView.pause();
+            }
+
+            @Override
+            public void onCastFailed() {
+            }
+        });
+        dialog.show();
+    }
+
+    private String getCastTitle() {
+        if (mVodInfo == null) return "TVBox";
+        try {
+            VodInfo.VodSeries series = mVodInfo.seriesMap.get(mVodInfo.playFlag).get(mVodInfo.playIndex);
+            return mVodInfo.name + " " + series.name;
+        } catch (Exception e) {
+            return TextUtils.isEmpty(mVodInfo.name) ? "TVBox" : mVodInfo.name;
+        }
+    }
+
+    private long getCastPosition() {
+        try {
+            return mVideoView == null ? 0 : mVideoView.getCurrentPosition();
+        } catch (Exception e) {
+            return 0;
+        }
+    }
+
+    private String getCastUrl(String url) {
+        if (TextUtils.isEmpty(url)) return url;
+        String local = ControlManager.get().getAddress(true);
+        String server = ControlManager.get().getAddress(false);
+        if (!TextUtils.isEmpty(local) && !TextUtils.isEmpty(server) && url.startsWith(local)) {
+            return server + url.substring(local.length());
+        }
+        return url;
     }
 
     //设置字幕

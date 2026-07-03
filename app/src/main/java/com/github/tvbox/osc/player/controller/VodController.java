@@ -190,6 +190,7 @@ public class VodController extends BaseController {
     TextView seekTime; //右上角进度时间显示
     TextView mScreenDisplay; //增加屏显开关
     LinearLayout tv_screen_display; //增加屏显布局
+    TextView mCastBtn;
     TextView net_play_speed;
     private boolean hasDanmu = false;
 
@@ -295,6 +296,7 @@ public class VodController extends BaseController {
         backBtn = findViewById(R.id.tv_back);
         seekTime = findViewById(R.id.tv_seek_time);
         mScreenDisplay = findViewById(R.id.screen_display);
+        mCastBtn = findViewById(R.id.play_cast);
         backBtn.setOnClickListener(new OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -837,8 +839,16 @@ public class VodController extends BaseController {
                 hideBottom();
             }
         });
-        mNextBtn.setNextFocusLeftId(R.id.screen_display);
-        mScreenDisplay.setNextFocusRightId(R.id.play_next);
+        mCastBtn.setOnClickListener(new OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                if (listener != null) listener.clickCast();
+            }
+        });
+        mNextBtn.setNextFocusLeftId(R.id.play_cast);
+        mScreenDisplay.setNextFocusRightId(R.id.play_cast);
+        mCastBtn.setNextFocusLeftId(R.id.screen_display);
+        mCastBtn.setNextFocusRightId(R.id.play_next);
     }
 
     private void hideLiveAboutBtn() {
@@ -987,6 +997,8 @@ public class VodController extends BaseController {
         void searchDanmuUi(boolean longClick);
 
         void startPlayUrl(String url, HashMap<String, String> headers);
+
+        void clickCast();
 
         void setAllowSwitchPlayer(boolean isAllow);
     }
