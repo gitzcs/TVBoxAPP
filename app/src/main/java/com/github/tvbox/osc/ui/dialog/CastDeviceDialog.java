@@ -7,6 +7,7 @@ import android.os.Looper;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -40,21 +41,41 @@ public class CastDeviceDialog extends BaseDialog {
     private final DeviceAdapter adapter = new DeviceAdapter();
     private OnCastListener onCastListener;
     private TextView title;
+    private ProgressBar progressBar;
+    private TextView tvScanning;
+    private TextView tvEmpty;
     private boolean searchFinished;
 
     public CastDeviceDialog(@NonNull @NotNull Context context, CastVideo video) {
         super(context);
         this.video = video;
-        setContentView(R.layout.dialog_select);
+        setContentView(R.layout.dialog_cast);
     }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         title = findViewById(R.id.title);
+        progressBar = findViewById(R.id.progressBar);
+        tvScanning = findViewById(R.id.tvScanning);
+        tvEmpty = findViewById(R.id.tvEmpty);
+        TextView btnRefresh = findViewById(R.id.btnRefresh);
+        TextView btnCancel = findViewById(R.id.btnCancel);
         TvRecyclerView list = findViewById(R.id.list);
         list.setAdapter(adapter);
-        title.setText("搜索投屏设备...");
+        title.setText("投屏到设备");
+        btnRefresh.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                refreshDevices();
+            }
+        });
+        btnCancel.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                dismiss();
+            }
+        });
         searchDevices();
     }
 
@@ -70,15 +91,26 @@ public class CastDeviceDialog extends BaseDialog {
     }
 
     private void searchDevices() {
+        searchFinished = false;
+        updateState();
         searchTvBoxDevices();
         searchDlnaDevices();
         handler.postDelayed(new Runnable() {
             @Override
             public void run() {
                 searchFinished = true;
-                updateTitle();
+                updateState();
             }
         }, 15000);
+    }
+
+    private void refreshDevices() {
+        handler.removeCallbacksAndMessages(null);
+        DLNACastManager.get().setDeviceListener(null);
+        DLNACastManager.get().release(getContext());
+        devices.clear();
+        adapter.setData(new ArrayList<CastDevice>());
+        searchDevices();
     }
 
     private void searchTvBoxDevices() {
@@ -134,16 +166,20 @@ public class CastDeviceDialog extends BaseDialog {
     private void addDevice(CastDevice device) {
         devices.put(device.getType() + ":" + device.getId(), device);
         adapter.setData(new ArrayList<>(devices.values()));
-        updateTitle();
+        updateState();
     }
 
     private void updateTitle() {
+        updateState();
+    }
+
+    private void updateState() {
         if (title == null) return;
-        if (!devices.isEmpty()) {
-            title.setText("投屏到设备");
-        } else {
-            title.setText(searchFinished ? "未找到投屏设备" : "搜索投屏设备...");
-        }
+        title.setText("投屏到设备");
+        boolean hasDevice = !devices.isEmpty();
+        if (progressBar != null) progressBar.setVisibility(!hasDevice && !searchFinished ? View.VISIBLE : View.GONE);
+        if (tvScanning != null) tvScanning.setVisibility(!hasDevice && !searchFinished ? View.VISIBLE : View.GONE);
+        if (tvEmpty != null) tvEmpty.setVisibility(!hasDevice && searchFinished ? View.VISIBLE : View.GONE);
     }
 
     private void castToDevice(final CastDevice device) {
@@ -238,14 +274,16 @@ public class CastDeviceDialog extends BaseDialog {
         @NonNull
         @Override
         public DeviceHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-            return new DeviceHolder(LayoutInflater.from(parent.getContext()).inflate(R.layout.item_dialog_select, parent, false));
+            return new DeviceHolder(LayoutInflater.from(parent.getContext()).inflate(R.layout.item_cast_device, parent, false));
         }
 
         @Override
         public void onBindViewHolder(@NonNull DeviceHolder holder, final int position) {
             final CastDevice device = data.get(position);
-            TextView name = holder.itemView.findViewById(R.id.tvName);
-            name.setText(device.getDisplayName());
+            TextView name = holder.itemView.findViewById(R.id.tvDeviceName);
+            TextView ip = holder.itemView.findViewById(R.id.tvDeviceIp);
+            name.setText(device.getName());
+            ip.setText((device.getType() == CastDevice.TYPE_DLNA ? "DLNA  " : "TVBox  ") + device.getId());
             holder.itemView.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
