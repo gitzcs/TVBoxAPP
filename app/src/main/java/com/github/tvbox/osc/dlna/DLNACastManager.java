@@ -10,6 +10,7 @@ import android.os.IBinder;
 import android.os.Looper;
 
 import com.google.gson.Gson;
+import com.github.tvbox.osc.util.LOG;
 
 import org.fourthline.cling.android.AndroidUpnpService;
 import org.fourthline.cling.controlpoint.ControlPoint;
@@ -25,13 +26,7 @@ import org.fourthline.cling.registry.Registry;
 import org.fourthline.cling.support.avtransport.callback.Play;
 import org.fourthline.cling.support.avtransport.callback.Seek;
 import org.fourthline.cling.support.avtransport.callback.SetAVTransportURI;
-import org.fourthline.cling.support.contentdirectory.DIDLParser;
-import org.fourthline.cling.support.model.DIDLContent;
-import org.fourthline.cling.support.model.DIDLObject;
-import org.fourthline.cling.support.model.ProtocolInfo;
-import org.fourthline.cling.support.model.Res;
 import org.fourthline.cling.support.model.SeekMode;
-import org.fourthline.cling.support.model.item.VideoItem;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -172,6 +167,7 @@ public class DLNACastManager extends DefaultRegistryListener implements ServiceC
             postFail(callback, "设备离线");
             return;
         }
+        LOG.i("dlna-cast start device=" + device.getName() + ", id=" + device.getId() + ", url=" + video.getUrl());
         control.execute(uriAction(control, service, video, callback));
     }
 
@@ -188,7 +184,8 @@ public class DLNACastManager extends DefaultRegistryListener implements ServiceC
     }
 
     private SetAVTransportURI uriAction(final ControlPoint control, final RemoteService service, final CastVideo video, final CastCallback callback) {
-        return new SetAVTransportURI(service, video.getUrl(), buildMetaData(video)) {
+        String metaData = buildMetaData(video);
+        return new SetAVTransportURI(service, video.getUrl(), metaData) {
             @Override
             public void success(ActionInvocation invocation) {
                 control.execute(playAction(control, service, video, callback));
@@ -196,6 +193,7 @@ public class DLNACastManager extends DefaultRegistryListener implements ServiceC
 
             @Override
             public void failure(ActionInvocation invocation, UpnpResponse operation, String defaultMsg) {
+                LOG.e("dlna-cast SetAVTransportURI failure: " + formatResponse(operation, defaultMsg));
                 postFail(callback, defaultMsg);
             }
         };
@@ -211,6 +209,7 @@ public class DLNACastManager extends DefaultRegistryListener implements ServiceC
 
             @Override
             public void failure(ActionInvocation invocation, UpnpResponse operation, String defaultMsg) {
+                LOG.e("dlna-cast Play failure: " + formatResponse(operation, defaultMsg));
                 postFail(callback, defaultMsg);
             }
         };
@@ -224,29 +223,53 @@ public class DLNACastManager extends DefaultRegistryListener implements ServiceC
 
             @Override
             public void failure(ActionInvocation invocation, UpnpResponse operation, String defaultMsg) {
+                LOG.i("dlna-cast Seek ignored: " + formatResponse(operation, defaultMsg));
             }
         };
     }
 
     private String buildMetaData(CastVideo video) {
         try {
-            DIDLContent content = new DIDLContent();
-            VideoItem item = new VideoItem("0", "-1", video.getName(), "", new Res(new ProtocolInfo("http-get:*:video/*:*"), 0L, video.getUrl()));
+            StringBuilder sb = new StringBuilder();
+            sb.append("<DIDL-Lite xmlns=\"urn:schemas-upnp-org:metadata-1-0/DIDL-Lite/\" ");
+            sb.append("xmlns:dc=\"http://purl.org/dc/elements/1.1/\" ");
+            sb.append("xmlns:upnp=\"urn:schemas-upnp-org:metadata-1-0/upnp/\">");
+            sb.append("<item id=\"0\" parentID=\"-1\" restricted=\"0\">");
+            sb.append("<dc:title>").append(escapeXml(video.getName())).append("</dc:title>");
+            sb.append("<dc:creator></dc:creator>");
+            sb.append("<upnp:class>object.item.videoItem</upnp:class>");
             HashMap<String, String> headers = video.getHeaders();
             if (headers != null && !headers.isEmpty()) {
-                item.addProperty(new DIDLObject.Property.DC.DESCRIPTION(new Gson().toJson(headers)));
+                sb.append("<dc:description>").append(escapeXml(new Gson().toJson(headers))).append("</dc:description>");
             }
-            content.addItem(item);
-            return new DIDLParser().generate(content);
+            sb.append("<res protocolInfo=\"http-get:*:video/*:*\">").append(escapeXml(video.getUrl())).append("</res>");
+            sb.append("</item>");
+            sb.append("</DIDL-Lite>");
+            return sb.toString();
         } catch (Exception e) {
+            LOG.e("dlna-cast metadata failure: " + e.getMessage());
             return "";
         }
+    }
+
+    private String escapeXml(String value) {
+        if (value == null) return "";
+        return value.replace("&", "&amp;")
+                .replace("<", "&lt;")
+                .replace(">", "&gt;")
+                .replace("'", "&apos;")
+                .replace("\"", "&quot;");
     }
 
     private String formatMs(long ms) {
         if (ms <= 0) return "00:00:00";
         long s = ms / 1000;
         return String.format(Locale.US, "%02d:%02d:%02d", s / 3600, (s % 3600) / 60, s % 60);
+    }
+
+    private String formatResponse(UpnpResponse operation, String defaultMsg) {
+        if (operation == null) return defaultMsg == null ? "" : defaultMsg;
+        return operation.getStatusCode() + " " + operation.getStatusMessage() + " " + (defaultMsg == null ? "" : defaultMsg);
     }
 
     private void postSuccess(final CastCallback callback) {
