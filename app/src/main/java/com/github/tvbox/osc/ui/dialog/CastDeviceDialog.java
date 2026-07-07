@@ -238,7 +238,7 @@ public class CastDeviceDialog extends BaseDialog {
         StringBuilder sb = new StringBuilder(url).append("|");
         int index = 0;
         for (String key : headers.keySet()) {
-            sb.append(key).append("=").append(URLEncoder.encode(headers.get(key), "UTF-8"));
+            sb.append(URLEncoder.encode(key, "UTF-8")).append("=").append(URLEncoder.encode(headers.get(key), "UTF-8"));
             if (index < headers.size() - 1) sb.append("&");
             index++;
         }
