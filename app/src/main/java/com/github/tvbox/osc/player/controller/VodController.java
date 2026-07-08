@@ -977,7 +977,25 @@ public class VodController extends BaseController {
         if (mDanmuSearchUiBtn == null) return;
         boolean hasDanmuSearchUi = ApiConfig.get().hasDanmuSearchUi();
         mDanmuSearchUiBtn.setVisibility(hasDanmuSearchUi ? VISIBLE : GONE);
-        if (mPlayLabel != null) mPlayLabel.setVisibility(hasDanmuSearchUi ? GONE : VISIBLE);
+        updatePlayLabelVisibility();
+    }
+
+    private void updatePlayLabelVisibility() {
+        if (mPlayLabel == null || mPlayBtnGroup == null) return;
+        boolean hidePlayLabel = false;
+        String prevText = null;
+        for (int i = 0; i < mPlayBtnGroup.getChildCount(); i++) {
+            View child = mPlayBtnGroup.getChildAt(i);
+            if (child == mPlayLabel || child.getVisibility() != VISIBLE || !(child instanceof TextView)) continue;
+            CharSequence text = ((TextView) child).getText();
+            String currentText = text == null ? "" : text.toString().trim();
+            if ("弹幕".equals(prevText) && ("搜弹幕".equals(currentText) || "弹幕搜索".equals(currentText))) {
+                hidePlayLabel = true;
+                break;
+            }
+            prevText = currentText;
+        }
+        mPlayLabel.setVisibility(hidePlayLabel ? GONE : VISIBLE);
     }
 
     public interface VodControlListener {
