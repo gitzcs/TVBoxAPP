@@ -360,7 +360,14 @@ public class PlayFragment extends BaseLazyFragment {
             }
             @Override
             public void startPlayUrl(String url, HashMap<String, String> headers) {
+                if (!TextUtils.isEmpty(m3u8SourceUrl) && !isM3u8ProxyUrl(url)) clearM3u8ProxyUrl();
                 goPlayUrl(url, headers);
+            }
+
+            @Override
+            public void onM3u8ProxyUrl(String proxyUrl, String sourceUrl) {
+                m3u8ProxyUrl = proxyUrl;
+                m3u8SourceUrl = sourceUrl;
             }
 
             @Override
@@ -415,12 +422,22 @@ public class PlayFragment extends BaseLazyFragment {
 
     private String getCastUrl(String url) {
         if (TextUtils.isEmpty(url)) return url;
+        if (isM3u8ProxyUrl(url) && !TextUtils.isEmpty(m3u8SourceUrl)) return m3u8SourceUrl;
         String local = ControlManager.get().getAddress(true);
         String server = ControlManager.get().getAddress(false);
         if (!TextUtils.isEmpty(local) && !TextUtils.isEmpty(server) && url.startsWith(local)) {
             return server + url.substring(local.length());
         }
         return url;
+    }
+
+    private boolean isM3u8ProxyUrl(String url) {
+        return !TextUtils.isEmpty(m3u8ProxyUrl) && url.equals(m3u8ProxyUrl);
+    }
+
+    private void clearM3u8ProxyUrl() {
+        m3u8ProxyUrl = null;
+        m3u8SourceUrl = null;
     }
 
     //设置字幕
@@ -1485,6 +1502,8 @@ public class PlayFragment extends BaseLazyFragment {
     private String webUserAgent;
     private HashMap<String, String > webHeaderMap;
     private String webPlayUrl;
+    private String m3u8ProxyUrl;
+    private String m3u8SourceUrl;
 
     private void initParse(String flag, boolean useParse, String playUrl, final String url) {
         parseFlag = flag;

@@ -1023,6 +1023,8 @@ public class VodController extends BaseController {
 
         void startPlayUrl(String url, HashMap<String, String> headers);
 
+        void onM3u8ProxyUrl(String proxyUrl, String sourceUrl);
+
         void clickCast();
 
         void setAllowSwitchPlayer(boolean isAllow);
@@ -1614,7 +1616,9 @@ public class VodController extends BaseController {
             LOG.i("echo-m3u8内容解析：未检测到广告");
             listener.startPlayUrl(url, headers);
         } else {
-            listener.startPlayUrl(ControlManager.get().getAddress(true) + "proxyM3u8", headers);
+            String proxyUrl = ControlManager.get().getAddress(true) + "proxyM3u8";
+            listener.onM3u8ProxyUrl(proxyUrl, url);
+            listener.startPlayUrl(proxyUrl, headers);
             Toast.makeText(getContext(), "已移除视频广告 "+M3u8.currentAdCount+" 条", Toast.LENGTH_SHORT).show();
         }
     }
