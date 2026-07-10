@@ -163,6 +163,7 @@ public class VodController extends BaseController {
     TvRecyclerView mGridParseView;
     TextView mPlayTitle;
     TextView mPlayTitle1;
+    TextView mPlayLabel;
     TextView mPlayLoadNetSpeedRightTop;
     TextView mNextBtn;
     TextView mPreBtn;
@@ -190,6 +191,7 @@ public class VodController extends BaseController {
     TextView seekTime; //右上角进度时间显示
     TextView mScreenDisplay; //增加屏显开关
     LinearLayout tv_screen_display; //增加屏显布局
+    TextView mCastBtn;
     TextView net_play_speed;
     private boolean hasDanmu = false;
 
@@ -254,6 +256,7 @@ public class VodController extends BaseController {
         mTotalTime = findViewById(R.id.total_time);
         mPlayTitle = findViewById(R.id.tv_info_name);
         mPlayTitle1 = findViewById(R.id.tv_info_name1);
+        mPlayLabel = findViewById(R.id.play_label);
         mPlayLoadNetSpeedRightTop = findViewById(R.id.tv_play_load_net_speed_right_top);
         mSeekBar = findViewById(R.id.seekBar);
         CircleThumbDrawable seekThumb = new CircleThumbDrawable(getContext());
@@ -290,11 +293,12 @@ public class VodController extends BaseController {
         mAudioTrackBtn = findViewById(R.id.audio_track_select);
         mDanmuSettingBtn = findViewById(R.id.danmu_setting);
         mDanmuSearchUiBtn = findViewById(R.id.danmu_search_ui);
-        updateDanmuSearchUiBtn();
         mLandscapePortraitBtn = findViewById(R.id.landscape_portrait);
         backBtn = findViewById(R.id.tv_back);
         seekTime = findViewById(R.id.tv_seek_time);
         mScreenDisplay = findViewById(R.id.screen_display);
+        mCastBtn = findViewById(R.id.play_cast);
+        updateDanmuSearchUiBtn();
         backBtn.setOnClickListener(new OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -837,8 +841,19 @@ public class VodController extends BaseController {
                 hideBottom();
             }
         });
-        mNextBtn.setNextFocusLeftId(R.id.screen_display);
+        mCastBtn.setOnClickListener(new OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                if (listener != null) listener.clickCast();
+            }
+        });
+        if (Build.VERSION.SDK_INT < 30) {
+            mCastBtn.setVisibility(GONE);
+        } else {
+            mCastBtn.setVisibility(VISIBLE);
+        }
         mScreenDisplay.setNextFocusRightId(R.id.play_next);
+        mNextBtn.setNextFocusLeftId(R.id.screen_display);
     }
 
     private void hideLiveAboutBtn() {
@@ -960,7 +975,27 @@ public class VodController extends BaseController {
 
     public void updateDanmuSearchUiBtn() {
         if (mDanmuSearchUiBtn == null) return;
-        mDanmuSearchUiBtn.setVisibility(ApiConfig.get().hasDanmuSearchUi() ? VISIBLE : GONE);
+        boolean hasDanmuSearchUi = ApiConfig.get().hasDanmuSearchUi();
+        mDanmuSearchUiBtn.setVisibility(hasDanmuSearchUi ? VISIBLE : GONE);
+        updatePlayLabelVisibility();
+    }
+
+    private void updatePlayLabelVisibility() {
+        if (mPlayLabel == null || mPlayBtnGroup == null) return;
+        boolean hidePlayLabel = false;
+        String prevText = null;
+        for (int i = 0; i < mPlayBtnGroup.getChildCount(); i++) {
+            View child = mPlayBtnGroup.getChildAt(i);
+            if (child == mPlayLabel || child.getVisibility() != VISIBLE || !(child instanceof TextView)) continue;
+            CharSequence text = ((TextView) child).getText();
+            String currentText = text == null ? "" : text.toString().trim();
+            if ("弹幕".equals(prevText) && ("搜弹幕".equals(currentText) || "弹幕搜索".equals(currentText))) {
+                hidePlayLabel = true;
+                break;
+            }
+            prevText = currentText;
+        }
+        mPlayLabel.setVisibility(hidePlayLabel ? GONE : VISIBLE);
     }
 
     public interface VodControlListener {
@@ -987,6 +1022,10 @@ public class VodController extends BaseController {
         void searchDanmuUi(boolean longClick);
 
         void startPlayUrl(String url, HashMap<String, String> headers);
+
+        void onM3u8ProxyUrl(String proxyUrl, String sourceUrl);
+
+        void clickCast();
 
         void setAllowSwitchPlayer(boolean isAllow);
     }
@@ -1577,7 +1616,9 @@ public class VodController extends BaseController {
             LOG.i("echo-m3u8内容解析：未检测到广告");
             listener.startPlayUrl(url, headers);
         } else {
-            listener.startPlayUrl(ControlManager.get().getAddress(true) + "proxyM3u8", headers);
+            String proxyUrl = ControlManager.get().getAddress(true) + "proxyM3u8";
+            listener.onM3u8ProxyUrl(proxyUrl, url);
+            listener.startPlayUrl(proxyUrl, headers);
             Toast.makeText(getContext(), "已移除视频广告 "+M3u8.currentAdCount+" 条", Toast.LENGTH_SHORT).show();
         }
     }

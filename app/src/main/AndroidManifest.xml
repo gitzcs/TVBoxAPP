@@ -74,6 +74,10 @@
             android:name=".ui.activity.LocalFileActivity"
             android:screenOrientation="sensorLandscape" />
 
+        <service
+            android:name=".dlna.DLNACastService"
+            android:exported="false" />
+
         <receiver
             android:name=".receiver.SearchReceiver"
             android:exported="false">

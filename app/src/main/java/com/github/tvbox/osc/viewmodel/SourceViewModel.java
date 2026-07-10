@@ -674,6 +674,10 @@ public class SourceViewModel extends ViewModel {
         String id = urlid;
     
         SourceBean sourceBean = ApiConfig.get().getSource(sourceKey);
+        if (isPushFallback(sourceBean)) {
+            detailResult.postValue(createPushDetail(urlid, sourceKey));
+            return;
+        }
         int type = sourceBean.getType();
         if (type == 3) {
             spThreadPool.execute(new Runnable() {
@@ -994,6 +998,12 @@ public class SourceViewModel extends ViewModel {
     public void getPlay(String sourceKey, String playFlag, String progressKey, String url, String subtitleKey) {
         final int requestSeq = playRequestSeq.incrementAndGet();
         SourceBean sourceBean = ApiConfig.get().getSource(sourceKey);
+        PushUrl pushUrl = parsePushUrl(url);
+        String requestUrl = pushUrl.url;
+        if (isPushFallback(sourceBean)) {
+            postPlayResult(requestSeq, createPushPlayResult(url, pushUrl, progressKey, subtitleKey, playFlag));
+            return;
+        }
         int type = sourceBean.getType();
         if (type == 3) {
             spThreadPool.execute(new Runnable() {
@@ -1004,9 +1014,9 @@ public class SourceViewModel extends ViewModel {
                         @Override
                         public String call() throws Exception {
                             Spider sp = ApiConfig.get().getCSP(sourceBean);
-                            if (TextUtils.isEmpty(url)) return "";
+                            if (TextUtils.isEmpty(requestUrl)) return "";
                             try {
-                                return sp.playerContent(playFlag, url, ApiConfig.get().getVipParseFlags());
+                                return sp.playerContent(playFlag, requestUrl, ApiConfig.get().getVipParseFlags());
                             } catch (Exception e) {
                                 LOG.i("echo--getPlay--error: " + e.getMessage());
                                 return "";
@@ -1021,6 +1031,7 @@ public class SourceViewModel extends ViewModel {
                         if (!TextUtils.isEmpty(json)) {
                             JSONObject result = normalizePlayerResult(new JSONObject(json));
                             result.put("key", url);
+                            mergePushHeaders(result, pushUrl);
                             result.put("proKey", progressKey);
                             result.put("subtKey", subtitleKey);
                             if (!result.has("flag"))
@@ -1048,13 +1059,14 @@ public class SourceViewModel extends ViewModel {
             try {
                 result.put("key", url);
                 String playUrl = sourceBean.getPlayerUrl().trim();
-                if (DefaultConfig.isVideoFormat(url) && playUrl.isEmpty()) {
+                if (DefaultConfig.isVideoFormat(requestUrl) && playUrl.isEmpty()) {
                     result.put("parse", 0);
-                    result.put("url", url);
+                    result.put("url", requestUrl);
                 } else {
                     result.put("parse", 1);
-                    result.put("url", url);
+                    result.put("url", requestUrl);
                 }
+                mergePushHeaders(result, pushUrl);
                 result.put("proKey", progressKey);
                 result.put("subtKey", subtitleKey);
                 result.put("playUrl", playUrl);
@@ -1070,7 +1082,7 @@ public class SourceViewModel extends ViewModel {
 
             GetRequest<String> request = OkGo.<String>get(sourceBean.getApi())
                     .tag("play")
-                    .params("play", url)
+                    .params("play", requestUrl)
                     .params("flag" ,playFlag);
             // 当 extend 不为空且非空字符串时添加参数
             if (extend != null && !extend.isEmpty()) {
@@ -1093,6 +1105,7 @@ public class SourceViewModel extends ViewModel {
                         try {
                             JSONObject result = normalizePlayerResult(new JSONObject(json));
                             result.put("key", url);
+                            mergePushHeaders(result, pushUrl);
                             result.put("proKey", progressKey);
                             result.put("subtKey", subtitleKey);
                             if (!result.has("flag"))
@@ -1162,6 +1175,89 @@ public class SourceViewModel extends ViewModel {
             th.printStackTrace();
         }
         return result;
+    }
+
+    private boolean isPushFallback(SourceBean sourceBean) {
+        return sourceBean != null && "push_agent".equals(sourceBean.getKey()) && sourceBean.getType() == -1;
+    }
+
+    private AbsXml createPushDetail(String url, String sourceKey) {
+        AbsXml data = new AbsXml();
+        data.sourceKey = sourceKey;
+        Movie movie = new Movie();
+        movie.videoList = new ArrayList<>();
+        Movie.Video video = new Movie.Video();
+        video.id = url;
+        video.name = url;
+        video.type = "推送";
+        video.sourceKey = sourceKey;
+        video.urlBean = new Movie.Video.UrlBean();
+        video.urlBean.infoList = new ArrayList<>();
+        Movie.Video.UrlBean.UrlInfo urlInfo = new Movie.Video.UrlBean.UrlInfo();
+        urlInfo.flag = "推送";
+        urlInfo.urls = "播放$" + url;
+        urlInfo.beanList = new ArrayList<>();
+        urlInfo.beanList.add(new Movie.Video.UrlBean.UrlInfo.InfoBean("播放", url));
+        video.urlBean.infoList.add(urlInfo);
+        movie.videoList.add(video);
+        data.movie = movie;
+        return data;
+    }
+
+    private JSONObject createPushPlayResult(String rawUrl, PushUrl pushUrl, String progressKey, String subtitleKey, String playFlag) {
+        try {
+            JSONObject result = new JSONObject();
+            result.put("key", rawUrl);
+            result.put("proKey", progressKey);
+            result.put("subtKey", subtitleKey);
+            result.put("flag", playFlag);
+            result.put("parse", 0);
+            result.put("url", pushUrl.url);
+            mergePushHeaders(result, pushUrl);
+            return result;
+        } catch (Throwable th) {
+            th.printStackTrace();
+            return null;
+        }
+    }
+
+    private void mergePushHeaders(JSONObject result, PushUrl pushUrl) {
+        if (result == null || pushUrl == null || pushUrl.headers.isEmpty()) return;
+        try {
+            JSONObject header = result.optJSONObject("header");
+            if (header == null) header = result.optJSONObject("headers");
+            if (header == null) header = new JSONObject();
+            for (String key : pushUrl.headers.keySet()) {
+                header.put(key, pushUrl.headers.get(key));
+            }
+            result.put("header", header);
+        } catch (Throwable ignored) {
+        }
+    }
+
+    private PushUrl parsePushUrl(String rawUrl) {
+        PushUrl pushUrl = new PushUrl();
+        pushUrl.url = rawUrl == null ? "" : rawUrl;
+        int index = pushUrl.url.indexOf('|');
+        if (index < 0) return pushUrl;
+        String headers = pushUrl.url.substring(index + 1);
+        pushUrl.url = pushUrl.url.substring(0, index);
+        for (String item : headers.split("&")) {
+            int eq = item.indexOf('=');
+            if (eq <= 0) continue;
+            try {
+                String key = URLDecoder.decode(item.substring(0, eq), "UTF-8");
+                String value = URLDecoder.decode(item.substring(eq + 1), "UTF-8");
+                if (!TextUtils.isEmpty(key)) pushUrl.headers.put(key, value);
+            } catch (Throwable ignored) {
+            }
+        }
+        return pushUrl;
+    }
+
+    private static class PushUrl {
+        String url = "";
+        HashMap<String, String> headers = new HashMap<>();
     }
 
     private void postPlayResult(int requestSeq, JSONObject result) {
