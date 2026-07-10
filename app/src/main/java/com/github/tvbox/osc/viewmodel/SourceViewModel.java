@@ -126,6 +126,11 @@ public class SourceViewModel extends ViewModel {
         sortCache.remove(sourceKey);
     }
 
+    public static void clearRuntimeCache() {
+        sortCache.clear();
+        extendCache.clear();
+    }
+
     private static AbsSortXml attachSortSource(String sourceKey, AbsSortXml sortXml) {
         if (sortXml != null) {
             sortXml.sourceKey = sourceKey;
@@ -1036,7 +1041,11 @@ public class SourceViewModel extends ViewModel {
                             result.put("subtKey", subtitleKey);
                             if (!result.has("flag"))
                                 result.put("flag", playFlag);
-                            postPlayResult(requestSeq, result);
+                            if (TextUtils.isEmpty(result.optString("url", "")) && shouldDirectPlay(sourceBean, requestUrl)) {
+                                postPlayResult(requestSeq, createDirectPlayResult(url, pushUrl, progressKey, subtitleKey, playFlag));
+                            } else {
+                                postPlayResult(requestSeq, result);
+                            }
                         } else {
                             postPlayResult(requestSeq, null);
                         }
@@ -1130,6 +1139,31 @@ public class SourceViewModel extends ViewModel {
 
     public void cancelPlayRequest() {
         playRequestSeq.incrementAndGet();
+    }
+
+    private boolean shouldDirectPlay(SourceBean sourceBean, String requestUrl) {
+        return sourceBean != null
+                && !TextUtils.isEmpty(requestUrl)
+                && (requestUrl.startsWith("http://") || requestUrl.startsWith("https://"));
+    }
+
+    private JSONObject createDirectPlayResult(String rawUrl, PushUrl pushUrl, String progressKey, String subtitleKey, String playFlag) {
+        try {
+            JSONObject result = new JSONObject();
+            result.put("key", rawUrl);
+            result.put("proKey", progressKey);
+            result.put("subtKey", subtitleKey);
+            result.put("flag", playFlag);
+            result.put("parse", 0);
+            result.put("jx", 0);
+            result.put("url", pushUrl.url);
+            mergePushHeaders(result, pushUrl);
+            LOG.i("echo--getPlay--direct:" + pushUrl.url);
+            return result;
+        } catch (Throwable th) {
+            th.printStackTrace();
+            return null;
+        }
     }
 
     private JSONObject normalizePlayerResult(JSONObject result) {
@@ -1433,7 +1467,7 @@ public class SourceViewModel extends ViewModel {
 //                            }
 //                        }
                         for (String s : str) {
-                            String[] ss = s.split("\\$");
+                            String[] ss = s.split("\\$", 2);
                             if (ss.length > 0) {
                                 if (ss.length >= 2) {
                                     infoBeanList.add(new Movie.Video.UrlBean.UrlInfo.InfoBean(ss[0], ss[1]));
@@ -1617,7 +1651,7 @@ public class SourceViewModel extends ViewModel {
                                 List<Movie.Video.UrlBean.UrlInfo.InfoBean> infoBeanList = new ArrayList<>();
                                 for (String s : str) {
                                     if (s.contains("$")) {
-                                        String[] ss = s.split("\\$");
+                                        String[] ss = s.split("\\$", 2);
 
                                         if (ss.length > 0) {
                                             if (ss.length >= 2) {
