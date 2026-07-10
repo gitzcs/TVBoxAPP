@@ -86,6 +86,13 @@
             </intent-filter>
         </receiver>
         <receiver
+            android:name=".receiver.PushReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.content.movie.push.Action" />
+            </intent-filter>
+        </receiver>
+        <receiver
             android:name=".receiver.CustomWebReceiver"
             android:exported="false">
             <intent-filter>
