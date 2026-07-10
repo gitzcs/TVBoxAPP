@@ -436,7 +436,6 @@ public class SourceViewModel extends ViewModel {
     }
     // categoryContent
     public void getList(MovieSort.SortData sortData, int page) {
-        LOG.i("echo-getList:");
         if (sortData == null) {
             LOG.i("echo-getList-sortData-null");
             listResult.postValue(null);
@@ -714,7 +713,7 @@ public class SourceViewModel extends ViewModel {
                     String json = null;
                     try {
                         json = future.get(20, TimeUnit.SECONDS);
-                        LOG.i("echo--getDetail--result:" + json);
+//                        LOG.i("echo--getDetail--result:" + json);
                     } catch (TimeoutException e) {
                         LOG.i("echo--getDetail--timeout");
                         future.cancel(true);
