@@ -729,7 +729,7 @@ public class PlayFragment extends BaseLazyFragment {
     public void goPlayUrl(String url, HashMap<String, String> headers) {
         LOG.i("echo-goPlayUrl:" + url);
         if (TextUtils.isEmpty(url)) {
-            handleResolvePlayUrlFailed("获取播放地址为空", true);
+            handleResolvePlayUrlFailed("获取播放地址为空");
             return;
         }
         if(autoRetryCount==0)webPlayUrl=url;
@@ -903,8 +903,9 @@ public class PlayFragment extends BaseLazyFragment {
                         subtitleCacheKey = info.optString("subtKey", null);
                         String playUrl = info.optString("playUrl", "");
                         String msg = info.optString("msg", "");
-                        if(!msg.isEmpty()){
-                            Toast.makeText(mContext, msg, Toast.LENGTH_SHORT).show();
+                        if (!TextUtils.isEmpty(msg)) {
+                            handleResolvePlayUrlFailed(msg);
+                            return;
                         }
                         String flag = info.optString("flag");
                         String url = info.getString("url");
@@ -931,11 +932,11 @@ public class PlayFragment extends BaseLazyFragment {
                         checkDanmu(danmaku);
                         searchDanmu(danmaku);
                     } catch (Throwable th) {
-                        handleResolvePlayUrlFailed("获取播放信息错误", true);
+                        handleResolvePlayUrlFailed("获取播放信息错误");
                     }
                 } else {
 //                    获取播放信息错误后只需再重试一次
-                    handleResolvePlayUrlFailed("获取播放信息错误", true);
+                    handleResolvePlayUrlFailed("获取播放信息错误");
                 }
             }
         });
@@ -1162,10 +1163,27 @@ public class PlayFragment extends BaseLazyFragment {
 
     private boolean allowSwitchPlayer = true;
     private boolean hasAutoSwitchedPlayer = false;
+    private int autoSwitchedPlayerType = -1;
     private boolean allowAutoSwitchLine = true;
     private boolean playbackStarted = false;
     private long playTimeoutBasePosition = 0;
     private java.util.Set<String> triedLineFlags = new java.util.HashSet<>();  // 记录已尝试过的线路
+
+    private void restoreAutoSwitchedPlayer() {
+        if (autoSwitchedPlayerType < 0) return;
+        try {
+            LOG.i("echo-autoRetry restore player: " + mVodPlayerCfg.optInt("pl", -1) + " -> " + autoSwitchedPlayerType);
+            mVodPlayerCfg.put("pl", autoSwitchedPlayerType);
+            mVodInfo.playerCfg = mVodPlayerCfg.toString();
+            mController.setPlayerConfig(mVodPlayerCfg);
+            EventBus.getDefault().post(new RefreshEvent(RefreshEvent.TYPE_REFRESH, mVodPlayerCfg));
+        } catch (Throwable th) {
+            th.printStackTrace();
+        } finally {
+            autoSwitchedPlayerType = -1;
+        }
+    }
+
     boolean autoRetry() {
         long currentTime = System.currentTimeMillis();
         if (currentTime - lastRetryTime > 60_000){
@@ -1184,10 +1202,12 @@ public class PlayFragment extends BaseLazyFragment {
         if (webPlayUrl != null) {
             if (allowSwitchPlayer && !hasAutoSwitchedPlayer) {
                 LOG.i("echo-autoRetry switch player and replay current url");
+                int playerType = mVodPlayerCfg.optInt("pl", -1);
                 boolean switchSkipped = mController.switchPlayer();
                 hasAutoSwitchedPlayer = true;
                 allowSwitchPlayer = false;
                 if (!switchSkipped) {
+                    autoSwitchedPlayerType = playerType;
                     stopParse();
                     initParseLoadFound();
                     if(mVideoView!=null) mVideoView.release();
@@ -1202,6 +1222,7 @@ public class PlayFragment extends BaseLazyFragment {
     }
 
     boolean tryNextLineIfEnabled() {
+        restoreAutoSwitchedPlayer();
         if (allowAutoSwitchLine && Hawk.get(HawkConfig.AUTO_SWITCH_LINE, true)) return tryNextLine();
         LOG.i("echo-autoRetry line switching disabled");
         autoRetryCount = 0;
@@ -1709,17 +1730,13 @@ public class PlayFragment extends BaseLazyFragment {
         if (!tryNextLineIfEnabled()) setTip("获取播放地址超时", false, true);
     }
 
-    void handleResolvePlayUrlFailed(String err, boolean finish) {
+    void handleResolvePlayUrlFailed(String err) {
         LOG.i("echo-resolvePlayUrl failed, try next line: " + err);
         if (sourceViewModel != null) sourceViewModel.cancelPlayRequest();
         stopParse();
         if (tryNextLineIfEnabled()) return;
-        if (finish) {
-            setTip(err, false, true);
-            Toast.makeText(mContext, err, Toast.LENGTH_SHORT).show();
-        } else {
-            setTip(err, false, true);
-        }
+        cancelPlayTimeout();
+        setTip(err, false, true);
     }
 
     void handleSwitchLinePlayTimeout() {
