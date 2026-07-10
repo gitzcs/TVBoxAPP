@@ -5,6 +5,10 @@ plugins {
 android {
     compileSdkVersion 33
 
+    buildFeatures {
+        buildConfig false
+    }
+
     defaultConfig {
         minSdkVersion 19
         targetSdkVersion 28

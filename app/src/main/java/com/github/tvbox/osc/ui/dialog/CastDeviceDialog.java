@@ -235,14 +235,8 @@ public class CastDeviceDialog extends BaseDialog {
 
     private String buildTvBoxUrl(String url, HashMap<String, String> headers) throws Exception {
         if (headers == null || headers.isEmpty()) return url;
-        StringBuilder sb = new StringBuilder(url).append("|");
-        int index = 0;
-        for (String key : headers.keySet()) {
-            sb.append(URLEncoder.encode(key, "UTF-8")).append("=").append(URLEncoder.encode(headers.get(key), "UTF-8"));
-            if (index < headers.size() - 1) sb.append("&");
-            index++;
-        }
-        return sb.toString();
+        String json = new org.json.JSONObject(headers).toString();
+        return url + "@Headers=" + URLEncoder.encode(json, "UTF-8") + "@";
     }
 
     private void handleCastResult(boolean success, String msg) {

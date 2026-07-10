@@ -55,6 +55,7 @@ import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -78,6 +79,10 @@ import okhttp3.Call;
  * @description:
  */
 public class SourceViewModel extends ViewModel {
+    private static final String PUSH_AGENT = "push_agent";
+    private static final String PUSH_FALLBACK = "push_fallback";
+    private static final String PUSH_HEADERS_MARKER = "@Headers=";
+
     public MutableLiveData<AbsSortXml> sortResult;
     public MutableLiveData<AbsXml> listResult;
     public MutableLiveData<AbsXml> searchResult;
@@ -662,7 +667,7 @@ public class SourceViewModel extends ViewModel {
     }
     // detailContent
     public void getDetail(String sourceKey, String urlid) {
-    	if (urlid.startsWith("push://") && ApiConfig.get().getSource("push_agent") != null) {           
+        if (urlid.startsWith("push://") && ApiConfig.get().getSource(PUSH_AGENT) != null) {
             String pushUrl = urlid.substring(7);
             if (pushUrl.startsWith("b64:")) {
                 try {
@@ -673,13 +678,15 @@ public class SourceViewModel extends ViewModel {
             } else {
                 pushUrl = URLDecoder.decode(pushUrl);
             }
-            sourceKey = "push_agent";
+            sourceKey = isCastPushUrl(pushUrl) ? PUSH_FALLBACK : PUSH_AGENT;
             urlid = pushUrl;
+        } else if (PUSH_AGENT.equals(sourceKey) && isCastPushUrl(urlid)) {
+            sourceKey = PUSH_FALLBACK;
         }
         String id = urlid;
     
         SourceBean sourceBean = ApiConfig.get().getSource(sourceKey);
-        if (isPushFallback(sourceBean)) {
+        if (isPushFallback(sourceKey, sourceBean)) {
             detailResult.postValue(createPushDetail(urlid, sourceKey));
             return;
         }
@@ -1003,9 +1010,10 @@ public class SourceViewModel extends ViewModel {
     public void getPlay(String sourceKey, String playFlag, String progressKey, String url, String subtitleKey) {
         final int requestSeq = playRequestSeq.incrementAndGet();
         SourceBean sourceBean = ApiConfig.get().getSource(sourceKey);
-        PushUrl pushUrl = parsePushUrl(url);
+        boolean pushFallback = isPushFallback(sourceKey, sourceBean);
+        PushUrl pushUrl = pushFallback ? parsePushUrl(url) : createPushUrl(url);
         String requestUrl = pushUrl.url;
-        if (isPushFallback(sourceBean)) {
+        if (pushFallback) {
             postPlayResult(requestSeq, createPushPlayResult(url, pushUrl, progressKey, subtitleKey, playFlag));
             return;
         }
@@ -1211,8 +1219,12 @@ public class SourceViewModel extends ViewModel {
         return result;
     }
 
-    private boolean isPushFallback(SourceBean sourceBean) {
-        return sourceBean != null && "push_agent".equals(sourceBean.getKey()) && sourceBean.getType() == -1;
+    private boolean isPushFallback(String sourceKey, SourceBean sourceBean) {
+        return PUSH_FALLBACK.equals(sourceKey) || (sourceBean != null && PUSH_AGENT.equals(sourceBean.getKey()) && sourceBean.getType() == -1);
+    }
+
+    private boolean isCastPushUrl(String url) {
+        return !TextUtils.isEmpty(url) && url.contains(PUSH_HEADERS_MARKER);
     }
 
     private AbsXml createPushDetail(String url, String sourceKey) {
@@ -1269,24 +1281,39 @@ public class SourceViewModel extends ViewModel {
         }
     }
 
-    private PushUrl parsePushUrl(String rawUrl) {
+    private PushUrl createPushUrl(String rawUrl) {
         PushUrl pushUrl = new PushUrl();
         pushUrl.url = rawUrl == null ? "" : rawUrl;
-        int index = pushUrl.url.indexOf('|');
-        if (index < 0) return pushUrl;
-        String headers = pushUrl.url.substring(index + 1);
-        pushUrl.url = pushUrl.url.substring(0, index);
-        for (String item : headers.split("&")) {
-            int eq = item.indexOf('=');
-            if (eq <= 0) continue;
-            try {
-                String key = URLDecoder.decode(item.substring(0, eq), "UTF-8");
-                String value = URLDecoder.decode(item.substring(eq + 1), "UTF-8");
-                if (!TextUtils.isEmpty(key)) pushUrl.headers.put(key, value);
-            } catch (Throwable ignored) {
-            }
-        }
         return pushUrl;
+    }
+
+    private PushUrl parsePushUrl(String rawUrl) {
+        PushUrl pushUrl = createPushUrl(rawUrl);
+        parseMarkedHeaders(pushUrl);
+        return pushUrl;
+    }
+
+    private boolean parseMarkedHeaders(PushUrl pushUrl) {
+        String marker = PUSH_HEADERS_MARKER;
+        int start = pushUrl.url.indexOf(marker);
+        if (start < 0) return false;
+        int valueStart = start + marker.length();
+        int end = pushUrl.url.indexOf('@', valueStart);
+        if (end < 0) return false;
+        try {
+            String text = URLDecoder.decode(pushUrl.url.substring(valueStart, end), "UTF-8");
+            JSONObject json = new JSONObject(text);
+            Iterator<String> keys = json.keys();
+            while (keys.hasNext()) {
+                String key = keys.next();
+                String value = json.optString(key, "");
+                if (!TextUtils.isEmpty(key)) pushUrl.headers.put(key, value);
+            }
+            pushUrl.url = pushUrl.url.substring(0, start) + pushUrl.url.substring(end + 1);
+            return true;
+        } catch (Throwable ignored) {
+            return false;
+        }
     }
 
     private static class PushUrl {
