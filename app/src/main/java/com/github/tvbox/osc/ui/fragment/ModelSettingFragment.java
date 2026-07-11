@@ -872,7 +872,7 @@ public class ModelSettingFragment extends BaseLazyFragment {
     private void clearConfigSwitchCache() {
         try {
             SourceViewModel.clearRuntimeCache();
-            FileUtils.clearSpiderCacheFiles();
+//            FileUtils.clearSpiderCacheFiles();
             LOG.i("echo-clear-config-switch-cache");
         } catch (Exception e) {
             LOG.i("echo-clear-config-switch-cache-error:" + e.getMessage());
