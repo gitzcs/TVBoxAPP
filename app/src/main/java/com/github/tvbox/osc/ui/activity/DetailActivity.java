@@ -518,7 +518,7 @@ public class DetailActivity extends BaseActivity {
 
             @Override
             public void onItemSelected(TvRecyclerView parent, View itemView, int position) {
-                TextView txtView = itemView.findViewById(R.id.tvSeriesFlag);
+                selectSeriesGroup(itemView, position);
                 if (vodInfo != null && vodInfo.seriesMap.get(vodInfo.playFlag).size() > 0) {
                     int targetPos = position * GroupCount;
 //                    mGridView.smoothScrollToPosition(targetPos);
@@ -548,6 +548,7 @@ public class DetailActivity extends BaseActivity {
             @Override
             public void onItemClick(BaseQuickAdapter adapter, View view, int position) {
                 FastClickCheckUtil.check(view);
+                selectSeriesGroup(view, position);
                 if (vodInfo != null && vodInfo.seriesMap.get(vodInfo.playFlag).size() > 0) {
                     int targetPos =  position * GroupCount+1;
 
@@ -571,6 +572,14 @@ public class DetailActivity extends BaseActivity {
     }
 
     //解决类似海贼王的超长动漫 焦点滚动失败的问题
+    private void selectSeriesGroup(View selectedView, int position) {
+        if (selectedSeriesGroupPosition == position) return;
+        View previousView = mSeriesGroupView.getLayoutManager().findViewByPosition(selectedSeriesGroupPosition);
+        if (previousView != null) previousView.findViewById(R.id.tvSeriesFlagSelect).setVisibility(View.GONE);
+        selectedSeriesGroupPosition = position;
+        selectedView.findViewById(R.id.tvSeriesFlagSelect).setVisibility(View.VISIBLE);
+    }
+
     void customSeriesScrollPos(int targetPos)
     {
         mGridViewLayoutMgr.scrollToPositionWithOffset(targetPos>10?targetPos - 10:0, 0);
