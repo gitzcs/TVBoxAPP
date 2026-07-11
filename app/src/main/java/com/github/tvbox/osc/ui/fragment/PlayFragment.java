@@ -91,6 +91,7 @@ import org.greenrobot.eventbus.EventBus;
 import org.greenrobot.eventbus.Subscribe;
 import org.greenrobot.eventbus.ThreadMode;
 import org.jetbrains.annotations.NotNull;
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.xwalk.core.XWalkJavascriptResult;
@@ -137,6 +138,7 @@ public class PlayFragment extends BaseLazyFragment {
     private ProgressBar mPlayLoading;
     private VodController mController;
     private SourceViewModel sourceViewModel;
+    private JSONObject qualityResult;
     private Handler mHandler;
     private boolean exitingPreview = false;
     private DanmakuView mDanmuView;
@@ -860,12 +862,14 @@ public class PlayFragment extends BaseLazyFragment {
         sourceViewModel.playResult.observe(this, new Observer<JSONObject>() {
             @Override
             public void onChanged(JSONObject info) {
+                if (info == null) publishQuality(null);
                 if (info != null) {
                     try {
                         if (isStalePlayResult(info)) {
                             LOG.i("echo-ignore stale play result");
                             return;
                         }
+                        publishQuality(info);
                         webPlayUrl = null;
                         progressKey = info.optString("proKey", null);
                         boolean parse = info.optString("parse", "1").equals("1");
@@ -940,6 +944,42 @@ public class PlayFragment extends BaseLazyFragment {
                 }
             }
         });
+    }
+
+    public boolean selectQuality(int position) {
+        if (qualityResult == null) return false;
+        try {
+            JSONArray urls = new JSONArray(qualityResult.optString("url"));
+            String url = urls.optString(position * 2 + 1);
+            if (TextUtils.isEmpty(url)) return false;
+            String playUrl = qualityResult.optString("playUrl", "");
+            String flag = qualityResult.optString("flag");
+            boolean parse = qualityResult.optString("parse", "1").equals("1");
+            boolean jx = qualityResult.optString("jx", "0").equals("1");
+            HashMap<String, String> headers = getHeaders(qualityResult);
+            if (parse || jx) {
+                boolean userJxList = (playUrl.isEmpty() && ApiConfig.get().getVipParseFlags().contains(flag)) || jx;
+                initParse(flag, userJxList, playUrl, url);
+            } else {
+                mController.showParse(false);
+                playUrl(playUrl + url, headers);
+            }
+            return true;
+        } catch (Throwable th) {
+            return false;
+        }
+    }
+
+    private void publishQuality(JSONObject info) {
+        try {
+            JSONArray urls = new JSONArray(info == null ? "" : info.optString("url"));
+            if (urls.length() < 4 || urls.length() % 2 != 0) throw new JSONException("invalid quality urls");
+            qualityResult = new JSONObject(info.toString());
+            EventBus.getDefault().post(new RefreshEvent(RefreshEvent.TYPE_PLAY_QUALITY, qualityResult));
+        } catch (Throwable th) {
+            qualityResult = null;
+            EventBus.getDefault().post(new RefreshEvent(RefreshEvent.TYPE_PLAY_QUALITY, null));
+        }
     }
 
     private void searchDanmu(String danmaku) {
