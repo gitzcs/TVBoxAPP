@@ -3,6 +3,7 @@ package com.github.tvbox.osc.ui.activity;
 import android.annotation.SuppressLint;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.res.Configuration;
 import android.graphics.Color;
 import android.graphics.Outline;
 import android.graphics.PointF;
@@ -1270,6 +1271,8 @@ public class DetailActivity extends BaseActivity {
     // preview
     VodInfo previewVodInfo = null;
     boolean fullWindows = false;
+    private int previewOrientation;
+    private boolean previewOrientationChanged;
     ViewGroup.LayoutParams windowsPreview = null;
     ViewGroup.LayoutParams windowsFull = null;
 
@@ -1282,7 +1285,23 @@ public class DetailActivity extends BaseActivity {
     }
 
     void exitFullPreview() {
+        boolean needRefreshSeries = previewOrientationChanged;
         setFullPreview(false);
+        previewOrientationChanged = false;
+        if (needRefreshSeries) refreshSeriesAfterFullPreview();
+    }
+
+    private void refreshSeriesAfterFullPreview() {
+        if (seriesAdapter == null || vodInfo == null || vodInfo.seriesMap == null || TextUtils.isEmpty(vodInfo.playFlag)) return;
+        if (vodInfo.seriesMap.get(vodInfo.playFlag) == null) return;
+        mGridView.post(new Runnable() {
+            @Override
+            public void run() {
+                mGridView.getRecycledViewPool().clear();
+                mGridView.setAdapter(seriesAdapter);
+                refreshList();
+            }
+        });
     }
 
     void setFullPreview(boolean full) {
@@ -1291,6 +1310,10 @@ public class DetailActivity extends BaseActivity {
         }
         if (windowsFull == null) {
             windowsFull = new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
+        }
+        if (full) {
+            previewOrientation = getResources().getConfiguration().orientation;
+            previewOrientationChanged = false;
         }
         fullWindows = full;
         if (playFragment != null) {
@@ -1315,6 +1338,15 @@ public class DetailActivity extends BaseActivity {
             }
         }
         toggleSubtitleTextSize();
+    }
+
+    @Override
+    public void onConfigurationChanged(Configuration newConfig) {
+        super.onConfigurationChanged(newConfig);
+        if (fullWindows && newConfig.orientation != previewOrientation) {
+            previewOrientation = newConfig.orientation;
+            previewOrientationChanged = true;
+        }
     }
 
     void ensurePlayFragment() {

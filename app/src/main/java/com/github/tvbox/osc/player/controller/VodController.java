@@ -4,6 +4,7 @@ import android.app.Activity;
 import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.pm.ActivityInfo;
+import android.content.res.Configuration;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.ColorFilter;
@@ -83,6 +84,16 @@ import static xyz.doikki.videoplayer.util.PlayerUtils.seconds2Time;
 import static xyz.doikki.videoplayer.util.PlayerUtils.safeTimeMs;
 
 public class VodController extends BaseController {
+    private static final float PORTRAIT_EPISODE_SWIPE_DP = 80f;
+    private static final long PORTRAIT_EPISODE_TITLE_SHOW_MS = 3000L;
+    private boolean portraitEpisodeSwipeTriggered;
+    private final Runnable portraitEpisodeTitleRunnable = new Runnable() {
+        @Override
+        public void run() {
+            if (!isBottomVisible()) mTopRoot1.setVisibility(GONE);
+        }
+    };
+
     public VodController(@NonNull @NotNull Context context) {
         super(context);
         mHandlerCallback = new HandlerCallback() {
@@ -109,7 +120,8 @@ public class VodController extends BaseController {
                             net_play_speed.setVisibility(GONE);
                         }
                         mPlayTitle.setVisibility(GONE);
-                        backBtn.setVisibility(ScreenUtils.isTv(context) ? INVISIBLE : VISIBLE);
+                        boolean isPortrait = getResources().getConfiguration().orientation == Configuration.ORIENTATION_PORTRAIT;
+                        backBtn.setVisibility(ScreenUtils.isTv(context) || isPortrait ? INVISIBLE : VISIBLE);
                         showLockView();
                         break;
                     }
@@ -144,6 +156,45 @@ public class VodController extends BaseController {
                 }
             }
         };
+    }
+
+    @Override
+    public boolean onDown(MotionEvent e) {
+        portraitEpisodeSwipeTriggered = false;
+        return super.onDown(e);
+    }
+
+    @Override
+    public boolean onScroll(MotionEvent e1, MotionEvent e2, float distanceX, float distanceY) {
+        if (isPortraitEpisodeSwipe(e1, e2)) {
+            if (!portraitEpisodeSwipeTriggered && Math.abs(e2.getY() - e1.getY()) >= portraitEpisodeSwipeThreshold()) {
+                portraitEpisodeSwipeTriggered = true;
+                if (listener != null) {
+                    if (e2.getY() < e1.getY()) listener.playNext(false);
+                    else listener.playPre();
+                    showPortraitEpisodeTitle();
+                }
+            }
+            return true;
+        }
+        return super.onScroll(e1, e2, distanceX, distanceY);
+    }
+
+    private boolean isPortraitEpisodeSwipe(MotionEvent e1, MotionEvent e2) {
+        if (e1 == null || e2 == null || !canHandleGesture(e1)) return false;
+        if (getResources().getConfiguration().orientation != Configuration.ORIENTATION_PORTRAIT) return false;
+        return Math.abs(e2.getY() - e1.getY()) > Math.abs(e2.getX() - e1.getX());
+    }
+
+    private float portraitEpisodeSwipeThreshold() {
+        return getResources().getDisplayMetrics().density * PORTRAIT_EPISODE_SWIPE_DP;
+    }
+
+    private void showPortraitEpisodeTitle() {
+        if (isBottomVisible()) return;
+        mHandler.removeCallbacks(portraitEpisodeTitleRunnable);
+        mTopRoot1.setVisibility(VISIBLE);
+        mHandler.postDelayed(portraitEpisodeTitleRunnable, PORTRAIT_EPISODE_TITLE_SHOW_MS);
     }
 
     SeekBar mSeekBar;
@@ -194,6 +245,7 @@ public class VodController extends BaseController {
     TextView mCastBtn;
     TextView net_play_speed;
     private boolean hasDanmu = false;
+    private boolean showParse;
 
     LockRunnable lockRunnable = new LockRunnable();
     private boolean isLock = false;
@@ -227,7 +279,8 @@ public class VodController extends BaseController {
     };
     
     private void showLockView() {
-        if (previewMode) {
+        if (previewMode || getResources().getConfiguration().orientation == Configuration.ORIENTATION_PORTRAIT) {
+            if (getResources().getConfiguration().orientation == Configuration.ORIENTATION_PORTRAIT) isLock = false;
             mHandler.removeCallbacks(lockRunnable);
             if (mLockView != null) {
                 mLockView.setVisibility(INVISIBLE);
@@ -302,6 +355,11 @@ public class VodController extends BaseController {
         backBtn.setOnClickListener(new OnClickListener() {
             @Override
             public void onClick(View v) {
+                if (getResources().getConfiguration().orientation == Configuration.ORIENTATION_PORTRAIT) {
+                    setLandscapePortrait();
+                    hideBottom();
+                    return;
+                }
                 if (getContext() instanceof Activity) {
                     isClickBackBtn = true;
                     ((Activity) getContext()).onBackPressed();
@@ -873,26 +931,78 @@ public class VodController extends BaseController {
     }
 
     public void initLandscapePortraitBtnInfo() {
-        if(mControlWrapper!=null && mActivity!=null){
-            int width = mControlWrapper.getVideoSize()[0];
-            int height = mControlWrapper.getVideoSize()[1];
-            double screenSqrt = ScreenUtils.getSqrt(mActivity);
-            if (screenSqrt < 10.0 && width <= height) {
-                mLandscapePortraitBtn.setVisibility(View.VISIBLE);
-                mLandscapePortraitBtn.setText("竖屏");
-            }
+        boolean isPortrait = getResources().getConfiguration().orientation == Configuration.ORIENTATION_PORTRAIT;
+        if (mCurrentTime != null) mCurrentTime.setVisibility(isPortrait ? GONE : VISIBLE);
+        if (mTotalTime != null) mTotalTime.setVisibility(isPortrait ? GONE : VISIBLE);
+        if (isPortrait) {
+            if (backBtn != null) backBtn.setVisibility(INVISIBLE);
+            if (mLockView != null) mLockView.setVisibility(INVISIBLE);
         }
+        updatePortraitMenu(isPortrait);
+
+        if (mLandscapePortraitBtn == null) return;
+        boolean showButton = false;
+        if (mControlWrapper != null && mActivity != null && !ScreenUtils.isTv(mActivity)) {
+            int[] videoSize = mControlWrapper.getVideoSize();
+            int width = videoSize[0];
+            int height = videoSize[1];
+            showButton = width > 0 && height > 0 && width <= height && ScreenUtils.getSqrt(mActivity) < 10.0;
+        }
+        mLandscapePortraitBtn.setVisibility(showButton ? VISIBLE : GONE);
+        if (showButton) mLandscapePortraitBtn.setText(isPortrait ? "横屏" : "竖屏");
+    }
+
+    private void updatePortraitMenu(boolean isPortrait) {
+        if (isPortrait) {
+            mParseRoot.setVisibility(GONE);
+            mPlayLabel.setVisibility(GONE);
+            mPlayrefresh.setVisibility(GONE);
+            mPlayerScaleBtn.setVisibility(GONE);
+            mPlayerIJKBtn.setVisibility(GONE);
+            mPlayerTimeStartEndText.setVisibility(GONE);
+            mPlayerTimeStartBtn.setVisibility(GONE);
+            mPlayerTimeSkipBtn.setVisibility(GONE);
+            mPlayerTimeResetBtn.setVisibility(GONE);
+            mCastBtn.setVisibility(GONE);
+            mZimuBtn.setVisibility(GONE);
+            mAudioTrackBtn.setVisibility(GONE);
+            mDanmuSettingBtn.setVisibility(GONE);
+            mDanmuSearchUiBtn.setVisibility(GONE);
+            mScreenDisplay.setVisibility(GONE);
+            return;
+        }
+
+        mParseRoot.setVisibility(showParse ? VISIBLE : GONE);
+        mPlayrefresh.setVisibility(VISIBLE);
+        mPlayerScaleBtn.setVisibility(VISIBLE);
+        mPlayerTimeStartEndText.setVisibility(VISIBLE);
+        mPlayerTimeStartBtn.setVisibility(VISIBLE);
+        mPlayerTimeSkipBtn.setVisibility(VISIBLE);
+        mPlayerTimeResetBtn.setVisibility(VISIBLE);
+        mZimuBtn.setVisibility(VISIBLE);
+        mScreenDisplay.setVisibility(VISIBLE);
+        mCastBtn.setVisibility(Build.VERSION.SDK_INT < 30 ? GONE : VISIBLE);
+        if (mPlayerConfig != null) updatePlayerCfgView();
+        hideLiveAboutBtn();
+        updateDanmuBtn();
+        updateDanmuSearchUiBtn();
     }
 
     void setLandscapePortrait() {
-        int requestedOrientation = mActivity.getRequestedOrientation();
-        if (requestedOrientation == ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE || requestedOrientation == ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE || requestedOrientation == ActivityInfo.SCREEN_ORIENTATION_REVERSE_LANDSCAPE) {
-            mLandscapePortraitBtn.setText("横屏");
-            mActivity.setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT);
-        } else if (requestedOrientation == ActivityInfo.SCREEN_ORIENTATION_PORTRAIT || requestedOrientation == ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT || requestedOrientation == ActivityInfo.SCREEN_ORIENTATION_REVERSE_PORTRAIT) {
+        if (mActivity == null) return;
+        if (mActivity.getResources().getConfiguration().orientation == Configuration.ORIENTATION_PORTRAIT) {
             mLandscapePortraitBtn.setText("竖屏");
             mActivity.setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE);
+        } else {
+            mLandscapePortraitBtn.setText("横屏");
+            mActivity.setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT);
         }
+    }
+
+    @Override
+    protected void onSizeChanged(int w, int h, int oldw, int oldh) {
+        super.onSizeChanged(w, h, oldw, oldh);
+        initLandscapePortraitBtnInfo();
     }
 
     void initSubtitleInfo() {
@@ -906,7 +1016,9 @@ public class VodController extends BaseController {
     }
 
     public void showParse(boolean userJxList) {
-        mParseRoot.setVisibility(userJxList ? VISIBLE : GONE);
+        showParse = userJxList;
+        boolean isPortrait = getResources().getConfiguration().orientation == Configuration.ORIENTATION_PORTRAIT;
+        mParseRoot.setVisibility(showParse && !isPortrait ? VISIBLE : GONE);
     }
 
     private JSONObject mPlayerConfig = null;
