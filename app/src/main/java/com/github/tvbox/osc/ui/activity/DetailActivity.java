@@ -1117,6 +1117,9 @@ public class DetailActivity extends BaseActivity {
             return;
         }
 
+        String oldFlag = vodInfo.playFlag;
+        int oldIndex = vodInfo.playIndex;
+        boolean sameFlag = TextUtils.equals(oldFlag, newFlag);
         VodInfo.VodSeries playingSeries = getPlayingSeries(playingVodInfo, newFlag);
         int newIndex = findSameEpisodeIndex(playingSeries, newSeriesList, playingVodInfo.playIndex);
         vodInfo.playFlag = newFlag;
@@ -1139,7 +1142,14 @@ public class DetailActivity extends BaseActivity {
         newSeriesList.get(newIndex).selected = true;
 
         seriesFlagAdapter.notifyDataSetChanged();
-        refreshList();
+        if (sameFlag && oldIndex >= 0 && oldIndex < newSeriesList.size()) {
+            if (oldIndex != newIndex) {
+                seriesAdapter.notifyItemChanged(oldIndex);
+                seriesAdapter.notifyItemChanged(newIndex);
+            }
+        } else {
+            refreshList();
+        }
         setTvPlayUrl(newSeriesList.get(newIndex).url);
 
         int flagIndex = -1;
