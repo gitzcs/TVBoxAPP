@@ -883,6 +883,7 @@ public class VodController extends BaseController {
         });
         //屏显
         int disPlay = Hawk.get(HawkConfig.SCREEN_DISPLAY, GONE);
+        mTopRoot2.setVisibility(disPlay);
         seekTime.setVisibility(disPlay);
         net_play_speed.setVisibility(disPlay);
         mPlayPauseTime.setVisibility(disPlay);

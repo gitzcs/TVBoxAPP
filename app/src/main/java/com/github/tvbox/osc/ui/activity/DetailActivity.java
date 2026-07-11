@@ -423,12 +423,14 @@ public class DetailActivity extends BaseActivity {
                         VodInfo.VodSeriesFlag flag = vodInfo.seriesFlags.get(i);
                         if (flag.name.equals(oldFlag)) {
                             flag.selected = false;
-                            seriesFlagAdapter.notifyItemChanged(i);
+                            View oldItemView = mGridViewFlag.getLayoutManager().findViewByPosition(i);
+                            if (oldItemView != null) oldItemView.findViewById(R.id.tvSeriesFlagSelect).setVisibility(View.GONE);
                             break;
                         }
                     }
                     VodInfo.VodSeriesFlag flag = vodInfo.seriesFlags.get(position);
                     flag.selected = true;
+                    itemView.findViewById(R.id.tvSeriesFlagSelect).setVisibility(View.VISIBLE);
                     // clean pre flag select status
                     if (oldSeriesList != null && oldSeriesList.size() > oldIndex) {
                         oldSeriesList.get(oldIndex).selected = false;
@@ -442,9 +444,7 @@ public class DetailActivity extends BaseActivity {
                         }
                         newSeriesList.get(vodInfo.playIndex).selected = true;
                     }
-                    seriesFlagAdapter.notifyItemChanged(position);
                     refreshList();
-                    mGridView.clearFocus();
                 }
                 seriesFlagFocus = itemView;
             }
@@ -716,7 +716,7 @@ public class DetailActivity extends BaseActivity {
         }else {
             tvSeriesGroup.setVisibility(View.GONE);
         }
-        seriesFlagAdapter.notifyDataSetChanged();
+        if (!mGridViewFlag.hasFocus()) seriesFlagAdapter.notifyDataSetChanged();
         mGridViewQuality.setNextFocusUpId(tvSeriesGroup.getVisibility() == View.VISIBLE ? R.id.mSeriesSortTv : R.id.mGridViewFlag);
     }
 
