@@ -1174,7 +1174,7 @@ public class DetailActivity extends BaseActivity {
                 mGridViewFlag.setSelection(flagIndex);
             }
         }
-        if (!isFirstLoad && mGridView.hasFocus()) {
+        if (!isFirstLoad) {
             mGridView.setSelection(newIndex);
         }
 
