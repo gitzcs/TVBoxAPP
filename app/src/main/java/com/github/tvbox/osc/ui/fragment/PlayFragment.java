@@ -181,9 +181,13 @@ public class PlayFragment extends BaseLazyFragment {
     }
 
     private void checkDanmu(String danmu) {
+        checkDanmu(danmu, null);
+    }
+
+    private void checkDanmu(String danmu, DanmuLoadController.LoadCallback callback) {
         if (danmuLoadController != null) {
             VodInfo.VodSeries series = mVodInfo == null ? null : getCurrentSeries(mVodInfo.playFlag, mVodInfo.playIndex);
-            danmuLoadController.check(danmu, mVodInfo == null ? "" : mVodInfo.name, series == null ? "" : series.name);
+            danmuLoadController.check(danmu, mVodInfo == null ? "" : mVodInfo.name, series == null ? "" : series.name, callback);
         }
     }
 
@@ -914,6 +918,9 @@ public class PlayFragment extends BaseLazyFragment {
                         String flag = info.optString("flag");
                         String url = info.getString("url");
                         String danmaku = info.optString("danmaku", "");
+                        if (DanmakuApi.hasCustomApi()) danmaku = "";
+                        final String danmuProgressKey = progressKey;
+                        boolean fallbackToDefaultSearch = DanmakuApi.isUseDefault() && danmaku.trim().startsWith("http");
                         if(url.startsWith("[")){
                             url=mController.firstUrlByArray(url);
                         }
@@ -933,7 +940,11 @@ public class PlayFragment extends BaseLazyFragment {
                             mController.showParse(false);
                             playUrl(playUrl + url, headers);
                         }
-                        checkDanmu(danmaku);
+                        checkDanmu(danmaku, fallbackToDefaultSearch ? () -> {
+                            if (DanmakuApi.isUseDefault() && TextUtils.equals(danmuProgressKey, progressKey)) {
+                                searchDanmu("");
+                            }
+                        } : null);
                         searchDanmu(danmaku);
                     } catch (Throwable th) {
                         handleResolvePlayUrlFailed("获取播放信息错误");
