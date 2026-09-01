@@ -286,7 +286,7 @@ public class VodController extends BaseController {
             int[] mVideoSizes = mControlWrapper.getVideoSize();
             String width = Integer.toString(mVideoSizes[0]);
             String height = Integer.toString(mVideoSizes[1]);
-            mVideoSize.setText("[ " + width + " X " + height +" ]");
+            mVideoSize.setText(width + " X " + height);
 
             mHandler.postDelayed(this, 1000);
         }

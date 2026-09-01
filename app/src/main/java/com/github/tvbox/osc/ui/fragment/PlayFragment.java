@@ -297,14 +297,9 @@ public class PlayFragment extends BaseLazyFragment {
         mVideoView.addOnStateChangeListener(new VideoView.SimpleOnStateChangeListener() {
             @Override
             public void onPlayStateChanged(int playState) {
-                if (playState == VideoView.STATE_PLAYING && mVideoView != null) {
-                    mVideoView.showVideoFrame();
-                }
                 if (webPlayUrl != null && isStartedPlayState(playState)) {
                     markPlaybackStarted();
-                    if (mVideoView == null || !mVideoView.isVideoFrameCleared()) {
-                        hideTipOnUiThread();
-                    }
+                    hideTipOnUiThread();
                 }
                 if (switchingPlayback) {
                     if (playState == VideoView.STATE_PLAYBACK_COMPLETED) {
@@ -1955,7 +1950,7 @@ public class PlayFragment extends BaseLazyFragment {
                 }
                 AbstractPlayer mediaPlayer = mVideoView.getMediaPlayer();
                 if (mediaPlayer != null) {
-                    mVideoView.clearVideoFrame();
+                    mediaPlayer.stop();
                 }
             } else {
                 mVideoView.release();

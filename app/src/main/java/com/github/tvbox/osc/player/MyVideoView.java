@@ -4,7 +4,6 @@ import android.content.Context;
 import android.text.TextUtils;
 import android.util.AttributeSet;
 import android.view.Gravity;
-import android.view.View;
 import android.widget.ImageView;
 
 import androidx.annotation.NonNull;
@@ -22,7 +21,6 @@ import xyz.doikki.videoplayer.player.VideoView;
 public class MyVideoView extends VideoView implements DrawHandler.Callback {
     private DanmakuView danmuView;
     private ImageView artworkView;
-    private View frameCover;
 
     public MyVideoView(@NonNull Context context) {
         super(context, null);
@@ -67,24 +65,6 @@ public class MyVideoView extends VideoView implements DrawHandler.Callback {
 
     public int[] getVideoSize() {
         return mVideoSize;
-    }
-
-    public void clearVideoFrame() {
-        if (mMediaPlayer != null) mMediaPlayer.stop();
-        if (frameCover == null) {
-            frameCover = new View(getContext());
-            frameCover.setBackgroundColor(android.graphics.Color.BLACK);
-            mPlayerContainer.addView(frameCover, new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT, Gravity.CENTER));
-        }
-        frameCover.setVisibility(VISIBLE);
-    }
-
-    public void showVideoFrame() {
-        if (frameCover != null) frameCover.setVisibility(GONE);
-    }
-
-    public boolean isVideoFrameCleared() {
-        return frameCover != null && frameCover.getVisibility() == VISIBLE;
     }
 
     @Override
