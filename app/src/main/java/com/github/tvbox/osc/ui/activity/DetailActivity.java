@@ -1902,16 +1902,18 @@ public class DetailActivity extends BaseActivity {
             exitFullPreview();
             return;
         }
-        if (seriesSelect) {
-            if (seriesFlagFocus != null && !seriesFlagFocus.isFocused()) {
-                try {
-                    if (seriesFlagFocus.isShown()) {
-                        seriesFlagFocus.requestFocus();
-                        return;
-                    }
-                } catch (Throwable th) {
-                    th.printStackTrace();
+        if (mGridView != null && mGridView.hasFocus()
+                && mGridViewFlag != null && mGridViewFlag.getVisibility() == View.VISIBLE) {
+            try {
+                if (seriesFlagFocus != null && seriesFlagFocus.isShown()
+                        && seriesFlagFocus.requestFocus()) {
+                    return;
                 }
+                if (mGridViewFlag.requestFocus()) {
+                    return;
+                }
+            } catch (Throwable th) {
+                th.printStackTrace();
             }
         }
         if(showPreview && playFragment!=null){

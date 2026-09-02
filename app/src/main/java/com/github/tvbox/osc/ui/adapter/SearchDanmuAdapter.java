@@ -16,5 +16,6 @@ public class SearchDanmuAdapter extends BaseQuickAdapter<DanmuSearchResult, Base
     @Override
     protected void convert(BaseViewHolder helper, DanmuSearchResult item) {
         helper.setText(R.id.danmuName, item.getName());
+        helper.addOnClickListener(R.id.danmuItem);
     }
 }
