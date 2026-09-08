@@ -8,11 +8,14 @@ import com.orhanobut.hawk.Hawk;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.Map;
 import java.util.List;
-import java.util.Iterator;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class SearchHelper {
+
+    private static final Pattern SEASON_SUFFIX_PATTERN = Pattern.compile(
+            "^(.*?)[\\s._-]*(?:第\\s*(?:[0-9]{1,2}|[零一二三四五六七八九十百千万两]+)\\s*季|[0-9]{1,2}\\s*季|[0-9]{1,2})$");
 
     public static HashMap<String, String> getSourcesForSearch() {
         HashMap<String, String> mCheckSources;
@@ -79,10 +82,22 @@ public class SearchHelper {
 
     public static List<String> splitWords(String text) {
         List<String> result = new ArrayList<>();
+        if (text == null || text.trim().isEmpty()) {
+            return result;
+        }
         result.add(text);
         String[] parts = text.split("\\W+");
         if (parts.length > 1) {
             result.addAll(Arrays.asList(parts));
+        }
+        Matcher matcher = SEASON_SUFFIX_PATTERN.matcher(text.trim());
+        if (matcher.matches()) {
+            String baseName = matcher.group(1).trim();
+            if (!baseName.isEmpty()
+                    && !Character.isDigit(baseName.charAt(baseName.length() - 1))
+                    && !result.contains(baseName)) {
+                result.add(baseName);
+            }
         }
         return result;
     }
