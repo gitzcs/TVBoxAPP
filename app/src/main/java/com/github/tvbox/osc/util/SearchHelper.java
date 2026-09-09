@@ -15,7 +15,12 @@ import java.util.regex.Pattern;
 public class SearchHelper {
 
     private static final Pattern SEASON_SUFFIX_PATTERN = Pattern.compile(
-            "^(.*?)[\\s._-]*(?:第\\s*(?:[0-9]{1,2}|[零一二三四五六七八九十百千万两]+)\\s*季|[0-9]{1,2}\\s*季|[0-9]{1,2})$");
+            "^(.*?)[\\s._-]*(?:(第\\s*)?([0-9]{1,2}|[零一二三四五六七八九十百千万两]+)(\\s*季)|([0-9]{1,2}))$");
+
+    private static final String[] CHINESE_NUMBERS = {
+            "零", "一", "二", "三", "四", "五", "六", "七", "八", "九", "十",
+            "十一", "十二", "十三", "十四", "十五", "十六", "十七", "十八", "十九", "二十"
+    };
 
     public static HashMap<String, String> getSourcesForSearch() {
         HashMap<String, String> mCheckSources;
@@ -98,8 +103,37 @@ public class SearchHelper {
                     && !result.contains(baseName)) {
                 result.add(baseName);
             }
+            String season = matcher.group(3) == null ? matcher.group(5) : matcher.group(3);
+            if (!baseName.isEmpty() && season != null) {
+                String nextSeason = nextSeason(season);
+                if (nextSeason != null) {
+                    String prefix = matcher.group(3) == null || matcher.group(2) == null ? "" : matcher.group(2);
+                    String suffix = matcher.group(3) == null || matcher.group(4) == null ? "" : matcher.group(4);
+                    String nextTitle = baseName + prefix + nextSeason + suffix;
+                    if (!result.contains(nextTitle)) {
+                        result.add(nextTitle);
+                    }
+                }
+            }
         }
         return result;
+    }
+
+    private static String nextSeason(String season) {
+        String value = season.trim();
+        try {
+            return String.valueOf(Integer.parseInt(value) + 1);
+        } catch (NumberFormatException ignored) {
+            if ("两".equals(value)) {
+                return "三";
+            }
+            for (int i = 0; i < CHINESE_NUMBERS.length - 1; i++) {
+                if (CHINESE_NUMBERS[i].equals(value)) {
+                    return CHINESE_NUMBERS[i + 1];
+                }
+            }
+            return null;
+        }
     }
 
 }

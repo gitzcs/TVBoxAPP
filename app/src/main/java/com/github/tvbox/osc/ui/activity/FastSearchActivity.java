@@ -48,6 +48,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
@@ -388,7 +389,7 @@ public class FastSearchActivity extends BaseActivity {
     private void fenci() {
         if (!quickSearchWord.isEmpty()) return; // 如果经有分词了，不再进行二次分词
         quickSearchWord.addAll(SearchHelper.splitWords(searchTitle));
-        List<String> words = new ArrayList<>(new HashSet<>(quickSearchWord));
+        List<String> words = new ArrayList<>(new LinkedHashSet<>(quickSearchWord));
         EventBus.getDefault().post(new RefreshEvent(RefreshEvent.TYPE_QUICK_SEARCH_WORD, words));
         // 分词
 //        OkGo.<String>get("http://api.pullword.com/get.php?source=" + URLEncoder.encode(searchTitle) + "&param1=0&param2=0&json=1")
