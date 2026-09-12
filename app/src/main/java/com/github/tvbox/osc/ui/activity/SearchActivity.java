@@ -84,7 +84,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class SearchActivity extends BaseActivity {
     private static final String HOT_SEARCH_URL = "https://movie.douban.com/j/search_subjects?type=tv&tag=%E7%83%AD%E9%97%A8&sort=recommend&page_limit=20&page_start=0";
     private static final int SEARCH_THREAD_COUNT = 6;
-    private static final int SEARCH_MAX_THREAD_COUNT = Build.VERSION.SDK_INT >= 30 ? 18 : 12;
+    private static final int SEARCH_MAX_THREAD_COUNT = Build.VERSION.SDK_INT > 30 ? 18 : 12;
     private static final int SEARCH_NEXT_BATCH_SECONDS = 3;
     private static final int SEARCH_SITE_TIMEOUT_SECONDS = 10;
     private static final String[] DEFAULT_HOT_WORDS = {
@@ -464,38 +464,51 @@ public class SearchActivity extends BaseActivity {
                 int itemMargin = getResources().getDimensionPixelSize(R.dimen.vs_5);
                 int paddingH = getResources().getDimensionPixelSize(R.dimen.vs_10);
                 int minWidth = getResources().getDimensionPixelSize(R.dimen.vs_80);
-                int maxWidth = Math.max(minWidth, (llHistoryWord.getWidth() - itemMargin * 6) / 3);
+                int availableWidth = historyWordGrid.getWidth();
+                if (availableWidth <= 0) availableWidth = llHistoryWord.getWidth();
                 float textSize = getResources().getDimension(R.dimen.ts_22);
                 int textColor = getResources().getColor(R.color.color_FFFFFF);
+                LinearLayout row = null;
+                int rowWidth = 0;
                 for (int i = 0; i < history.size(); i++) {
                     final String word = history.get(i);
                     TextView item = new TextView(SearchActivity.this);
                     item.setText(word);
                     item.setSingleLine(true);
-                    item.setEllipsize(TextUtils.TruncateAt.END);
                     item.setGravity(Gravity.CENTER);
                     item.setIncludeFontPadding(false);
                     item.setFocusable(true);
                     item.setTextColor(textColor);
                     item.setTextSize(TypedValue.COMPLEX_UNIT_PX, textSize);
-                    item.setMaxWidth(maxWidth);
                     item.setMinWidth(minWidth);
                     item.setPadding(paddingH, 0, paddingH, 0);
                     item.setBackgroundResource(R.drawable.shape_user_focus);
+                    item.measure(
+                            View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED),
+                            View.MeasureSpec.makeMeasureSpec(itemHeight, View.MeasureSpec.EXACTLY));
+                    int itemWidth = Math.max(minWidth, item.getMeasuredWidth());
+                    int rowItemWidth = itemWidth + itemMargin * 2;
+                    if (row == null || (rowWidth > 0 && rowWidth + rowItemWidth > availableWidth)) {
+                        row = new LinearLayout(SearchActivity.this);
+                        row.setOrientation(LinearLayout.HORIZONTAL);
+                        GridLayout.LayoutParams rowParams = new GridLayout.LayoutParams(
+                                GridLayout.spec(GridLayout.UNDEFINED),
+                                GridLayout.spec(GridLayout.UNDEFINED));
+                        rowParams.width = GridLayout.LayoutParams.MATCH_PARENT;
+                        rowParams.height = GridLayout.LayoutParams.WRAP_CONTENT;
+                        historyWordGrid.addView(row, rowParams);
+                        rowWidth = 0;
+                    }
                     item.setOnClickListener(new View.OnClickListener() {
                         @Override
                         public void onClick(View v) {
                             startSearch(word);
                         }
                     });
-                    GridLayout.LayoutParams params = new GridLayout.LayoutParams(
-                            GridLayout.spec(i / 3),
-                            GridLayout.spec(i % 3)
-                    );
-                    params.width = GridLayout.LayoutParams.WRAP_CONTENT;
-                    params.height = itemHeight;
+                    LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(itemWidth, itemHeight);
                     params.setMargins(itemMargin, itemMargin, itemMargin, itemMargin);
-                    historyWordGrid.addView(item, params);
+                    row.addView(item, params);
+                    rowWidth += rowItemWidth;
                 }
             }
         });
