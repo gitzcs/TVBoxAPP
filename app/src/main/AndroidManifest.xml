@@ -72,6 +72,13 @@
             android:name=".ui.activity.FinderActivity"
             android:screenOrientation="sensorLandscape" />
         <activity
+            android:name=".ui.activity.CacheActivity"
+            android:screenOrientation="sensorLandscape" />
+        <activity
+            android:name=".ui.activity.LocalPlayActivity"
+            android:screenOrientation="sensorLandscape"
+            android:theme="@style/AppTheme.NoActionBar" />
+        <activity
             android:name=".ui.activity.HistoryActivity"
             android:screenOrientation="sensorLandscape" />
         <activity
