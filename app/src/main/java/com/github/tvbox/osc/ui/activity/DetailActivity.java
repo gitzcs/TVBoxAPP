@@ -125,6 +125,8 @@ public class DetailActivity extends BaseActivity {
     private TextView tvChangeSource;
     private TextView tvCollect;
     private TextView tvCache;
+    /** 虚拟解析缓存用的播放结果观察者（同一时刻只保留一个，避免叠加与旧值回放）。 */
+    private Observer<JSONObject> cacheParseObserver;
     private TvRecyclerView mGridViewFlag;
     private TvRecyclerView mGridViewQuality;
     private TvRecyclerView mGridView;
@@ -690,7 +692,13 @@ public class DetailActivity extends BaseActivity {
         final String fPic = pic;
         try {
             SourceViewModel svm = new ViewModelProvider(this).get(SourceViewModel.class);
-            svm.playResult.observe(this, new Observer<JSONObject>() {
+            // 同一个 LiveData 上重复 observe 会叠加观察者, 而且新观察者会立刻收到
+            // 上一次的旧值(把上一集当成这次的解析结果)。所以先摘掉旧的再挂新的。
+            if (cacheParseObserver != null) {
+                svm.playResult.removeObserver(cacheParseObserver);
+                cacheParseObserver = null;
+            }
+            cacheParseObserver = new Observer<JSONObject>() {
                 @Override
                 public void onChanged(JSONObject info) {
                     if (info == null) {
@@ -730,7 +738,8 @@ public class DetailActivity extends BaseActivity {
                         Toast.makeText(DetailActivity.this, "解析失败, 暂无法缓存", Toast.LENGTH_SHORT).show();
                     }
                 }
-            });
+            };
+            svm.playResult.observe(this, cacheParseObserver);
             String proKey = sourceKey + vodInfo.id + vodInfo.playFlag + vodInfo.playIndex;
             String subtKey = sourceKey + "-" + vodInfo.id + "-" + vodInfo.playFlag + "-" + vodInfo.playIndex + "-subt";
             svm.getPlay(sourceKey, vodInfo.playFlag, proKey, rawUrl, subtKey);
@@ -2000,6 +2009,15 @@ public class DetailActivity extends BaseActivity {
     @Override
     protected void onDestroy() {
         resetDetailFallback();
+        // 摘掉虚拟解析缓存的观察者, 避免 Activity 销毁后仍被回调
+        try {
+            if (cacheParseObserver != null) {
+                new ViewModelProvider(this).get(SourceViewModel.class)
+                        .playResult.removeObserver(cacheParseObserver);
+                cacheParseObserver = null;
+            }
+        } catch (Throwable ignored) {
+        }
         super.onDestroy();
         try {
             if (searchExecutorService != null) {
