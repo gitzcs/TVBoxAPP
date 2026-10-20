@@ -1,0 +1,39 @@
+# ==========================================================
+#  TVApp · .editorconfig
+#  与 .gitattributes 配套：编辑器层面就写 LF + UTF-8，
+#  避免"提交时才被规范化"导致的整文件 diff。
+# ==========================================================
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 4
+max_line_length = 120
+
+# ---------- Java / Android ----------
+[*.{java,kt,gradle,groovy}]
+indent_size = 4
+
+[*.{xml,html}]
+indent_size = 4
+
+# ---------- 配置 / 文档 ----------
+[*.{json,yml,yaml,properties}]
+indent_size = 2
+
+[*.md]
+# Markdown 里行尾两个空格是有意义的换行，不能删
+trim_trailing_whitespace = false
+
+[*.{bat,cmd}]
+end_of_line = crlf
+
+[gradlew]
+end_of_line = lf
+
+[*.{sh,bash,zsh}]
+end_of_line = lf

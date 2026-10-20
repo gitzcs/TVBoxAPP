@@ -1,0 +1,69 @@
+# ==========================================================
+#  TVApp · .gitignore
+#  注意：本仓库用 .gitattributes 统一换行符（仓库内一律 LF）
+# ==========================================================
+
+# ---------- Gradle ----------
+.gradle/
+build/
+!gradle/wrapper/gradle-wrapper.jar
+!gradle/wrapper/gradle-wrapper.properties
+
+# ---------- Android 本机配置（含 SDK 路径，绝不能入库）----------
+local.properties
+keystore.properties
+signing.properties
+release/
+
+# ---------- 构建产物 ----------
+*.apk
+*.aab
+*.ap_
+*.dex
+*.class
+*.jar
+!gradle/wrapper/gradle-wrapper.jar
+output.json
+lint-results*.html
+lint-results*.xml
+
+# ---------- 原生构建 ----------
+.externalNativeBuild/
+.cxx/
+obj/
+libs/*.so
+
+# ---------- IDE ----------
+.idea/
+*.iml
+*.iws
+*.ipr
+*.hprof
+out/
+.vscode/
+.settings/
+.project
+.classpath
+
+# ---------- 系统 ----------
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+Thumbs.db
+Desktop.ini
+*~
+
+# ---------- 日志 / 临时 ----------
+*.log
+*.tmp
+*.bak
+*.swp
+crash-*.log
+
+# ---------- 签名文件 ----------
+*.jks
+*.keystore
+*.p12
+*.pem
