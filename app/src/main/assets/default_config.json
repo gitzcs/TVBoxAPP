@@ -1,0 +1,51 @@
+{
+  "name": "内置示例配置",
+  "spider": "",
+  "wallpaper": "",
+  "logo": "",
+  "ua": "",
+  "hosts": [],
+  "doh": [],
+  "sites": [
+    {
+      "key": "demo_cms_1",
+      "name": "示例采集站 A",
+      "type": 1,
+      "api": "https://cms-a.example.invalid/api.php/provide/vod/",
+      "searchable": 1,
+      "filterable": 1,
+      "ext": ""
+    },
+    {
+      "key": "demo_cms_2",
+      "name": "示例采集站 B",
+      "type": 1,
+      "api": "https://cms-b.example.invalid/api.php/provide/vod/",
+      "searchable": 1,
+      "filterable": 1,
+      "ext": ""
+    },
+    {
+      "key": "demo_cms_3",
+      "name": "示例采集站 C",
+      "type": 0,
+      "api": "https://cms-c.example.invalid/xml/",
+      "searchable": 1,
+      "filterable": 1,
+      "ext": ""
+    },
+    {
+      "key": "demo_cms_4",
+      "name": "示例采集站 D",
+      "type": 1,
+      "api": "https://cms-d.example.invalid/api.php/provide/vod/",
+      "searchable": 1,
+      "filterable": 1,
+      "ext": ""
+    }
+  ],
+  "parses": [],
+  "lives": [],
+  "flags": [],
+  "rules": []
+}

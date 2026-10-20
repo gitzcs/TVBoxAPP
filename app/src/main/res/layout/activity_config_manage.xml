@@ -34,6 +34,20 @@
 
 
         <TextView
+            android:id="@+id/btnFinder"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="@dimen/vs_10"
+            android:layout_marginRight="@dimen/vs_10"
+            android:background="@drawable/button_dialog_main"
+            android:clickable="true"
+            android:focusable="true"
+            android:padding="@dimen/vs_12"
+            android:text="视频源自动获取"
+            android:textColor="@android:color/white"
+            android:textSize="@dimen/ts_20" />
+
+        <TextView
             android:id="@+id/btnAddConfig"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"

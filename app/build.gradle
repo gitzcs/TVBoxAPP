@@ -161,6 +161,12 @@ android {
         checkReleaseBuilds false
         abortOnError false
     }
+
+    testOptions {
+        // JVM 单测里 android.util.Log 等框架方法是 stub，会抛
+        // "Method ... not mocked"。返回默认值即可让纯逻辑测试跑起来。
+        unitTests.returnDefaultValues = true
+    }
 //    dexOptions {
 //        javaMaxHeapSize "4g"
 //        additionalParameters += '--multi-dex'
@@ -228,5 +234,7 @@ dependencies {
     implementation 'commons-io:commons-io:2.11.0'
     implementation 'com.googlecode.juniversalchardet:juniversalchardet:1.0.3'
     implementation 'org.brotli:dec:0.1.2'
+
+    testImplementation 'junit:junit:4.13.2'
 }
 

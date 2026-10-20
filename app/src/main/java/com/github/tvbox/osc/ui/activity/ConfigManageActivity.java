@@ -52,6 +52,13 @@ public class ConfigManageActivity extends BaseActivity {
                 showEditDialog(null);
             }
         });
+
+        findViewById(R.id.btnFinder).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                jumpActivity(FinderActivity.class);
+            }
+        });
     }
 
     @Override

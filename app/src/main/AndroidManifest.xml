@@ -69,6 +69,9 @@
             android:name=".ui.activity.ConfigManageActivity"
             android:screenOrientation="sensorLandscape" />
         <activity
+            android:name=".ui.activity.FinderActivity"
+            android:screenOrientation="sensorLandscape" />
+        <activity
             android:name=".ui.activity.HistoryActivity"
             android:screenOrientation="sensorLandscape" />
         <activity

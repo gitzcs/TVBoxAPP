@@ -1,0 +1,482 @@
+package com.github.tvbox.osc.finder;
+
+import android.content.Context;
+import android.os.Handler;
+import android.os.Looper;
+
+import com.github.tvbox.osc.util.LOG;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.TimeUnit;
+
+/**
+ * 「自动找源」的调度中枢：<b>启动即用本地，后台定时刷新，直到通了为止</b>。
+ *
+ * <p>时序（对应需求「每次打开 app 时查找/验证/保存；GitHub 不通就先用本地，
+ * 后台定时再试」）：
+ * <ol>
+ *     <li>{@link #start()} 被 {@code App.onCreate} 调用 → 读本地缓存，
+ *         立刻把可用源暴露出去（<b>零网络</b>，冷启动不卡）</li>
+ *     <li>按下面的策略把一次「发现 + 验证 + 保存」排进后台线程</li>
+ * </ol>
+ *
+ * <p>调度策略（可用 {@code SourceCache} 里的记录跨进程重启生效）：
+ * <table border="1">
+ *     <tr><th>情况</th><th>下次刷新</th></tr>
+ *     <tr><td>还没缓存 / 从没试过</td><td>立即</td></tr>
+ *     <tr><td>上次成功</td><td>1 小时后</td></tr>
+ *     <tr><td>上次失败（GitHub 不通、网络断）</td><td>15 分钟后再试，直到成功</td></tr>
+ *     <tr><td>缓存太旧（&gt;24h）</td><td>不再等待，立即刷新</td></tr>
+ * </table>
+ *
+ * <p>刷新失败时<b>不会清掉旧缓存</b>——这是「不通时先用本地」的关键，
+ * 否则一次网络抖动就会让 App 变成没有任何源可用。
+ */
+public final class AutoSourceManager {
+
+    /** 正常刷新间隔：1 小时。 */
+    public static final long REFRESH_INTERVAL_MS = 60L * 60L * 1000L;
+
+    /** 失败后的重试间隔：15 分钟（直到通了为止）。 */
+    public static final long RETRY_INTERVAL_MS = 15L * 60L * 1000L;
+
+    /** 缓存超过这个时长就不等间隔了，直接刷新。 */
+    public static final long STALE_INTERVAL_MS = 24L * 60L * 60L * 1000L;
+
+    /** 一个源验证通过后，多久可以「不重新验证也先用着」。 */
+    public static final long TRUST_INTERVAL_MS = 6L * 60L * 60L * 1000L;
+
+    private static volatile AutoSourceManager sInstance;
+
+    /** 对外状态快照（不可变）。 */
+    public static final class State {
+        private final boolean refreshing;
+        private final String stage;
+        private final int usableCount;
+        private final long lastCheckedAt;
+        private final long lastAttemptAt;
+        private final boolean lastAttemptOk;
+        private final boolean attempted;
+        private final int failStreak;
+        private final String lastError;
+
+        State(boolean refreshing, String stage, int usableCount, long lastCheckedAt,
+              long lastAttemptAt, boolean lastAttemptOk, boolean attempted,
+              int failStreak, String lastError) {
+            this.refreshing = refreshing;
+            this.stage = stage;
+            this.usableCount = usableCount;
+            this.lastCheckedAt = lastCheckedAt;
+            this.lastAttemptAt = lastAttemptAt;
+            this.lastAttemptOk = lastAttemptOk;
+            this.attempted = attempted;
+            this.failStreak = failStreak;
+            this.lastError = lastError;
+        }
+
+        public boolean isRefreshing() {
+            return refreshing;
+        }
+
+        /** 当前阶段描述（搜索中 / 验证 3/12…），未在刷新时为 null。 */
+        public String getStage() {
+            return stage;
+        }
+
+        public int getUsableCount() {
+            return usableCount;
+        }
+
+        /** 上次「发现 + 验证」完成的时间。 */
+        public long getLastCheckedAt() {
+            return lastCheckedAt;
+        }
+
+        public long getLastAttemptAt() {
+            return lastAttemptAt;
+        }
+
+        public boolean isLastAttemptOk() {
+            return lastAttemptOk;
+        }
+
+        public boolean hasAttempted() {
+            return attempted;
+        }
+
+        public int getFailStreak() {
+            return failStreak;
+        }
+
+        public String getLastError() {
+            return lastError;
+        }
+
+        /** 一句话状态，可直接丢给 UI。 */
+        public String describe() {
+            if (refreshing) {
+                return stage == null ? "正在自动找源…" : stage;
+            }
+            if (usableCount <= 0) {
+                if (!attempted) {
+                    return "还没有可用源，正在准备自动找源…";
+                }
+                return "暂时没有可用源" + (lastError == null ? "" : "：" + lastError);
+            }
+            StringBuilder sb = new StringBuilder("本地已保存 ").append(usableCount).append(" 个可用源");
+            if (lastCheckedAt > 0) {
+                sb.append("，上次验证 ").append(ago(lastCheckedAt));
+            }
+            if (attempted && !lastAttemptOk) {
+                sb.append("；上次联网刷新失败，正在后台重试")
+                        .append(lastError == null ? "" : "（" + lastError + "）");
+            }
+            return sb.toString();
+        }
+
+        private static String ago(long at) {
+            long ms = System.currentTimeMillis() - at;
+            if (ms < 60_000L) {
+                return "刚刚";
+            }
+            if (ms < 3600_000L) {
+                return (ms / 60_000L) + " 分钟前";
+            }
+            if (ms < 24L * 3600_000L) {
+                return (ms / 3600_000L) + " 小时前";
+            }
+            return (ms / (24L * 3600_000L)) + " 天前";
+        }
+    }
+
+    /** 状态变化回调（主线程）。 */
+    public interface Listener {
+        void onState(State state);
+    }
+
+    private final Context appContext;
+    private final SourceCache cache;
+    private final SourceFinder finder;
+    private final Handler main = new Handler(Looper.getMainLooper());
+    private final List<Listener> listeners = new CopyOnWriteArrayList<>();
+
+    private volatile ScheduledExecutorService scheduler;
+    private volatile boolean refreshing;
+    private volatile String stage;
+    private volatile SourceFinder.Report lastReport;
+    private volatile boolean pendingRefresh;
+
+    private AutoSourceManager(Context context) {
+        this.appContext = context.getApplicationContext();
+        this.cache = new SourceCache(appContext);
+        this.finder = new SourceFinder(appContext);
+    }
+
+    public static AutoSourceManager get(Context context) {
+        if (sInstance == null) {
+            synchronized (AutoSourceManager.class) {
+                if (sInstance == null) {
+                    sInstance = new AutoSourceManager(context);
+                }
+            }
+        }
+        return sInstance;
+    }
+
+    // ---------------- 生命周期 ----------------
+
+    /**
+     * 由 {@code App.onCreate} 调用：立刻暴露本地缓存，并按策略排一次后台刷新。
+     */
+    public void start() {
+        List<Finding> cached = cache.usable();
+        LOG.i("自动找源启动：本地可用源 " + cached.size() + " 个"
+                + (cache.hasAttempted()
+                ? ("，上次尝试 " + (cache.lastAttemptOk() ? "成功" : "失败")
+                + "，连续失败 " + cache.failStreak() + " 次") : "，从未尝试"));
+        notifyState();
+        ensureScheduler();
+        long delay = nextDelayMs();
+        LOG.i("下次自动找源：" + (delay <= 0 ? "立即" : (delay / 1000) + "s 后"));
+        scheduleRefresh(delay);
+    }
+
+    public void stop() {
+        ScheduledExecutorService s = scheduler;
+        if (s != null) {
+            s.shutdownNow();
+            scheduler = null;
+        }
+    }
+
+    // ---------------- 读取 ----------------
+
+    /** 本地缓存的可用源（已排序，best 打头）；零网络。 */
+    public List<Finding> usableCached() {
+        List<Finding> cached = cache.usable();
+        if (cached.isEmpty() && lastReport != null) {
+            return lastReport.usable();
+        }
+        return cached;
+    }
+
+    /** 全部缓存的验证结果（含不可用）。 */
+    public List<Finding> allCached() {
+        return cache.load();
+    }
+
+    /** 最近一次完整的发现结果；还没跑过时为 null。 */
+    public SourceFinder.Report lastReport() {
+        return lastReport;
+    }
+
+    public SourceCache cache() {
+        return cache;
+    }
+
+    public SourceIndex index() {
+        return finder.index();
+    }
+
+    public State state() {
+        List<Finding> usable = cache.usable();
+        return new State(refreshing, stage, usable.size(), cache.savedAt(),
+                cache.lastAttemptAt(), cache.lastAttemptOk(), cache.hasAttempted(),
+                cache.failStreak(), cache.lastError());
+    }
+
+    // ---------------- 刷新 ----------------
+
+    /** 后台刷新（非阻塞）。 */
+    public void refreshAsync(boolean includeGithub) {
+        cache.setIncludeGithub(includeGithub);
+        synchronized (this) {
+            if (refreshing) {
+                pendingRefresh = true;
+                return;
+            }
+        }
+        ensureScheduler();
+        scheduleRefresh(0L);
+    }
+
+    /** 同步刷新（阻塞，自己找后台线程调用）。 */
+    public SourceFinder.Report refreshSync(boolean includeGithub) {
+        cache.setIncludeGithub(includeGithub);
+        return doRefresh(includeGithub);
+    }
+
+    /**
+     * 手动验证一个地址，通过就写入本地缓存（不影响当前配置）。
+     *
+     * <p>对应界面上的「验证并保存」：用户从别处拿到一个配置地址，
+     * 不想等后台定时任务，也不想先启用它，只想确认它能不能用并留档。
+     * 验证跑在调度线程上，回调切回主线程。
+     */
+    public void verifyAndSaveAsync(final String url, final String name,
+                                   final VerifyCallback callback) {
+        ensureScheduler();
+        scheduler.execute(new Runnable() {
+            @Override
+            public void run() {
+                final Finding finding = finder.verify(url, name, Finding.ORIGIN_MANUAL);
+                if (finding.isUsable()) {
+                    cache.upsert(finding);
+                }
+                main.post(new Runnable() {
+                    @Override
+                    public void run() {
+                        if (callback != null) {
+                            callback.onDone(finding, finding.isUsable());
+                        }
+                    }
+                });
+                notifyState();
+            }
+        });
+    }
+
+    /** 手动验证的回调（主线程）。 */
+    public interface VerifyCallback {
+        void onDone(Finding finding, boolean saved);
+    }
+
+    /** 从本地缓存删除一条（不处理当前正在使用的配置）。 */
+    public void removeCached(String url) {
+        cache.remove(url);
+        notifyState();
+    }
+
+    /** 缓存文件在设备上的路径，设置页/找源页用来告诉用户「存哪了」。 */
+    public String cacheFilePath() {
+        return appContext.getFilesDir() + "/finder/sources.json";
+    }
+
+    public void addListener(Listener listener) {
+        if (listener != null && !listeners.contains(listener)) {
+            listeners.add(listener);
+        }
+    }
+
+    public void removeListener(Listener listener) {
+        listeners.remove(listener);
+    }
+
+    // ---------------- 内部：调度 ----------------
+
+    private void ensureScheduler() {
+        if (scheduler == null) {
+            synchronized (this) {
+                if (scheduler == null) {
+                    scheduler = Executors.newSingleThreadScheduledExecutor(new ThreadFactory() {
+                        @Override
+                        public Thread newThread(Runnable r) {
+                            Thread t = new Thread(r, "auto-source");
+                            t.setDaemon(true);
+                            return t;
+                        }
+                    });
+                }
+            }
+        }
+    }
+
+    private void scheduleRefresh(long delayMs) {
+        ScheduledExecutorService s = scheduler;
+        if (s == null) {
+            return;
+        }
+        s.schedule(new Runnable() {
+            @Override
+            public void run() {
+                runCycle();
+            }
+        }, Math.max(0L, delayMs), TimeUnit.MILLISECONDS);
+    }
+
+    /** 一次刷新 + 决定下次什么时候再来。 */
+    private void runCycle() {
+        boolean includeGithub = cache.includeGithub();
+        try {
+            doRefresh(includeGithub);
+        } catch (Throwable t) {
+            LOG.e("自动找源异常", t);
+            cache.markAttempt(false, t.getClass().getSimpleName() + ": " + t.getMessage());
+            notifyState();
+        }
+        if (pendingRefresh) {
+            pendingRefresh = false;
+            scheduleRefresh(0L);
+            return;
+        }
+        scheduleRefresh(nextDelayMs());
+    }
+
+    /**
+     * 下次刷新延迟。
+     *
+     * <p>失败要「快速重试直到通了」，成功就回到正常间隔；
+     * 缓存太旧则不再等待。
+     */
+    long nextDelayMs() {
+        long now = System.currentTimeMillis();
+        if (cache.load().isEmpty()) {
+            return 0L;
+        }
+        if (!cache.hasAttempted()) {
+            return 0L;
+        }
+        long savedAt = cache.savedAt();
+        if (savedAt > 0 && now - savedAt > STALE_INTERVAL_MS) {
+            return 0L;
+        }
+        long base = cache.lastAttemptOk() ? REFRESH_INTERVAL_MS : RETRY_INTERVAL_MS;
+        long due = cache.lastAttemptAt() + base;
+        return Math.max(0L, due - now);
+    }
+
+    // ---------------- 内部：执行 ----------------
+
+    private SourceFinder.Report doRefresh(boolean includeGithub) {
+        synchronized (this) {
+            if (refreshing) {
+                return lastReport;
+            }
+            refreshing = true;
+        }
+        notifyState();
+        try {
+            SourceFinder.Report report = finder.discover(includeGithub, new SourceFinder.Listener() {
+                @Override
+                public void onStage(String message) {
+                    stage = message;
+                    notifyState();
+                }
+
+                @Override
+                public void onFound(Finding finding, int done, int total) {
+                    stage = "已验证 " + done + "/" + total + "：" + finding.getName()
+                            + (finding.isUsable() ? " ✓" : " ✗");
+                    notifyState();
+                }
+            });
+            lastReport = report;
+            persist(report);
+            return report;
+        } finally {
+            refreshing = false;
+            stage = null;
+            notifyState();
+        }
+    }
+
+    /**
+     * 落地验证结果。
+     *
+     * <p>只有「这次真的验证出可用源」才覆盖旧缓存；一个都没验出来时保留旧的，
+     * 并把失败原因记下来交给重试策略。
+     */
+    private void persist(SourceFinder.Report report) {
+        List<Finding> usable = report.usable();
+        if (!usable.isEmpty()) {
+            cache.save(report.all());
+            cache.markAttempt(true, null);
+            LOG.i("源缓存已更新：" + usable.size() + " 个可用源");
+            return;
+        }
+        String why = report.note() == null ? "本次验证没有可用的源" : report.note();
+        if (report.all().isEmpty()) {
+            why = "没有可验证的候选源";
+        }
+        cache.markAttempt(false, why);
+        LOG.w("本次没有验证出可用源，保留旧缓存：" + why);
+    }
+
+    private void notifyState() {
+        final State snapshot = state();
+        main.post(new Runnable() {
+            @Override
+            public void run() {
+                for (Listener l : listeners) {
+                    try {
+                        l.onState(snapshot);
+                    } catch (Exception e) {
+                        LOG.w("找源监听器异常：" + e);
+                    }
+                }
+            }
+        });
+    }
+
+    /** 供 UI 展示：当前策略的可读描述。 */
+    public static String describePolicy() {
+        return "启动即用本地缓存；每 " + (REFRESH_INTERVAL_MS / 60000) + " 分钟联网刷新一次；"
+                + "失败后每 " + (RETRY_INTERVAL_MS / 60000) + " 分钟重试，直到恢复";
+    }
+}

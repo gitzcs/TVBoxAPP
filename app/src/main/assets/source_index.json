@@ -1,0 +1,38 @@
+{
+  "version": 1,
+  "updated": "2026-10-21",
+  "note": "内置索引只声明「去哪里找」，不内置任何具体影视源地址。App 会逐个下载、解析、抽样验证，只有验证通过的才写入本地缓存并优先使用。",
+  "local": [
+    { "name": "内置示例配置（4 个采集站）", "url": "assets://default_config.json" }
+  ],
+  "sources": [],
+  "github": {
+    "enabled": true,
+    "queries": [
+      "tvbox config in:name,description",
+      "tvbox 接口 in:name,description",
+      "tvbox json in:name,description",
+      "catvod config in:name,description"
+    ],
+    "maxRepos": 6,
+    "maxFilesPerRepo": 6,
+    "guessFilenames": [
+      "config.json",
+      "api.json",
+      "tvbox.json",
+      "jsm.json",
+      "tvbox_config.json",
+      "single.json",
+      "main.json",
+      "json/config.json",
+      "json/jsm.json",
+      "color.json"
+    ],
+    "readmeCandidates": ["README.md", "readme.md", "README.txt"]
+  },
+  "probe": {
+    "maxSitesPerConfig": 3,
+    "budgetMs": 25000,
+    "requestTimeoutSeconds": 8
+  }
+}
