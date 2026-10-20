@@ -1,5 +1,6 @@
 # ==========================================================
-#  TVApp · .gitignore
+#  TVBoxApp · .gitignore
+#  以 TVBoxApp 规则为基底，合并 TVBoxOS 上游需要的条目。
 #  注意：本仓库用 .gitattributes 统一换行符（仓库内一律 LF）
 # ==========================================================
 
@@ -21,17 +22,24 @@ release/
 *.ap_
 *.dex
 *.class
-*.jar
-!gradle/wrapper/gradle-wrapper.jar
 output.json
+output-metadata.json
 lint-results*.html
 lint-results*.xml
+proguardMapping.txt
+
+# Generated files
+bin/
+gen/
+out/
 
 # ---------- 原生构建 ----------
 .externalNativeBuild/
 .cxx/
 obj/
-libs/*.so
+
+# ---------- Proguard ----------
+proguard/
 
 # ---------- IDE ----------
 .idea/
@@ -39,11 +47,21 @@ libs/*.so
 *.iws
 *.ipr
 *.hprof
-out/
 .vscode/
 .settings/
 .project
 .classpath
+.navigation/
+captures/
+.idea/workspace.xml
+.idea/tasks.xml
+.idea/gradle.xml
+.idea/assetWizardSettings.xml
+.idea/dictionaries
+.idea/shelf
+.idea/caches
+.idea/modules.xml
+.idea/navEditor.xml
 
 # ---------- 系统 ----------
 .DS_Store
@@ -54,6 +72,9 @@ out/
 Thumbs.db
 Desktop.ini
 *~
+/LTDecodeSpace
+/adb.exe
+/LTDecodeNew3.exe
 
 # ---------- 日志 / 临时 ----------
 *.log
@@ -61,9 +82,32 @@ Desktop.ini
 *.bak
 *.swp
 crash-*.log
+.temp/
+.py/
 
 # ---------- 签名文件 ----------
+# keystore 不入库；上游自带的公开弱口令 keystore 也一并排除
 *.jks
 *.keystore
 *.p12
 *.pem
+
+# ---------- Freeline / fastlane ----------
+freeline.py
+freeline/
+freeline_project_description.json
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/screenshots
+fastlane/test_output
+fastlane/readme.md
+
+# ---------- misc ----------
+vcs.xml
+
+# ---------- lint ----------
+lint/intermediates/
+lint/generated/
+lint/outputs/
+lint/tmp/
+lint/reports/
