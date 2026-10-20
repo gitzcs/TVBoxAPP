@@ -21,7 +21,7 @@
             android:layout_height="@dimen/vs_40"
             android:layout_marginEnd="@dimen/vs_15"
             android:layout_marginRight="@dimen/vs_15"
-            android:background="?attr/color_theme" />
+            android:background="@color/color_FFB800" />
 
         <TextView
             android:layout_width="0dp"
@@ -32,19 +32,6 @@
             android:textSize="@dimen/ts_28"
             android:textStyle="bold" />
 
-        <TextView
-            android:id="@+id/btnUseBuiltin"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginEnd="@dimen/vs_10"
-            android:layout_marginRight="@dimen/vs_10"
-            android:background="@drawable/button_dialog_vod"
-            android:clickable="true"
-            android:focusable="true"
-            android:padding="@dimen/vs_12"
-            android:text="使用内置配置地址"
-            android:textColor="@color/color_FFB800"
-            android:textSize="@dimen/ts_20" />
 
         <TextView
             android:id="@+id/btnAddConfig"
@@ -75,7 +62,7 @@
         android:layout_height="wrap_content"
         android:gravity="center"
         android:padding="@dimen/vs_10"
-        android:text="多配置模式下将合并所有启用配置的数据源, 需在设置中开启多配置开关"
+        android:text="停用的配置不会加载；主页源用于显示首页内容"
         android:textColor="@color/color_FFFFFF_70"
         android:textSize="@dimen/ts_18" />
 </LinearLayout>

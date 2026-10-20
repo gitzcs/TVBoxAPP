@@ -25,6 +25,7 @@ import com.github.tvbox.osc.base.BaseLazyFragment;
 import com.github.tvbox.osc.bean.IJKCode;
 import com.github.tvbox.osc.bean.SourceBean;
 import com.github.tvbox.osc.event.RefreshEvent;
+import com.github.tvbox.osc.ui.activity.ConfigManageActivity;
 import com.github.tvbox.osc.ui.activity.LocalFileActivity;
 import com.github.tvbox.osc.ui.activity.SettingActivity;
 import com.github.tvbox.osc.ui.adapter.ApiHistoryDialogAdapter;
@@ -37,6 +38,8 @@ import com.github.tvbox.osc.ui.dialog.DanmuApiDialog;
 import com.github.tvbox.osc.ui.dialog.SearchRemoteTvDialog;
 import com.github.tvbox.osc.ui.dialog.SelectDialog;
 import com.github.tvbox.osc.ui.dialog.XWalkInitDialog;
+import com.github.tvbox.osc.bean.ConfigBean;
+import com.github.tvbox.osc.util.ConfigManager;
 import com.github.tvbox.osc.util.DanmuHelper;
 import com.github.tvbox.osc.util.FastClickCheckUtil;
 import com.github.tvbox.osc.util.FileUtils;
@@ -153,7 +156,7 @@ public class ModelSettingFragment extends BaseLazyFragment {
         tvMediaCodec.setText(Hawk.get(HawkConfig.IJK_CODEC, "硬解码"));
         tvDebugOpen.setText(Hawk.get(HawkConfig.DEBUG_OPEN, false) ? "已打开" : "已关闭");
         tvParseWebView.setText(Hawk.get(HawkConfig.PARSE_WEBVIEW, true) ? "系统自带" : "XWalkView");
-        tvApi.setText(Hawk.get(HawkConfig.API_URL, ""));
+        tvApi.setText(getCurrentConfigLabel());
         refreshApiLineText();
 
         tvDns.setText(OkGoHelper.dnsHttpsList.get(Hawk.get(HawkConfig.DOH_URL, 0)));
@@ -320,6 +323,16 @@ public class ModelSettingFragment extends BaseLazyFragment {
             }
         });
         findViewById(R.id.llApi).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                FastClickCheckUtil.check(v);
+                // 多配置管理：新增/编辑/启停/设主页源
+                ((BaseActivity) mActivity).jumpActivity(ConfigManageActivity.class);
+            }
+        });
+
+        // 保留旧入口：临时直接换一个地址（不进入多配置列表）
+        findViewById(R.id.llApiQuick).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 FastClickCheckUtil.check(v);
@@ -846,6 +859,27 @@ public class ModelSettingFragment extends BaseLazyFragment {
         }, 2500);
     }
 
+    /**
+     * 「配置地址」一栏显示的内容。
+     *
+     * <p>有主页配置时显示它的名字，否则退回当前生效地址。
+     */
+    private String getCurrentConfigLabel() {
+        ConfigBean home = ConfigManager.getHomeConfig();
+        if (home != null) {
+            return home.displayName();
+        }
+        return Hawk.get(HawkConfig.API_URL, "");
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        // 从「配置地址管理」返回后刷新显示
+        if (tvApi != null) {
+            tvApi.setText(getCurrentConfigLabel());
+        }
+    }
     private void refreshApiLineText() {
         if (tvApiLine == null) return;
         ArrayList<String> apiLines = Hawk.get(HawkConfig.API_LINE_LIST, new ArrayList<String>());

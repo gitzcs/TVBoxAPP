@@ -9,6 +9,7 @@ import com.github.tvbox.osc.callback.LoadingCallback;
 import com.github.tvbox.osc.data.AppDataManager;
 import com.github.tvbox.osc.server.ControlManager;
 import com.github.tvbox.osc.util.AppManager;
+import com.github.tvbox.osc.util.ConfigManager;
 import com.github.tvbox.osc.util.EpgUtil;
 import com.github.tvbox.osc.util.FileUtils;
 import com.github.tvbox.osc.util.HawkConfig;
@@ -59,6 +60,8 @@ public class App extends MultiDexApplication {
         PlayerHelper.init();
         QuickJSLoader.init();
         FileUtils.cleanPlayerCache();
+        // 旧版单一配置地址 → 多配置列表（首次启动时执行一次）
+        ConfigManager.migrateFromLegacy();
     }
 
     private void initParams() {

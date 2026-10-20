@@ -109,6 +109,20 @@
                             android:textSize="@dimen/ts_24" />
 
                     <TextView
+                            android:id="@+id/llApiQuick"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="@dimen/vs_15"
+                            android:layout_marginLeft="@dimen/vs_15"
+                            android:background="@drawable/button_dialog_main"
+                            android:clickable="true"
+                            android:focusable="true"
+                            android:padding="@dimen/vs_8"
+                            android:text="快速更换"
+                            android:textColor="@android:color/white"
+                            android:textSize="@dimen/ts_18" />
+
+                    <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginStart="@dimen/vs_10"
