@@ -120,8 +120,16 @@ public class FinderActivity extends BaseActivity implements AutoSourceManager.Li
     }
 
     private void confirmUse(final Finding finding) {
+        // 安全闸: 配置里含爬虫站(type 3)时, 导入意味着 App 会真的下载并运行那些 jar
+        // (远程代码执行)。必须明示风险, 让用户自己决定。见 docs/实现方案.md §4.5。
+        String tip = "把「" + finding.getName() + "」设为当前配置？";
+        int spiders = finding.getSpiderSiteCount();
+        if (spiders > 0) {
+            tip = tip + "\n\n⚠ 该配置包含 " + spiders + " 个爬虫站，"
+                    + "使用后会从远程下载并执行其代码。\n仅在信任该配置来源时继续。";
+        }
         TipDialog dialog = new TipDialog(this,
-                "把「" + finding.getName() + "」设为当前配置？",
+                tip,
                 "确定", "取消", new TipDialog.OnListener() {
                     @Override
                     public void left() {
@@ -165,6 +173,9 @@ public class FinderActivity extends BaseActivity implements AutoSourceManager.Li
                     sb.append("，分类 ").append(item.getCategoryCount()).append(" 个");
                 }
                 sb.append(item.isPlayable() ? "，可播放" : "，未取到播放地址");
+                if (item.getSpiderSiteCount() > 0) {
+                    sb.append("，含 ").append(item.getSpiderSiteCount()).append(" 个爬虫站");
+                }
                 helper.setText(R.id.tvFinderInfo, sb.toString());
                 tvState.setText("可用");
                 tvState.setTextColor(getResources().getColor(R.color.color_00FF0A));

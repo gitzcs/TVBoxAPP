@@ -80,9 +80,11 @@ public final class FinderProbe {
             // ---------- L2：筛选采集站 ----------
             List<SourceBean> cms = sniffed.cmsSites();
             finding.setSiteCount(cms.size());
+            // 爬虫站只计数, 绝不加载(加载 jar = 远程代码执行, 见 docs/实现方案.md §4.5)
+            int spiders = sniffed.spiderSiteCount();
+            finding.setSpiderSiteCount(spiders);
             if (cms.isEmpty()) {
                 finding.setUsable(false);
-                int spiders = sniffed.spiderSiteCount();
                 finding.setMessage("没有可用的采集站"
                         + (spiders > 0 ? "（含 " + spiders + " 个爬虫站，探针不加载远程代码）" : ""));
                 return finish(finding, start);

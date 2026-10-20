@@ -56,6 +56,16 @@ public final class Finding {
     /** 是否通过验证。 */
     private boolean usable;
 
+    /**
+     * 配置里的爬虫站（type 3 等）数量。
+     *
+     * <p>探针<b>只计数、绝不加载</b>——jar 爬虫意味着远程代码执行（见
+     * docs/实现方案.md §4.5）。但用户导入这个配置时，App 就会真的去加载那些 jar。
+     * 所以导入前必须用这个数字明示风险。
+     */
+    @SerializedName("spider_site_count")
+    private int spiderSiteCount;
+
     /** 失败原因 / 补充说明。 */
     private String message;
 
@@ -116,6 +126,14 @@ public final class Finding {
 
     public int getSiteCount() {
         return siteCount;
+    }
+
+    public int getSpiderSiteCount() {
+        return spiderSiteCount;
+    }
+
+    public void setSpiderSiteCount(int spiderSiteCount) {
+        this.spiderSiteCount = spiderSiteCount;
     }
 
     public void setSiteCount(int siteCount) {
