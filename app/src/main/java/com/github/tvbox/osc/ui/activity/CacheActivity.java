@@ -329,8 +329,15 @@ public class CacheActivity extends BaseActivity {
                         Toast.makeText(CacheActivity.this, "内部播放失败, 尝试系统播放器", Toast.LENGTH_SHORT).show();
                         try {
                             Intent sysIntent = new Intent(Intent.ACTION_VIEW);
-                            sysIntent.setDataAndType(Uri.fromFile(f), "video/mp2t");
+                            // API 24+ 禁止 file:// 跨应用暴露, 改走 FileProvider; 低版本仍用 fromFile
+                            Uri sysUri = android.os.Build.VERSION.SDK_INT >= 24
+                                    ? androidx.core.content.FileProvider.getUriForFile(
+                                            CacheActivity.this,
+                                            getPackageName() + ".fileprovider", f)
+                                    : Uri.fromFile(f);
+                            sysIntent.setDataAndType(sysUri, "video/mp2t");
                             sysIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                            sysIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
                             startActivity(sysIntent);
                         } catch (Throwable th2) {
                             Toast.makeText(CacheActivity.this, "无法播放, 请检查文件", Toast.LENGTH_SHORT).show();
@@ -350,7 +357,8 @@ public class CacheActivity extends BaseActivity {
     }
 
     private String formatSize(long bytes) {
-        if (bytes <= 0) return "未知";
+        if (bytes < 0) return "未知";
+        if (bytes == 0) return "0 B";
         double kb = bytes / 1024.0;
         if (kb < 1024) return String.format(Locale.getDefault(), "%.1f KB", kb);
         double mb = kb / 1024.0;
