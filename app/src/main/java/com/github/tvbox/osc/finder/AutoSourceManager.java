@@ -168,6 +168,15 @@ public final class AutoSourceManager {
 
     private volatile ScheduledExecutorService scheduler;
     private volatile boolean refreshing;
+    /**
+     * 是否已经排过调度任务。
+     *
+     * <p>{@link #start()} 会被 {@code App.onCreate} 和 {@code FinderActivity.onResume} 各调一次；
+     * 首次安装时缓存为空，{@link #nextDelayMs()} 两次都返回 0，于是会排出两轮完整的
+     * 发现流程——每轮都要扫 GitHub 仓库、发上百个请求，白烧一次未认证 API 配额。
+     * 所以这里做幂等保护。
+     */
+    private volatile boolean started;
     private volatile String stage;
     private volatile SourceFinder.Report lastReport;
     private volatile boolean pendingRefresh;
@@ -193,6 +202,8 @@ public final class AutoSourceManager {
 
     /**
      * 由 {@code App.onCreate} 调用：立刻暴露本地缓存，并按策略排一次后台刷新。
+     *
+     * <p>幂等：重复调用只会刷新一次 UI 状态，不会重复排刷新任务。
      */
     public void start() {
         List<Finding> cached = cache.usable();
@@ -201,6 +212,13 @@ public final class AutoSourceManager {
                 ? ("，上次尝试 " + (cache.lastAttemptOk() ? "成功" : "失败")
                 + "，连续失败 " + cache.failStreak() + " 次") : "，从未尝试"));
         notifyState();
+        synchronized (this) {
+            if (started) {
+                LOG.i("自动找源已在调度中，跳过重复启动");
+                return;
+            }
+            started = true;
+        }
         ensureScheduler();
         long delay = nextDelayMs();
         LOG.i("下次自动找源：" + (delay <= 0 ? "立即" : (delay / 1000) + "s 后"));
@@ -212,6 +230,9 @@ public final class AutoSourceManager {
         if (s != null) {
             s.shutdownNow();
             scheduler = null;
+        }
+        synchronized (this) {
+            started = false;
         }
     }
 

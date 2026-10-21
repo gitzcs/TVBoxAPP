@@ -37,9 +37,12 @@ public class FinderActivity extends BaseActivity implements AutoSourceManager.Li
     private TvRecyclerView finderList;
     private TextView tvStatus;
     private TextView tvPolicy;
+    private TextView btnRefresh;
     private FinderAdapter adapter;
     private final Handler handler = new Handler(Looper.getMainLooper());
     private String lastSig = "";
+    /** 当前是否正在刷新（只用于按钮的视觉反馈）。 */
+    private boolean refreshingNow;
 
     @Override
     protected int getLayoutResID() {
@@ -57,9 +60,17 @@ public class FinderActivity extends BaseActivity implements AutoSourceManager.Li
 
         tvPolicy.setText(AutoSourceManager.describePolicy());
 
-        findViewById(R.id.btnRefresh).setOnClickListener(new View.OnClickListener() {
+        btnRefresh = (TextView) findViewById(R.id.btnRefresh);
+        btnRefresh.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                if (refreshingNow) {
+                    // 刷新中再点一次会让整轮发现重跑（上百个请求 + 烧一次 API 配额），
+                    // 而用户点第二下往往只是因为「没看到任何反馈」。
+                    Toast.makeText(FinderActivity.this, "正在找源中，请稍候…",
+                            Toast.LENGTH_SHORT).show();
+                    return;
+                }
                 AutoSourceManager.get(FinderActivity.this).refreshAsync(true);
             }
         });
@@ -72,6 +83,7 @@ public class FinderActivity extends BaseActivity implements AutoSourceManager.Li
         manager.addListener(this);
         // 先展示本地缓存（零网络），再由后台任务刷新
         refreshList();
+        setRefreshingUi(manager.state().isRefreshing());
         manager.start();
     }
 
@@ -84,7 +96,21 @@ public class FinderActivity extends BaseActivity implements AutoSourceManager.Li
     @Override
     public void onState(AutoSourceManager.State state) {
         tvStatus.setText(state.describe());
+        setRefreshingUi(state.isRefreshing());
         refreshList();
+    }
+
+    /**
+     * 刷新中按钮变灰并改文案，但<b>保持可聚焦</b>——TV 上用遥控器操作，
+     * {@code setEnabled(false)} 会让焦点从按钮上掉走，用户得从头开始导航。
+     */
+    private void setRefreshingUi(boolean refreshing) {
+        if (btnRefresh == null || refreshing == refreshingNow) {
+            return;
+        }
+        refreshingNow = refreshing;
+        btnRefresh.setText(refreshing ? "找源中…" : "立即刷新");
+        btnRefresh.setAlpha(refreshing ? 0.45f : 1.0f);
     }
 
     /** 刷新列表：内容有变化才重建，避免频繁刷新导致黑闪。 */
