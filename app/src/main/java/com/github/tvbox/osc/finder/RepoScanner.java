@@ -101,6 +101,60 @@ public final class RepoScanner {
         }
     }
 
+    /**
+     * 解析种子仓库写法：{@code owner/repo} 或 {@code owner/repo@branch}。
+     *
+     * <p>不合法时返回 null（调用方跳过并记 note），不要抛异常——索引是随包发布的
+     * 数据，写错一个字符不该让整个发现流程挂掉。
+     */
+    public static Repo parseSeed(String spec) {
+        if (spec == null) {
+            return null;
+        }
+        String s = spec.trim();
+        // 允许直接写网页地址，容错一下
+        s = s.replaceFirst("(?i)^https?://github\\.com/", "");
+        s = s.replaceFirst("(?i)^git@github\\.com:", "");
+        s = s.replaceFirst("\\.git$", "");
+        if (s.isEmpty()) {
+            return null;
+        }
+        String branch = null;
+        int at = s.indexOf('@');
+        if (at >= 0) {
+            branch = s.substring(at + 1).trim();
+            s = s.substring(0, at).trim();
+        }
+        if (branch != null && branch.isEmpty()) {
+            branch = null;
+        }
+        while (s.endsWith("/")) {
+            s = s.substring(0, s.length() - 1);
+        }
+        int slash = s.indexOf('/');
+        if (slash <= 0 || slash == s.length() - 1 || s.indexOf('/', slash + 1) >= 0) {
+            return null;
+        }
+        return new Repo(s, branch, 0, "内置种子仓库");
+    }
+
+    /**
+     * 探测仓库默认分支：先试 {@code main}，再试 {@code master}。
+     *
+     * <p>只在种子仓库没写分支时才调用。用 raw 上的 README 探路（不走 API、不消耗配额），
+     * 两次请求都失败就回落到 {@code main}。
+     */
+    public static String detectBranch(String fullName) {
+        for (String branch : new String[]{"main", "master"}) {
+            FinderResult r = FinderHttp.get(rawUrl(fullName, branch, "README.md"), null,
+                    FinderHttp.PROBE_TIMEOUT_SECONDS);
+            if (r.isOk()) {
+                return branch;
+            }
+        }
+        return "main";
+    }
+
     /** 一次扫描的结果。 */
     public static final class Scan {
         private final List<String> urls;
@@ -185,39 +239,99 @@ public final class RepoScanner {
 
     public Scan scan(String fullName, String branch) {
         String br = branch == null || branch.trim().isEmpty() ? "main" : branch.trim();
-        Set<String> urls = new LinkedHashSet<>();
+        // 猜名与「发现结果」分开收集：两者要各占一半名额，
+        // 否则猜名会把 README 里作者亲手写的真实地址全挤掉（见 mergeCapped）。
+        Set<String> guessed = new LinkedHashSet<>();
+        Set<String> discovered = new LinkedHashSet<>();
         List<String> notes = new ArrayList<>();
 
         // 通道 1：猜常见文件名（不走 API，最稳）
         for (String name : cfg.getGuessFilenames()) {
-            urls.add(rawUrl(fullName, br, name));
+            guessed.add(rawUrl(fullName, br, name));
         }
 
         // 通道 2：GitHub 文件树（常被限流）
         List<String> treePaths = listByGithubTree(fullName, br, notes);
         for (String p : treePaths) {
-            urls.add(rawUrl(fullName, br, p));
+            discovered.add(rawUrl(fullName, br, p));
         }
 
         if (treePaths.isEmpty()) {
             // 通道 3：jsDelivr 文件列表
             List<String> cdnPaths = listByJsdelivr(fullName, br, notes);
             for (String p : cdnPaths) {
-                urls.add(rawUrl(fullName, br, p));
+                discovered.add(rawUrl(fullName, br, p));
             }
         }
 
         // 通道 4：README 里作者自己写的地址
-        for (String u : readmeUrls(fullName, br)) {
-            urls.add(u);
+        // 本仓库的地址排前面：README 常顺手链到别的仓库/别的作者的配置
+        // （qist 的 README 里就有 jihulab、agit.ai、xhww.fun），
+        // 名额有限时不该让它们挤掉本仓库自己的配置。
+        List<String> readme = readmeUrls(fullName, br);
+        String owner = fullName.toLowerCase(Locale.ROOT);
+        List<String> others = new ArrayList<>();
+        for (String u : readme) {
+            if (u != null && u.toLowerCase(Locale.ROOT).contains(owner)) {
+                discovered.add(u);
+            } else {
+                others.add(u);
+            }
         }
+        discovered.addAll(others);
 
-        List<String> limited = new ArrayList<>(urls);
-        if (limited.size() > cfg.getMaxFilesPerRepo()) {
-            // 猜出来的名字排在最前（命中率最高），截断时优先保留
-            limited = new ArrayList<>(limited.subList(0, cfg.getMaxFilesPerRepo()));
-        }
+        List<String> limited = mergeCapped(new ArrayList<>(guessed),
+                new ArrayList<>(discovered), cfg.getMaxFilesPerRepo());
         return new Scan(limited, notes.isEmpty() ? null : join(notes, "；"));
+    }
+
+    /**
+     * 把「猜出来的文件名」和「发现出来的地址」合并到一个名额里。
+     *
+     * <p>为什么不能简单按插入顺序截断：{@code guessFilenames} 是一份全局清单，
+     * 十几个名字会把 {@code maxFilesPerRepo} 直接占满，于是 README 里作者亲手
+     * 写的真实地址一个都留不下来。
+     *
+     * <p>但也不能反过来全让给发现结果：README 抽链接会捞到<b>别的仓库</b>的地址
+     * （qist 的 README 里就链着 jihulab、agit.ai、xhww.fun 等），把本仓库自己的
+     * 配置文件挤掉；而文件树 API 又经常被限流，此时猜名是唯一还能工作的通道。
+     *
+     * <p>所以：先给猜名留一个<b>保底名额</b>（最稳的通道必须有机会跑），
+     * 再让发现结果占满剩余名额，最后把没用完的名额回填给更多猜名。
+     */
+    static List<String> mergeCapped(List<String> guessed, List<String> discovered, int cap) {
+        List<String> out = new ArrayList<>();
+        if (cap <= 0) {
+            return out;
+        }
+        Set<String> seen = new LinkedHashSet<>();
+        int guessFloor = Math.min(guessed.size(), cap >= 6 ? 3 : 1);
+        for (String u : guessed) {
+            if (out.size() >= guessFloor) {
+                break;
+            }
+            if (u != null && seen.add(u)) {
+                out.add(u);
+            }
+        }
+        for (String u : discovered) {
+            if (out.size() >= cap) {
+                break;
+            }
+            if (u != null && seen.add(u)) {
+                out.add(u);
+            }
+        }
+        // 发现结果没占满名额，把剩下的猜名回填进去
+        for (String u : guessed) {
+            if (out.size() >= cap) {
+                break;
+            }
+            if (u != null && seen.add(u)) {
+                out.add(u);
+            }
+        }
+        return out;
     }
 
     private List<String> listByGithubTree(String fullName, String branch, List<String> notes) {

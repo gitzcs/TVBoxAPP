@@ -53,12 +53,15 @@ public final class FinderProbe {
         Finding finding = Finding.of(name, url, origin, originDetail);
         try {
             // ---------- L1：下载 + 解密 + 解析 ----------
-            String raw = fetchConfig(url);
-            if (raw == null) {
+            FinderResult fetched = fetchConfigResult(url);
+            if (!fetched.isOk()) {
                 finding.setUsable(false);
-                finding.setMessage("配置下载失败");
+                finding.setNotFound(fetched.isNotFound());
+                finding.setMessage(fetched.isNotFound()
+                        ? "配置不存在（404）" : "配置下载失败");
                 return finish(finding, start);
             }
+            String raw = fetched.getData();
             ConfigSniffer.Sniffed sniffed = ConfigSniffer.parse(raw, null);
             if (sniffed == null) {
                 finding.setUsable(false);
@@ -68,7 +71,7 @@ public final class FinderProbe {
 
             // 多仓：逐条线路试，直到找到一条能用的
             if (sniffed.isMultiRepo()) {
-                ConfigSniffer.Sniffed resolved = resolveMultiRepo(sniffed, finding);
+                ConfigSniffer.Sniffed resolved = resolveMultiRepo(sniffed, finding, url);
                 if (resolved == null) {
                     finding.setUsable(false);
                     finding.setMessage("多仓线路均不可用");
@@ -105,8 +108,15 @@ public final class FinderProbe {
      * 多仓配置：按顺序尝试各条线路，返回第一条含可用采集站的。
      *
      * <p>最多试 5 条，避免线路全挂时卡太久。
+     *
+     * <p>命中后会把 {@link Finding} 的地址<b>回写成选中的那条线路</b>。多仓壳子本身
+     * 只有 {@code urls}/{@code storeHouse}、没有 sites，若仍保存壳子地址，用户点
+     * 「使用」加载到的就是一份空配置。
+     *
+     * @param parentUrl 多仓壳子自己的地址，用来解析线路里的相对路径
      */
-    private ConfigSniffer.Sniffed resolveMultiRepo(ConfigSniffer.Sniffed multi, Finding finding) {
+    private ConfigSniffer.Sniffed resolveMultiRepo(ConfigSniffer.Sniffed multi, Finding finding,
+                                                   String parentUrl) {
         int tried = 0;
         StringBuilder errors = new StringBuilder();
         for (ConfigSniffer.Line line : multi.lines) {
@@ -115,7 +125,8 @@ public final class FinderProbe {
             }
             tried++;
             try {
-                String raw = fetchConfig(line.url);
+                String lineUrl = resolveAgainst(line.url, parentUrl);
+                String raw = fetchConfig(lineUrl);
                 if (raw == null) {
                     errors.append(line.name).append("：下载失败；");
                     continue;
@@ -126,7 +137,10 @@ public final class FinderProbe {
                     continue;
                 }
                 if (!one.cmsSites().isEmpty()) {
-                    finding.setMessage("多仓自动选中线路：" + line.name);
+                    finding.setUrl(lineUrl);
+                    finding.setOrigin(Finding.ORIGIN_MULTI);
+                    finding.setMessage("多仓自动选中线路："
+                            + (line.name == null || line.name.isEmpty() ? lineUrl : line.name));
                     return one;
                 }
                 errors.append(line.name).append("：无采集站；");
@@ -136,6 +150,65 @@ public final class FinderProbe {
         }
         finding.setMessage("多仓线路均不可用（已试 " + tried + " 条）：" + errors);
         return null;
+    }
+
+    /**
+     * 把线路地址按父配置地址解析成绝对地址。
+     *
+     * <p>TVBox 多仓配置里 {@code ./99188.json}、{@code ../x/y.json}、{@code 99188.json}
+     * 这类相对写法很常见（qist/tvbox 的 {@code 0707.json} 就是 {@code ./99188.json}），
+     * 而 {@link FinderHttp} 只认 {@code http} 开头的地址，原样传过去必然「URL 非法」。
+     *
+     * <p>纯字符串处理，不用 {@code java.net.URL}：老版本 Android 上它对非标准
+     * scheme（如 {@code assets://}）会抛 MalformedURLException。
+     */
+    static String resolveAgainst(String child, String parent) {
+        if (child == null) {
+            return null;
+        }
+        String c = child.trim();
+        // 已是绝对地址（含 scheme，也涵盖 TVBox 特有的 github://、assets://）
+        if (c.isEmpty() || c.contains("://") || parent == null) {
+            return c;
+        }
+        String p = parent.trim();
+        int schemeEnd = p.indexOf("://");
+        if (schemeEnd < 0) {
+            return c;
+        }
+        int pathStart = p.indexOf('/', schemeEnd + 3);
+        if (pathStart < 0) {
+            return p + "/" + (c.startsWith("/") ? c.substring(1) : c);
+        }
+        // scheme://host/（含结尾斜杠）
+        String authority = p.substring(0, pathStart + 1);
+        // 父配置所在目录，不含结尾斜杠
+        String rest = p.substring(pathStart + 1);
+        int lastSlash = rest.lastIndexOf('/');
+        String dir = lastSlash < 0 ? "" : rest.substring(0, lastSlash);
+        if (c.startsWith("/")) {
+            return authority + c.substring(1);
+        }
+        // 按段消解 ./ 与 ../，避免在字符串上回溯切斜杠出错
+        List<String> segs = new ArrayList<>();
+        for (String s : dir.split("/")) {
+            if (!s.isEmpty()) {
+                segs.add(s);
+            }
+        }
+        for (String s : c.split("/")) {
+            if (s.isEmpty() || ".".equals(s)) {
+                continue;
+            }
+            if ("..".equals(s)) {
+                if (!segs.isEmpty()) {
+                    segs.remove(segs.size() - 1);
+                }
+                continue;
+            }
+            segs.add(s);
+        }
+        return authority + join(segs, "/");
     }
 
     // ---------------- L3：站点抽样 ----------------
@@ -324,15 +397,24 @@ public final class FinderProbe {
      * 断网也有东西可验证。
      */
     private String fetchConfig(String url) {
+        FinderResult result = fetchConfigResult(url);
+        return result.isOk() ? result.getData() : null;
+    }
+
+    /**
+     * 同上，但保留失败细节（HTTP 状态码），让调用方能区分「404 确定不存在」
+     * 与「网络不通 / 超时」——前者换镜像也是白等。
+     */
+    private FinderResult fetchConfigResult(String url) {
         if (url == null || url.trim().isEmpty()) {
-            return null;
+            return FinderResult.fail("地址为空");
         }
         String s = url.trim();
         if (s.startsWith("assets://")) {
-            return readAsset(s.substring("assets://".length()));
+            String text = readAsset(s.substring("assets://".length()));
+            return text == null ? FinderResult.fail("读取内置配置失败") : FinderResult.ok(text);
         }
-        FinderResult result = FinderHttp.get(s, null, FinderHttp.DEFAULT_TIMEOUT_SECONDS);
-        return result.isOk() ? result.getData() : null;
+        return FinderHttp.get(s, null, FinderHttp.DEFAULT_TIMEOUT_SECONDS);
     }
 
     /** 读 assets 里的文本文件。 */

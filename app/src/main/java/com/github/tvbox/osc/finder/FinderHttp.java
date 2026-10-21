@@ -61,7 +61,7 @@ public final class FinderHttp {
             }
             try (okhttp3.Response response = client.newCall(builder.build()).execute()) {
                 if (!response.isSuccessful()) {
-                    return FinderResult.fail("HTTP " + response.code());
+                    return FinderResult.fail(response.code(), "HTTP " + response.code());
                 }
                 okhttp3.ResponseBody body = response.body();
                 if (body == null) {

@@ -67,12 +67,42 @@ public final class SourceIndex {
 
     /** GitHub 发现参数。 */
     public static final class Github {
+        /**
+         * 索引未显式配置时使用的默认排除规则。
+         *
+         * <p>{@code 9918}/{@code 99188} 是圈内成人向聚合配置的通行文件名，
+         * {@code 0707} 是多仓壳子且线路指向成人内容。这些不该由自动发现
+         * 主动推给用户——用户真要，可以在「视频源自动获取」页手动粘贴地址验证。
+         */
+        private static final List<String> DEFAULT_EXCLUDES = Collections.unmodifiableList(
+                Arrays.asList("9918", "99188", "0707", "adult"));
+
         private boolean enabled = true;
         private List<String> queries;
+        /**
+         * 种子仓库，写法 {@code owner/repo} 或 {@code owner/repo@branch}。
+         *
+         * <p>Search API 是整个 GitHub 通道里最脆弱的一环（未认证配额只有
+         * 10 次/分钟，实测经常 403）。种子仓库不依赖搜索，直接扫描，
+         * 所以即使搜索被限流，这些仓库里的配置依然能被发现。
+         *
+         * <p>种子优先扫描，搜索结果填满剩余名额（总数仍受 {@code maxRepos} 约束）。
+         */
+        private List<String> repos;
         private int maxRepos = 6;
         private int maxFilesPerRepo = 6;
         private List<String> guessFilenames;
         private List<String> readmeCandidates;
+        /**
+         * 候选地址排除规则（小写子串匹配，命中即丢弃）。
+         *
+         * <p>自动发现是「仓库里有什么就扫什么」，会把作者放在同一仓库里、
+         * 但并非面向全体用户的配置一并捞出来（例如成人向内容）。默认排除掉，
+         * 需要的人可以在索引里清空这个列表自行放开。
+         *
+         * <p>只作用于自动发现；用户手动粘贴地址验证时不受此限制。
+         */
+        private List<String> excludePatterns;
 
         public boolean isEnabled() {
             return enabled;
@@ -80,6 +110,10 @@ public final class SourceIndex {
 
         public List<String> getQueries() {
             return queries == null ? Collections.<String>emptyList() : queries;
+        }
+
+        public List<String> getRepos() {
+            return repos == null ? Collections.<String>emptyList() : repos;
         }
 
         public int getMaxRepos() {
@@ -98,6 +132,11 @@ public final class SourceIndex {
         public List<String> getReadmeCandidates() {
             return readmeCandidates == null
                     ? Collections.<String>emptyList() : readmeCandidates;
+        }
+
+        public List<String> getExcludePatterns() {
+            // 索引里没写就用默认值；显式写 "excludePatterns": [] 则表示不排除。
+            return excludePatterns == null ? DEFAULT_EXCLUDES : excludePatterns;
         }
     }
 

@@ -1,29 +1,37 @@
 {
   "version": 1,
-  "updated": "2026-10-21",
-  "note": "内置索引只声明「去哪里找」，不内置任何具体影视源地址。App 会逐个下载、解析、抽样验证，只有验证通过的才写入本地缓存并优先使用。",
+  "updated": "2026-10-22",
+  "note": "内置索引只声明「去哪里找」（仓库、文件名模式），不内置任何具体影视源地址。App 会逐个下载、解析、抽样验证，只有验证通过的才写入本地缓存并优先使用。",
   "local": [
     { "name": "内置示例配置（4 个采集站）", "url": "assets://default_config.json" }
   ],
   "sources": [],
   "github": {
     "enabled": true,
+    "repos": [
+      "qist/tvbox@master",
+      "gaotianliuyun/gao@master"
+    ],
     "queries": [
       "tvbox config in:name,description",
       "tvbox 接口 in:name,description",
       "tvbox json in:name,description",
       "catvod config in:name,description"
     ],
-    "maxRepos": 6,
-    "maxFilesPerRepo": 6,
+    "maxRepos": 8,
+    "maxFilesPerRepo": 8,
     "guessFilenames": [
+      "jsm.json",
+      "0821.json",
+      "0825.json",
+      "0827.json",
+      "dianshi.json",
       "config.json",
       "api.json",
       "tvbox.json",
-      "jsm.json",
-      "tvbox_config.json",
       "single.json",
       "main.json",
+      "tvbox_config.json",
       "json/config.json",
       "json/jsm.json",
       "color.json"

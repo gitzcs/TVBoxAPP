@@ -77,6 +77,14 @@ public final class Finding {
     @SerializedName("latency_ms")
     private long latencyMs;
 
+    /**
+     * 本次失败是否属于「资源确定不存在」（HTTP 404 / 410）。
+     *
+     * <p>{@code transient}：只用于当轮判断「值不值得再试镜像」，不写进缓存——
+     * 下一次刷新时该地址可能已经存在了，落盘反而会把过期结论固化。
+     */
+    private transient boolean notFound;
+
     public Finding() {
     }
 
@@ -210,6 +218,15 @@ public final class Finding {
 
     public void setLatencyMs(long latencyMs) {
         this.latencyMs = latencyMs;
+    }
+
+    /** 是否「确定不存在」。仅供 {@code SourceFinder} 决定要不要试镜像。 */
+    public boolean isNotFound() {
+        return notFound;
+    }
+
+    public void setNotFound(boolean notFound) {
+        this.notFound = notFound;
     }
 
     // ---------------- 展示 ----------------

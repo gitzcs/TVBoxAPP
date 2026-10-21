@@ -234,10 +234,17 @@ public final class SourceFinder {
      * 而 jsDelivr / gitmirror 往往还能拿到同一份文件。
      * 镜像只在主地址失败后才请求，所以正常情况下不会增加额外耗时；
      * 命中镜像时保存的地址就是镜像地址（下次冷启动可以直连）。
+     *
+     * <p>但「失败」要分类：404 说明这个文件<b>本来就不存在</b>（猜文件名猜错是常态），
+     * 而所有镜像服务的是同一份仓库文件，换过去必然也是 404——实测 jsDelivr 还会
+     * 吃满 15s 超时。所以这种情况直接跳过镜像，省下的是几十次无效长等待。
      */
     private Finding probeCandidate(Candidate c) {
         Finding primary = probe.probe(c.name, c.url, c.origin, c.originDetail);
         if (primary.isUsable()) {
+            return primary;
+        }
+        if (primary.isNotFound()) {
             return primary;
         }
         for (String mirror : mirrorsFor(c.url)) {
@@ -246,6 +253,10 @@ public final class SourceFinder {
                 mirrored.setMessage("主地址不可用，已改用镜像：" + mirror);
                 LOG.i("主地址不可用，镜像可用：" + mirror);
                 return mirrored;
+            }
+            if (mirrored.isNotFound()) {
+                // 镜像也确认文件不存在，剩下的镜像不用再试
+                break;
             }
         }
         return primary;
@@ -282,23 +293,44 @@ public final class SourceFinder {
         SourceIndex.Github gh = index.github();
         List<RepoScanner.Repo> repos = new ArrayList<>();
         Set<String> seenRepos = new LinkedHashSet<>();
+        int maxRepos = gh.getMaxRepos();
 
-        List<String> queries = gh.getQueries();
-        int tried = 0;
-        for (String q : queries) {
-            if (tried >= 3 || repos.size() >= gh.getMaxRepos()) {
+        // 通道 A：种子仓库。不依赖 Search API，所以搜索被限流时这条通道照样有效。
+        for (String spec : gh.getRepos()) {
+            if (repos.size() >= maxRepos) {
                 break;
             }
-            tried++;
-            stage(listener, "搜索 GitHub：" + q);
-            List<RepoScanner.Repo> found = RepoScanner.searchRepos(q, gh.getMaxRepos());
-            if (found.isEmpty()) {
-                note.append("GitHub 搜索无结果或被限流，已降级为仅用内置索引");
-                break;
+            RepoScanner.Repo seed = RepoScanner.parseSeed(spec);
+            if (seed == null) {
+                appendNote(note, "种子仓库写法不合法，已跳过：" + spec);
+                continue;
             }
-            for (RepoScanner.Repo r : found) {
-                if (seenRepos.add(r.fullName())) {
-                    repos.add(r);
+            if (seenRepos.add(seed.fullName())) {
+                repos.add(seed);
+            }
+        }
+        int seedCount = repos.size();
+
+        // 通道 B：Search API 填满剩余名额（最容易被限流的一环，放后面）
+        if (repos.size() < maxRepos) {
+            List<String> queries = gh.getQueries();
+            int tried = 0;
+            for (String q : queries) {
+                if (tried >= 3 || repos.size() >= maxRepos) {
+                    break;
+                }
+                tried++;
+                stage(listener, "搜索 GitHub：" + q);
+                List<RepoScanner.Repo> found = RepoScanner.searchRepos(q, maxRepos);
+                if (found.isEmpty()) {
+                    appendNote(note, "GitHub 搜索无结果或被限流"
+                            + (seedCount > 0 ? "，本次只扫种子仓库" : "，已降级为仅用内置索引"));
+                    break;
+                }
+                for (RepoScanner.Repo r : found) {
+                    if (seenRepos.add(r.fullName())) {
+                        repos.add(r);
+                    }
                 }
             }
         }
@@ -306,15 +338,23 @@ public final class SourceFinder {
         if (repos.isEmpty()) {
             return;
         }
-        if (repos.size() > gh.getMaxRepos()) {
-            repos = new ArrayList<>(repos.subList(0, gh.getMaxRepos()));
+        if (repos.size() > maxRepos) {
+            repos = new ArrayList<>(repos.subList(0, maxRepos));
         }
 
         RepoScanner scanner = new RepoScanner(gh);
         for (RepoScanner.Repo repo : repos) {
-            stage(listener, "扫描仓库：" + repo.fullName() + "（" + repo.stars() + "★）");
-            RepoScanner.Scan scan = scanner.scan(repo.fullName(), repo.branch());
+            String branch = repo.branch();
+            if (branch == null || branch.trim().isEmpty()) {
+                branch = RepoScanner.detectBranch(repo.fullName());
+            }
+            stage(listener, "扫描仓库：" + repo.fullName()
+                    + (repo.stars() > 0 ? "（" + repo.stars() + "★）" : ""));
+            RepoScanner.Scan scan = scanner.scan(repo.fullName(), branch);
             for (String url : scan.urls()) {
+                if (isExcluded(url, gh)) {
+                    continue;
+                }
                 add(candidates, new Candidate(repo.fullName(), url,
                         Finding.ORIGIN_GITHUB, repo.fullName()));
             }
@@ -324,6 +364,27 @@ public final class SourceFinder {
         }
     }
 
+    /**
+     * 这个候选是否命中排除规则（小写子串匹配）。
+     *
+     * <p>只作用于自动发现。用户手动粘贴地址走 {@link #verify}，不受限制。
+     */
+    static boolean isExcluded(String url, SourceIndex.Github gh) {
+        if (url == null || url.trim().isEmpty()) {
+            return true;
+        }
+        if (gh == null) {
+            return false;
+        }
+        String lower = url.toLowerCase(java.util.Locale.ROOT);
+        for (String pattern : gh.getExcludePatterns()) {
+            if (pattern != null && !pattern.trim().isEmpty()
+                    && lower.contains(pattern.trim().toLowerCase(java.util.Locale.ROOT))) {
+                return true;
+            }
+        }
+        return false;
+    }
     // ---------------- 排序（纯函数，可单测） ----------------
 
     /**
