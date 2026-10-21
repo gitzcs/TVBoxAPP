@@ -9,6 +9,16 @@ import java.util.HashMap;
  * <p>从 TVBoxOS2 移植，字段与那边保持一致，便于对照排查。
  */
 public class CacheTask implements Serializable {
+
+    /**
+     * 显式序列版本号。
+     *
+     * <p>本类经 Hawk(Java 原生序列化)持久化。若省略, JVM 会根据类名与
+     * 字段签名隐式计算, release 混淆改名后会变化, 导致升级后旧下载任务
+     * 反序列化失败而静默丢失。配合 proguard-rules.pro 的 keep 规则一起使用。
+     */
+    private static final long serialVersionUID = 1L;
+
     public static final int STATE_WAIT = 0;       // 等待
     public static final int STATE_DOWNLOADING = 1; // 下载中
     public static final int STATE_DONE = 2;       // 已完成

@@ -13,6 +13,15 @@ import java.util.UUID;
  */
 public class ConfigBean implements Serializable {
 
+    /**
+     * 显式序列版本号。
+     *
+     * <p>本类经 Hawk(Java 原生序列化)持久化为多配置列表。若省略, 隐式版本号会随
+     * 类名/字段变动而变, release 混淆后升级将读不出旧配置。配合
+     * proguard-rules.pro 的 keep 规则一起使用。
+     */
+    private static final long serialVersionUID = 1L;
+
     /** 唯一标识 */
     public String id;
     /** 配置名称 */
