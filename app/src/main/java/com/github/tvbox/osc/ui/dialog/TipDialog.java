@@ -26,12 +26,19 @@ public class TipDialog extends BaseDialog {
         leftBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                // 确认对话框的标准行为：点按钮先关掉自己，再执行回调。
+                // 否则对话框会一直盖在界面上（FinderActivity「使用」、
+                // ConfigManageActivity「删除」都依赖它自动关闭）。
+                // 先 dismiss 再回调：即使回调里导航到别的页面，本框也已消失。
+                // HomeActivity 另有一次显式 dismiss，受 isShowing() 守卫，重复调用安全。
+                dismiss();
                 listener.left();
             }
         });
         rightBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                dismiss();
                 listener.right();
             }
         });
