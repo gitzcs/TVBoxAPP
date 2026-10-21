@@ -83,6 +83,67 @@ public class SourceFinderRankTest {
         assertEquals(1000L, index.probe().getBudgetMs());
     }
 
+    /**
+     * 锁定随包发布的 assets/source_index.json 的 JSON key 契约。
+     *
+     * <p>这个文件按字段名反序列化到 {@link SourceIndex}。release 混淆会重命名字段
+     * （见 proguard-rules.pro 的 keep 规则），一旦字段名与 JSON key 对不上，
+     * {@code Github.queries} 会静默变空 -> 自动找源搜不到任何仓库，且
+     * {@link SourceIndex#parse(String)} 用 fillDefaults() 兜底、不抛异常，
+     * 极难发现。此测试读取<b>真实 asset 文件</b>（而非手写 JSON），
+     * 保证 queries 等关键字段确实解析出非空值。
+     */
+    @Test
+    public void bundledAssetIndexKeepsGithubQueries() throws Exception {
+        String json = readBundledSourceIndex();
+        SourceIndex index = SourceIndex.parse(json);
+
+        // 内置本地源必须存在（断网兜底）
+        assertFalse("asset 索引应含本地内置源", index.localEntries().isEmpty());
+
+        // 核心：queries 不能为空 —— 这正是 release 混淆曾静默清空的字段
+        assertTrue("github.enabled 应为 true", index.github().isEnabled());
+        assertFalse("github.queries 解析后不能为空（JSON key 契约）",
+                index.github().getQueries().isEmpty());
+        assertFalse("github.guessFilenames 解析后不能为空",
+                index.github().getGuessFilenames().isEmpty());
+
+        // 探针参数应从 asset 读到真实值（而非默认兜底）
+        assertTrue("probe.maxSitesPerConfig 应 > 0", index.probe().getMaxSitesPerConfig() > 0);
+        assertTrue("probe.budgetMs 应 > 0", index.probe().getBudgetMs() > 0);
+    }
+
+    /**
+     * 读取打包进 APK 的 source_index.json。
+     *
+     * <p>单测 user.dir 通常是 app 模块目录；兼顾从工程根目录运行的情况。
+     * 读不到就让测试失败，避免静默跳过。
+     */
+    private static String readBundledSourceIndex() throws Exception {
+        String[] candidates = {
+                "src/main/assets/source_index.json",
+                "app/src/main/assets/source_index.json",
+        };
+        for (String c : candidates) {
+            java.io.File f = new java.io.File(c);
+            if (f.isFile()) {
+                byte[] bytes = new byte[(int) f.length()];
+                java.io.InputStream in = new java.io.FileInputStream(f);
+                try {
+                    int off = 0, n;
+                    while (off < bytes.length && (n = in.read(bytes, off, bytes.length - off)) > 0) {
+                        off += n;
+                    }
+                } finally {
+                    in.close();
+                }
+                return new String(bytes, java.nio.charset.Charset.forName("UTF-8"));
+            }
+        }
+        throw new java.io.FileNotFoundException(
+                "找不到 assets/source_index.json（尝试过 src/main/assets 与 app/src/main/assets）");
+    }
+
     @Test
     public void indexFallsBackOnGarbage() {
         for (String bad : new String[]{"", "   ", "not json", "[1,2,3]", "null", "\"str\""}) {
