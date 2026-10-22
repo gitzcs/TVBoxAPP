@@ -26,8 +26,7 @@ import java.util.List;
 /**
  * 配置地址管理：新增 / 编辑 / 删除 / 启停 / 设主页源。
  *
- * <p>不内置任何具体的第三方源地址（见 docs/实现方案.md §7.1）。
- * 配置来源：用户手动添加，或「视频源自动获取」页导入。
+ * <p>配置来源：随包内置的已验证采集配置、用户手动添加，或「视频源自动获取」页导入。
  */
 public class ConfigManageActivity extends BaseActivity {
 

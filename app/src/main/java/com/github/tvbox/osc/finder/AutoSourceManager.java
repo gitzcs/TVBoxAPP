@@ -456,6 +456,10 @@ public final class AutoSourceManager {
                 public void onFound(Finding finding, int done, int total) {
                     stage = "已验证 " + done + "/" + total + "：" + finding.getName()
                             + (finding.isUsable() ? " ✓" : " ✗");
+                    if (finding.isUsable()) {
+                        cache.upsert(finding);
+                        syncConfigs(cache.load());
+                    }
                     notifyState();
                 }
             });
@@ -572,7 +576,7 @@ public final class AutoSourceManager {
 
         LOG.i("自动找源已同步配置：可用 " + orderedUsable.size()
                 + " 个，当前配置 " + first.displayName());
-        if (configsChanged || homeChanged) {
+        if (homeChanged) {
             EventBus.getDefault().post(new RefreshEvent(RefreshEvent.TYPE_HOME_SOURCE_CHANGE));
         }
     }

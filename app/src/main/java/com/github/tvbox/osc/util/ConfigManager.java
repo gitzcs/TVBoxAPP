@@ -14,8 +14,8 @@ import java.util.List;
  * {@code Hawk.get(HawkConfig.API_URL, "")}，重构这些读取路径风险太大，
  * 因此统一由 {@link #syncLegacyApiUrl()} 单向同步过去。
  *
- * <p>仓库里不再内置任何具体的第三方源地址（见 docs/实现方案.md §7.1）。
- * 用户的配置来源有两个：手动填写，或「视频源自动获取」（finder 包）。
+ * <p>配置来源包括随包内置的已验证采集配置、手动填写，以及「视频源自动获取」
+ * （finder 包）同步的可用配置。内置配置不包含 jar 爬虫。
  */
 public class ConfigManager {
 
