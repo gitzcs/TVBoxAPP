@@ -8,6 +8,7 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import com.github.tvbox.osc.util.live.TxtSubscribe;
 
 import org.junit.Test;
 
@@ -37,6 +38,24 @@ public class BuiltInConfigTest {
                 read("noimank_tvboxmuti.json")).getAsJsonObject();
         assertTrue(config.has("urls"));
         assertFalse(config.getAsJsonArray("urls").isEmpty());
+    }
+
+    @Test
+    public void defaultLiveConfigHasChannelListUrl() throws Exception {
+        JsonObject config = JsonParser.parseString(read("qist_tvbox.json")).getAsJsonObject();
+        JsonObject live = config.getAsJsonArray("lives").get(0).getAsJsonObject();
+        assertEquals("电视直播", live.get("name").getAsString());
+        assertTrue(live.get("url").getAsString().contains("tvboxtv.txt"));
+    }
+
+    @Test
+    public void builtInLiveFallbackContainsPlayableChannels() throws Exception {
+        JsonArray groups = TxtSubscribe.parseToJsonArray(read("live_fallback.m3u"));
+        assertFalse(groups.isEmpty());
+        JsonArray channels = groups.get(0).getAsJsonObject().getAsJsonArray("channels");
+        assertFalse(channels.isEmpty());
+        assertTrue(channels.get(0).getAsJsonObject()
+                .getAsJsonArray("urls").get(0).getAsString().startsWith("http"));
     }
 
     private static String read(String name) throws Exception {

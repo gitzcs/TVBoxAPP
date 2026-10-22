@@ -3,6 +3,16 @@
   "spider": "",
   "lives": [
     {
+      "name": "电视直播",
+      "type": 0,
+      "url": "https://gh-proxy.com/https://raw.githubusercontent.com/qist/tvbox/master/tvboxtv.txt",
+      "playerType": 1,
+      "ua": "okhttp/3.8.1",
+      "timeout": 20,
+      "epg": "https://epg.cdn.loc.cc/?ch={name}&date={date}",
+      "logo": "https://logo.wyfc.qzz.io/{name}.png"
+    },
+    {
       "name": "migu",
       "type": 0,
       "url": "https://develop202.github.io/migu_video/interface.txt",
@@ -13,19 +23,9 @@
       "logo": "https://logo.wyfc.qzz.io/{name}.png"
     },
     {
-      "name": "live",
+      "name": "epg.pw",
       "type": 0,
       "url": "https://epg.pw/test_channels.m3u",
-      "playerType": 1,
-      "ua": "okhttp/3.8.1",
-      "timeout": 20,
-      "epg": "https://epg.cdn.loc.cc/?ch={name}&date={date}",
-      "logo": "https://logo.wyfc.qzz.io/{name}.png"
-    },
-    {
-      "name": "ipv6",
-      "type": 0,
-      "url": "https://raw.githubusercontent.com/qist/tvbox/master/tvboxtv.txt",
       "playerType": 1,
       "ua": "okhttp/3.8.1",
       "timeout": 20,
