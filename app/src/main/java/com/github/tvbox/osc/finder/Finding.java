@@ -14,6 +14,8 @@ public final class Finding {
     public static final String ORIGIN_LOCAL = "内置";
     public static final String ORIGIN_BUILTIN = "内置索引";
     public static final String ORIGIN_GITHUB = "GitHub";
+    public static final String ORIGIN_GITLAB = "GitLab";
+    public static final String ORIGIN_GITEE = "Gitee";
     public static final String ORIGIN_MULTI = "多仓线路";
     public static final String ORIGIN_MANUAL = "手动";
 

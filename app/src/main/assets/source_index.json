@@ -1,9 +1,10 @@
 {
   "version": 1,
   "updated": "2026-10-22",
-  "note": "内置索引优先使用 qist/tvbox，并通过仓库文件树与文件名模式继续发现。App 会逐个下载、解析、抽样验证，只有验证通过的才写入配置并优先使用。",
+  "note": "内置 qist/tvbox 可用采集源与 noimank 多仓索引，并在 GitHub、GitLab、Gitee 中发现更多配置。只有验证通过的源才写入配置。",
   "local": [
-    { "name": "qist/tvbox", "url": "https://raw.githubusercontent.com/qist/tvbox/master/jsm.json" }
+    { "name": "qist/tvbox 可用内置源", "url": "assets://qist_tvbox.json" },
+    { "name": "noimank/tvbox GitLab 多仓", "url": "assets://noimank_tvboxmuti.json" }
   ],
   "sources": [],
   "github": {
@@ -36,6 +37,24 @@
       "json/jsm.json",
       "color.json"
     ],
+    "readmeCandidates": ["README.md", "readme.md", "README.txt"]
+  },
+  "gitlab": {
+    "enabled": true,
+    "repos": ["noimank/tvbox@main"],
+    "queries": ["tvbox", "tvbox config"],
+    "maxRepos": 3,
+    "maxFilesPerRepo": 5,
+    "guessFilenames": ["tvboxmuti.json", "tvbox.json", "config.json", "api.json", "jsm.json"],
+    "readmeCandidates": ["README.md", "readme.md", "README.txt"]
+  },
+  "gitee": {
+    "enabled": true,
+    "repos": [],
+    "queries": ["tvbox", "tvbox config", "电视盒子"],
+    "maxRepos": 3,
+    "maxFilesPerRepo": 5,
+    "guessFilenames": ["tvbox.json", "config.json", "api.json", "jsm.json", "single.json"],
     "readmeCandidates": ["README.md", "readme.md", "README.txt"]
   },
   "probe": {

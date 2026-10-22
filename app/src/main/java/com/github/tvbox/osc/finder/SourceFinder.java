@@ -158,6 +158,9 @@ public final class SourceFinder {
     public Report discover(boolean includeGithub, Listener listener) {
         long start = System.currentTimeMillis();
         List<Candidate> candidates = new ArrayList<>();
+        List<Candidate> githubCandidates = new ArrayList<>();
+        List<Candidate> gitlabCandidates = new ArrayList<>();
+        List<Candidate> giteeCandidates = new ArrayList<>();
         StringBuilder note = new StringBuilder();
 
         // 通道 1：内置索引（离线可用）
@@ -168,17 +171,41 @@ public final class SourceFinder {
         }
         stage(listener, "内置索引 " + candidates.size() + " 条");
 
+        // 先验证随包内置源，让首次启动尽快拿到可用配置；在线搜索随后继续。
+        int builtInTotal = candidates.size();
+        List<Finding> findings = probeCandidates(candidates, 0, builtInTotal, listener);
+
         // 通道 2：GitHub 在线发现（可失败）
         if (includeGithub && index.github().isEnabled()) {
-            collectGithub(candidates, note, listener);
-        } else if (!includeGithub) {
-            note.append("已跳过 GitHub 在线发现（仅用内置索引）");
+            collectGithub(githubCandidates, note, listener);
         }
+        if (includeGithub && index.gitlab().isEnabled()) {
+            collectCodeHost(CodeHostScanner.Platform.GITLAB, index.gitlab(),
+                    gitlabCandidates, note, listener);
+        }
+        if (includeGithub && index.gitee().isEnabled()) {
+            collectCodeHost(CodeHostScanner.Platform.GITEE, index.gitee(),
+                    giteeCandidates, note, listener);
+        } else if (!includeGithub) {
+            note.append("已跳过 GitHub/GitLab/Gitee 在线发现（仅用内置索引）");
+        }
+        List<Candidate> onlineCandidates = new ArrayList<>();
+        mergePlatformCandidates(onlineCandidates, githubCandidates, gitlabCandidates, giteeCandidates);
+        int total = builtInTotal + onlineCandidates.size();
+        findings.addAll(probeCandidates(onlineCandidates, builtInTotal, total, listener));
 
-        // 验证（并发）
-        int total = candidates.size();
-        stage(listener, "开始验证 " + total + " 个候选源");
-        List<Future<Finding>> futures = new ArrayList<>(total);
+        long cost = System.currentTimeMillis() - start;
+        Report report = new Report(findings, total, cost,
+                note.length() == 0 ? null : note.toString());
+        LOG.i("自动找源完成：" + report.summary().replace('\n', ' '));
+        return report;
+    }
+
+    private List<Finding> probeCandidates(List<Candidate> candidates, int offset,
+                                          int total, Listener listener) {
+        if (candidates.isEmpty()) return new ArrayList<>();
+        stage(listener, "开始验证 " + candidates.size() + " 个候选源");
+        List<Future<Finding>> futures = new ArrayList<>(candidates.size());
         for (final Candidate c : candidates) {
             futures.add(pool().submit(new Callable<Finding>() {
                 @Override
@@ -188,8 +215,8 @@ public final class SourceFinder {
             }));
         }
 
-        List<Finding> findings = new ArrayList<>(total);
-        for (int i = 0; i < total; i++) {
+        List<Finding> findings = new ArrayList<>(candidates.size());
+        for (int i = 0; i < candidates.size(); i++) {
             Candidate c = candidates.get(i);
             Finding f;
             try {
@@ -205,15 +232,10 @@ public final class SourceFinder {
             }
             findings.add(f);
             if (listener != null) {
-                listener.onFound(f, findings.size(), total);
+                listener.onFound(f, offset + findings.size(), total);
             }
         }
-
-        long cost = System.currentTimeMillis() - start;
-        Report report = new Report(findings, total, cost,
-                note.length() == 0 ? null : note.toString());
-        LOG.i("自动找源完成：" + report.summary().replace('\n', ' '));
-        return report;
+        return findings;
     }
 
     /** 手动验证单个地址（用户在界面上粘贴地址时用）。 */
@@ -364,6 +386,64 @@ public final class SourceFinder {
         }
     }
 
+    private void collectCodeHost(CodeHostScanner.Platform platform,
+                                 SourceIndex.CodeHost cfg,
+                                 List<Candidate> candidates,
+                                 StringBuilder note,
+                                 Listener listener) {
+        List<CodeHostScanner.Repo> repos = new ArrayList<>();
+        Set<String> seen = new LinkedHashSet<>();
+        int maxRepos = cfg.getMaxRepos();
+        for (String spec : cfg.getRepos()) {
+            if (repos.size() >= maxRepos) break;
+            CodeHostScanner.Repo repo = CodeHostScanner.parseSeed(platform, spec);
+            if (repo != null && seen.add(repo.fullName())) repos.add(repo);
+        }
+
+        CodeHostScanner scanner = new CodeHostScanner(platform, cfg);
+        for (String query : cfg.getQueries()) {
+            if (repos.size() >= maxRepos) break;
+            stage(listener, "搜索 " + platform.label() + "：" + query);
+            for (CodeHostScanner.Repo repo : scanner.searchRepos(query, maxRepos - repos.size())) {
+                if (repos.size() >= maxRepos) break;
+                if (seen.add(repo.fullName())) repos.add(repo);
+            }
+        }
+
+        for (CodeHostScanner.Repo repo : repos) {
+            stage(listener, "扫描 " + platform.label() + " 仓库：" + repo.fullName());
+            CodeHostScanner.Scan scan = scanner.scan(repo.fullName(), repo.branch());
+            for (String url : scan.urls()) {
+                if (isExcluded(url, index.github())) continue;
+                String origin = platform == CodeHostScanner.Platform.GITLAB
+                        ? Finding.ORIGIN_GITLAB : Finding.ORIGIN_GITEE;
+                add(candidates, new Candidate(repo.fullName(), url, origin, repo.fullName()));
+            }
+            if (scan.note() != null) {
+                appendNote(note, platform.label() + " " + repo.fullName() + "：" + scan.note());
+            }
+        }
+    }
+
+    private static void mergePlatformCandidates(List<Candidate> target,
+                                                List<Candidate> github,
+                                                List<Candidate> gitlab,
+                                                List<Candidate> gitee) {
+        List<List<Candidate>> channels = new ArrayList<>();
+        channels.add(github);
+        channels.add(gitlab);
+        channels.add(gitee);
+        int max = 0;
+        for (List<Candidate> channel : channels) {
+            max = Math.max(max, channel.size());
+        }
+        for (int i = 0; i < max && target.size() < MAX_CANDIDATES; i++) {
+            for (List<Candidate> channel : channels) {
+                if (i < channel.size()) add(target, channel.get(i));
+            }
+        }
+    }
+
     /**
      * 这个候选是否命中排除规则（小写子串匹配）。
      *
@@ -406,6 +486,9 @@ public final class SourceFinder {
                 if (a.isUsable() != b.isUsable()) {
                     return a.isUsable() ? -1 : 1;
                 }
+                if (a.isLocal() != b.isLocal()) {
+                    return a.isLocal() ? -1 : 1;
+                }
                 if (a.isPlayable() != b.isPlayable()) {
                     return a.isPlayable() ? -1 : 1;
                 }
@@ -414,9 +497,6 @@ public final class SourceFinder {
                 }
                 if (a.getSiteCount() != b.getSiteCount()) {
                     return b.getSiteCount() - a.getSiteCount();
-                }
-                if (a.isLocal() != b.isLocal()) {
-                    return a.isLocal() ? -1 : 1;
                 }
                 return Long.compare(b.getCheckedAt(), a.getCheckedAt());
             }

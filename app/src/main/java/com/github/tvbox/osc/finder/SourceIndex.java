@@ -63,7 +63,56 @@ public final class SourceIndex {
     private List<Entry> sources;
 
     private Github github;
+    private Gitlab gitlab;
+    private Gitee gitee;
     private Probe probe;
+
+    /** GitLab / Gitee 等代码托管平台的通用发现参数。 */
+    public static class CodeHost {
+        private boolean enabled = true;
+        private List<String> repos;
+        private List<String> queries;
+        private int maxRepos = 3;
+        private int maxFilesPerRepo = 5;
+        private List<String> guessFilenames;
+        private List<String> readmeCandidates;
+
+        public boolean isEnabled() {
+            return enabled;
+        }
+
+        public List<String> getRepos() {
+            return repos == null ? Collections.<String>emptyList() : repos;
+        }
+
+        public List<String> getQueries() {
+            return queries == null ? Collections.<String>emptyList() : queries;
+        }
+
+        public int getMaxRepos() {
+            return maxRepos <= 0 ? 3 : maxRepos;
+        }
+
+        public int getMaxFilesPerRepo() {
+            return maxFilesPerRepo <= 0 ? 5 : maxFilesPerRepo;
+        }
+
+        public List<String> getGuessFilenames() {
+            return guessFilenames == null
+                    ? Collections.<String>emptyList() : guessFilenames;
+        }
+
+        public List<String> getReadmeCandidates() {
+            return readmeCandidates == null
+                    ? Collections.<String>emptyList() : readmeCandidates;
+        }
+    }
+
+    public static final class Gitlab extends CodeHost {
+    }
+
+    public static final class Gitee extends CodeHost {
+    }
 
     /** GitHub 发现参数。 */
     public static final class Github {
@@ -197,8 +246,9 @@ public final class SourceIndex {
     public static SourceIndex fallback() {
         SourceIndex index = new SourceIndex();
         index.local = new ArrayList<>(Arrays.asList(
-                new Entry("qist/tvbox",
-                        "https://raw.githubusercontent.com/qist/tvbox/master/jsm.json")));
+                new Entry("qist/tvbox 可用内置源", "assets://qist_tvbox.json"),
+                new Entry("noimank/tvbox GitLab 多仓",
+                        "assets://noimank_tvboxmuti.json")));
         index.sources = new ArrayList<>();
         index.fillDefaults();
         return index;
@@ -213,6 +263,12 @@ public final class SourceIndex {
         }
         if (github == null) {
             github = new Github();
+        }
+        if (gitlab == null) {
+            gitlab = new Gitlab();
+        }
+        if (gitee == null) {
+            gitee = new Gitee();
         }
         if (probe == null) {
             probe = new Probe();
@@ -233,6 +289,14 @@ public final class SourceIndex {
 
     public Github github() {
         return github == null ? (github = new Github()) : github;
+    }
+
+    public Gitlab gitlab() {
+        return gitlab == null ? (gitlab = new Gitlab()) : gitlab;
+    }
+
+    public Gitee gitee() {
+        return gitee == null ? (gitee = new Gitee()) : gitee;
     }
 
     public Probe probe() {

@@ -64,6 +64,19 @@ public class SourceFinderRankTest {
     }
 
     @Test
+    public void bundledAssetWinsOverEquivalentRemoteConfig() {
+        Finding remote = make("https://example.com/qist.json", true, true, 3, 15);
+        Finding builtIn = make("assets://qist_tvbox.json", true, true, 3, 10);
+        builtIn.setOrigin(Finding.ORIGIN_LOCAL);
+
+        List<Finding> list = new ArrayList<>();
+        list.add(remote);
+        list.add(builtIn);
+
+        assertEquals("assets://qist_tvbox.json", SourceFinder.rank(list).get(0).getUrl());
+    }
+
+    @Test
     public void indexParsesInline() {
         String json = "{\"version\":2,\"local\":[{\"name\":\"本地\",\"url\":\"assets://a.json\"}],"
                 + "\"sources\":[{\"name\":\"在线\",\"url\":\"https://x/y.json\"}],"
@@ -101,7 +114,13 @@ public class SourceFinderRankTest {
         // 内置本地源必须存在（断网兜底）
         assertFalse("asset 索引应含本地内置源", index.localEntries().isEmpty());
         assertTrue("qist/tvbox 应作为首选内置源",
-                index.localEntries().get(0).getUrl().contains("qist/tvbox"));
+                index.localEntries().get(0).getUrl().equals("assets://qist_tvbox.json"));
+        assertTrue("noimank GitLab 多仓应内置",
+                index.localEntries().get(1).getUrl().equals("assets://noimank_tvboxmuti.json"));
+        assertTrue("GitLab 搜索应启用", index.gitlab().isEnabled());
+        assertFalse("GitLab 搜索应含种子仓库", index.gitlab().getRepos().isEmpty());
+        assertTrue("Gitee 搜索应启用", index.gitee().isEnabled());
+        assertFalse("Gitee 搜索应含查询词", index.gitee().getQueries().isEmpty());
 
         // 核心：queries 不能为空 —— 这正是 release 混淆曾静默清空的字段
         assertTrue("github.enabled 应为 true", index.github().isEnabled());
@@ -152,7 +171,7 @@ public class SourceFinderRankTest {
             SourceIndex index = SourceIndex.parse(bad);
             assertTrue("坏输入应回落到兜底索引：" + bad, index.localEntries().size() >= 1);
             assertTrue("兜底索引也应优先 qist/tvbox",
-                    index.localEntries().get(0).getUrl().contains("qist/tvbox"));
+                    index.localEntries().get(0).getUrl().equals("assets://qist_tvbox.json"));
         }
     }
 
