@@ -47,6 +47,7 @@ import com.orhanobut.hawk.Hawk;
 import org.json.JSONObject;
 
 import java.io.BufferedReader;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -171,7 +172,9 @@ public class ApiConfig {
         TempKey = null;
         String configUrl = "", pk = ";pk;";
         apiUrl=apiUrl.replace("file://", "clan://localhost/");
-        if (apiUrl.contains(pk)) {
+        if (apiUrl.startsWith("assets://")) {
+            configUrl = apiUrl;
+        } else if (apiUrl.contains(pk)) {
             String[] a = apiUrl.split(pk);
             TempKey = a[1];
             if (apiUrl.startsWith("clan")){
@@ -196,8 +199,9 @@ public class ApiConfig {
             callback.error("-1");
             return;
         }
+        boolean builtIn = apiUrl.startsWith("assets://");
         File cache = new File(App.getInstance().getFilesDir().getAbsolutePath() + "/" + MD5.encode(apiUrl));
-        if (useCache && cache.exists()) {
+        if (!builtIn && useCache && cache.exists()) {
             try {
                 String json = readConfigFile(cache);
                 if (switchApiCollectionIfNeeded(apiUrl, json)) {
@@ -222,13 +226,13 @@ public class ApiConfig {
                 try {
 //                            LOG.longI("echo-ConfigJson", json);
                     if (switchApiCollectionIfNeeded(apiUrl, json)) {
-                        FileUtils.saveCache(cache,json);
+                        if (!builtIn) FileUtils.saveCache(cache,json);
                         loadConfig(false, callback, activity);
                         return;
                     }
                     clearApiLinesIfUnmatched(apiUrl);
                     parseJson(apiUrl, json);
-                    FileUtils.saveCache(cache,json);
+                    if (!builtIn) FileUtils.saveCache(cache,json);
                     callback.success();
                 } catch (Throwable th) {
                     th.printStackTrace();
@@ -375,22 +379,29 @@ public class ApiConfig {
                 String error = "";
                 okhttp3.Response response = null;
                 try {
-                    okhttp3.Request request = new okhttp3.Request.Builder()
-                            .url(requestUrl)
-                            .build();
-                    okhttp3.OkHttpClient client = OkGoHelper.getDefaultClient();
-                    if (client == null) client = com.github.catvod.net.OkHttp.client();
-                    response = client.newCall(request).execute();
-                    if (!response.isSuccessful()) {
-                        error = "HTTP " + response.code();
-                    } else if (response.body() == null) {
-                        error = "empty body";
-                    } else {
-                        result = FindResult(response.body().string(), configKey);
-                        if (apiUrl.startsWith("clan")) {
-                            result = clanContentFix(clanToAddress(apiUrl), result);
+                    if (requestUrl.startsWith("assets://")) {
+                        result = readAsset(requestUrl.substring("assets://".length()));
+                        if (TextUtils.isEmpty(result)) {
+                            error = "读取内置配置失败";
                         }
-                        result = fixContentPath(apiUrl, result);
+                    } else {
+                        okhttp3.Request request = new okhttp3.Request.Builder()
+                                .url(requestUrl)
+                                .build();
+                        okhttp3.OkHttpClient client = OkGoHelper.getDefaultClient();
+                        if (client == null) client = com.github.catvod.net.OkHttp.client();
+                        response = client.newCall(request).execute();
+                        if (!response.isSuccessful()) {
+                            error = "HTTP " + response.code();
+                        } else if (response.body() == null) {
+                            error = "empty body";
+                        } else {
+                            result = FindResult(response.body().string(), configKey);
+                            if (apiUrl.startsWith("clan")) {
+                                result = clanContentFix(clanToAddress(apiUrl), result);
+                            }
+                            result = fixContentPath(apiUrl, result);
+                        }
                     }
                 } catch (Throwable th) {
                     error = th.getMessage();
@@ -1505,6 +1516,22 @@ public class ApiConfig {
                 }
             }
         });
+    }
+
+    private String readAsset(String path) {
+        if (TextUtils.isEmpty(path)) return null;
+        try (InputStream in = App.getInstance().getAssets().open(path)) {
+            ByteArrayOutputStream out = new ByteArrayOutputStream();
+            byte[] buffer = new byte[8192];
+            int length;
+            while ((length = in.read(buffer)) != -1) {
+                out.write(buffer, 0, length);
+            }
+            return out.toString("UTF-8");
+        } catch (Throwable th) {
+            LOG.e("读取内置配置失败: " + path, th);
+            return null;
+        }
     }
 
     public Spider getPyCSP(String url) {
