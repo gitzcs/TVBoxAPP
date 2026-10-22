@@ -714,7 +714,8 @@ public class HomeActivity extends BaseActivity {
                 showFilterIcon((int) event.obj);
             }
         } else if (event.type == RefreshEvent.TYPE_HOME_SOURCE_CHANGE) {
-            refreshHome(false);
+            SourceViewModel.clearRuntimeCache();
+            refreshHome(true);
         }
     }
 
@@ -889,9 +890,7 @@ public class HomeActivity extends BaseActivity {
 
     private void refreshHomeSort() {
         refreshHomeRec = true;
-        if (UserFragment.homeHotVodAdapter != null) {
-            UserFragment.homeHotVodAdapter.setNewData(new ArrayList<Movie.Video>());
-        }
+        UserFragment.updateHomeRecommendations(new ArrayList<Movie.Video>());
         SourceBean home = ApiConfig.get().getHomeSourceBean();
         if (home != null) {
             SourceViewModel.clearSortCache(home.getKey());
@@ -904,7 +903,7 @@ public class HomeActivity extends BaseActivity {
         refreshHomeRec = false;
         if (Hawk.get(HawkConfig.HOME_REC, HawkConfig.DEFAULT_HOME_REC) != 1) return;
         if (absXml == null || absXml.videoList == null || UserFragment.homeHotVodAdapter == null) return;
-        UserFragment.homeHotVodAdapter.setNewData(absXml.videoList);
+        UserFragment.updateHomeRecommendations(absXml.videoList);
     }
 
     private void refreshHome(final boolean restart)
