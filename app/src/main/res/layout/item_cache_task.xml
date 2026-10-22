@@ -22,7 +22,7 @@
             android:layout_height="wrap_content"
             android:ellipsize="end"
             android:singleLine="true"
-            android:textColor="@android:color/white"
+            android:textColor="@color/dialog_text_primary"
             android:textSize="@dimen/ts_22" />
 
         <ProgressBar
@@ -38,7 +38,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="@dimen/vs_3"
-            android:textColor="@color/color_FFFFFF_70"
+            android:textColor="@color/dialog_text_hint"
             android:textSize="@dimen/ts_18" />
     </LinearLayout>
 
@@ -48,12 +48,12 @@
         android:layout_height="wrap_content"
         android:layout_marginStart="@dimen/vs_10"
         android:layout_marginLeft="@dimen/vs_10"
-        android:background="@drawable/button_dialog_main"
+        android:background="@drawable/button_danmu_setting"
         android:clickable="true"
         android:focusable="true"
         android:padding="@dimen/vs_8"
         android:text="暂停"
-        android:textColor="@android:color/white"
+        android:textColor="@color/dialog_text_primary"
         android:textSize="@dimen/ts_20" />
 
     <TextView
@@ -62,12 +62,12 @@
         android:layout_height="wrap_content"
         android:layout_marginStart="@dimen/vs_10"
         android:layout_marginLeft="@dimen/vs_10"
-        android:background="@drawable/button_dialog_main"
+        android:background="@drawable/button_danmu_setting"
         android:clickable="true"
         android:focusable="true"
         android:padding="@dimen/vs_8"
         android:text="重试"
-        android:textColor="@android:color/white"
+        android:textColor="@color/dialog_text_primary"
         android:textSize="@dimen/ts_20" />
 
     <TextView
@@ -76,12 +76,12 @@
         android:layout_height="wrap_content"
         android:layout_marginStart="@dimen/vs_15"
         android:layout_marginLeft="@dimen/vs_15"
-        android:background="@drawable/button_dialog_main"
+        android:background="@drawable/button_danmu_setting"
         android:clickable="true"
         android:focusable="true"
         android:padding="@dimen/vs_8"
         android:text="播放"
-        android:textColor="@android:color/white"
+        android:textColor="@color/dialog_text_primary"
         android:textSize="@dimen/ts_20" />
 
     <TextView
@@ -90,7 +90,7 @@
         android:layout_height="wrap_content"
         android:layout_marginStart="@dimen/vs_10"
         android:layout_marginLeft="@dimen/vs_10"
-        android:background="@drawable/button_dialog_vod"
+        android:background="@drawable/button_danmu_setting"
         android:clickable="true"
         android:focusable="true"
         android:padding="@dimen/vs_8"

@@ -13,7 +13,7 @@
         android:layout_height="wrap_content"
         android:gravity="center"
         android:text="新增配置"
-        android:textColor="@android:color/white"
+        android:textColor="@color/dialog_text_primary"
         android:textSize="@dimen/ts_28"
         android:textStyle="bold" />
 
@@ -28,8 +28,8 @@
         android:inputType="text"
         android:maxLines="1"
         android:padding="@dimen/vs_10"
-        android:textColor="@android:color/white"
-        android:textColorHint="@color/color_FFFFFF_50"
+        android:textColor="@color/dialog_text_primary"
+        android:textColorHint="@color/dialog_text_hint"
         android:textSize="@dimen/ts_22" />
 
     <!-- 配置地址 -->
@@ -43,8 +43,8 @@
         android:inputType="text"
         android:maxLines="1"
         android:padding="@dimen/vs_10"
-        android:textColor="@android:color/white"
-        android:textColorHint="@color/color_FFFFFF_50"
+        android:textColor="@color/dialog_text_primary"
+        android:textColorHint="@color/dialog_text_hint"
         android:textSize="@dimen/ts_22" />
 
     <!-- 直播地址 -->
@@ -58,8 +58,8 @@
         android:inputType="text"
         android:maxLines="1"
         android:padding="@dimen/vs_10"
-        android:textColor="@android:color/white"
-        android:textColorHint="@color/color_FFFFFF_50"
+        android:textColor="@color/dialog_text_primary"
+        android:textColorHint="@color/dialog_text_hint"
         android:textSize="@dimen/ts_22" />
 
     <!-- EPG地址 -->
@@ -73,8 +73,8 @@
         android:inputType="text"
         android:maxLines="1"
         android:padding="@dimen/vs_10"
-        android:textColor="@android:color/white"
-        android:textColorHint="@color/color_FFFFFF_50"
+        android:textColor="@color/dialog_text_primary"
+        android:textColorHint="@color/dialog_text_hint"
         android:textSize="@dimen/ts_22" />
 
     <!-- 代理 -->
@@ -88,8 +88,8 @@
         android:inputType="text"
         android:maxLines="1"
         android:padding="@dimen/vs_10"
-        android:textColor="@android:color/white"
-        android:textColorHint="@color/color_FFFFFF_50"
+        android:textColor="@color/dialog_text_primary"
+        android:textColorHint="@color/dialog_text_hint"
         android:textSize="@dimen/ts_22" />
 
     <!-- 启用开关 -->
@@ -105,19 +105,19 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:text="启用该配置"
-            android:textColor="@android:color/white"
+            android:textColor="@color/dialog_text_primary"
             android:textSize="@dimen/ts_22" />
 
         <TextView
             android:id="@+id/btnToggleEnabled"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:background="@drawable/button_dialog_main"
+            android:background="@drawable/button_danmu_setting"
             android:clickable="true"
             android:focusable="true"
             android:padding="@dimen/vs_10"
             android:text="已启用"
-            android:textColor="@android:color/white"
+            android:textColor="@color/dialog_text_primary"
             android:textSize="@dimen/ts_20" />
     </LinearLayout>
 
@@ -133,13 +133,13 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:background="@drawable/button_dialog_vod"
+            android:background="@drawable/button_danmu_setting"
             android:clickable="true"
             android:focusable="true"
             android:gravity="center"
             android:padding="@dimen/vs_12"
             android:text="取消"
-            android:textColor="@android:color/white"
+            android:textColor="@color/dialog_text_primary"
             android:textSize="@dimen/ts_22" />
 
         <TextView
@@ -148,13 +148,13 @@
             android:layout_height="wrap_content"
             android:layout_marginLeft="@dimen/vs_15"
             android:layout_weight="1"
-            android:background="@drawable/button_dialog_main"
+            android:background="@drawable/button_danmu_setting"
             android:clickable="true"
             android:focusable="true"
             android:gravity="center"
             android:padding="@dimen/vs_12"
             android:text="保存"
-            android:textColor="@android:color/white"
+            android:textColor="@color/dialog_text_primary"
             android:textSize="@dimen/ts_22" />
     </LinearLayout>
 </LinearLayout>
