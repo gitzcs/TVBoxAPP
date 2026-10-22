@@ -499,8 +499,8 @@ public final class AutoSourceManager {
     /**
      * 把找源结果同步到用户配置列表。
      *
-     * <p>自动验证过的不可用地址会从配置中移除；可用地址自动新增或复用，
-     * 排名第一的可用源设为当前主页配置。
+     * <p>自动验证过的不可用地址会从配置中移除；可用地址自动新增或复用。
+     * 当前主页配置仍在列表中时保持不变，否则才使用排名第一的可用源。
      */
     private void syncConfigs(List<Finding> findings) {
         if (findings == null || findings.isEmpty()) {
@@ -566,19 +566,44 @@ public final class AutoSourceManager {
         }
 
         String oldHomeId = ConfigManager.getHomeConfigId();
-        ConfigBean first = orderedUsable.get(0);
-        boolean homeChanged = !first.id.equals(oldHomeId);
+        ConfigBean applied = selectConfigToApply(configs, orderedUsable, oldHomeId);
+        if (applied == null) {
+            return;
+        }
+        boolean homeChanged = !applied.id.equals(oldHomeId);
         if (configsChanged) {
             ConfigManager.saveConfigs(configs);
         }
-        ConfigManager.setHomeConfigId(first.id);
-        cache.setAppliedUrl(first.apiUrl);
+        ConfigManager.setHomeConfigId(applied.id);
+        cache.setAppliedUrl(applied.apiUrl);
 
         LOG.i("自动找源已同步配置：可用 " + orderedUsable.size()
-                + " 个，当前配置 " + first.displayName());
+                + " 个，当前配置 " + applied.displayName());
         if (homeChanged) {
             EventBus.getDefault().post(new RefreshEvent(RefreshEvent.TYPE_HOME_SOURCE_CHANGE));
         }
+    }
+
+    static ConfigBean selectConfigToApply(List<ConfigBean> configs,
+                                         List<ConfigBean> orderedUsable,
+                                         String homeConfigId) {
+        if (homeConfigId != null && !homeConfigId.isEmpty() && configs != null) {
+            for (ConfigBean bean : configs) {
+                if (bean != null && homeConfigId.equals(bean.id) && bean.enabled
+                        && bean.apiUrl != null && !bean.apiUrl.trim().isEmpty()) {
+                    return bean;
+                }
+            }
+        }
+        if (orderedUsable != null) {
+            for (ConfigBean bean : orderedUsable) {
+                if (bean != null && bean.enabled
+                        && bean.apiUrl != null && !bean.apiUrl.trim().isEmpty()) {
+                    return bean;
+                }
+            }
+        }
+        return null;
     }
 
     private static ConfigBean findConfig(List<ConfigBean> configs, String url) {
