@@ -36,6 +36,8 @@ public class ConfigBean implements Serializable {
     public String proxy;
     /** 是否启用 */
     public boolean enabled;
+    /** 是否由「视频源自动获取」维护；自动刷新时可安全移除失效项。 */
+    public boolean autoSource;
 
     public ConfigBean() {
         this.id = UUID.randomUUID().toString();

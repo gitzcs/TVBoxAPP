@@ -100,6 +100,8 @@ public class SourceFinderRankTest {
 
         // 内置本地源必须存在（断网兜底）
         assertFalse("asset 索引应含本地内置源", index.localEntries().isEmpty());
+        assertTrue("qist/tvbox 应作为首选内置源",
+                index.localEntries().get(0).getUrl().contains("qist/tvbox"));
 
         // 核心：queries 不能为空 —— 这正是 release 混淆曾静默清空的字段
         assertTrue("github.enabled 应为 true", index.github().isEnabled());
@@ -149,6 +151,8 @@ public class SourceFinderRankTest {
         for (String bad : new String[]{"", "   ", "not json", "[1,2,3]", "null", "\"str\""}) {
             SourceIndex index = SourceIndex.parse(bad);
             assertTrue("坏输入应回落到兜底索引：" + bad, index.localEntries().size() >= 1);
+            assertTrue("兜底索引也应优先 qist/tvbox",
+                    index.localEntries().get(0).getUrl().contains("qist/tvbox"));
         }
     }
 

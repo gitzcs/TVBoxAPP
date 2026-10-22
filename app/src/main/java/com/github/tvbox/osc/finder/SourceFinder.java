@@ -24,8 +24,8 @@ import java.util.regex.Pattern;
  *
  * <p>两个通道：
  * <ol>
- *     <li><b>内置索引</b>（{@code assets/source_index.json}）——离线基石，
- *         含随包发布的本地配置，保证任何网络状况下都有源可用</li>
+ *     <li><b>内置索引</b>（{@code assets/source_index.json}）——首选通道，
+ *         随包声明 qist/tvbox 等优先验证地址，不依赖 GitHub 仓库搜索</li>
  *     <li><b>GitHub 在线发现</b>——搜索仓库 → 扫描仓库 → 得到候选地址</li>
  * </ol>
  *

@@ -56,7 +56,7 @@ public final class SourceIndex {
     private String updated;
     private String note;
 
-    /** 本地内置配置，永远可用（不依赖网络）。 */
+    /** 随包内置的首选候选，启动时优先验证。 */
     private List<Entry> local;
 
     /** 公开配置地址，需要联网验证。 */
@@ -192,13 +192,13 @@ public final class SourceIndex {
     }
 
     /**
-     * 兜底索引：assets 读不出来时至少保证有内置配置可用。
-     * 这里的本地条目指的是随包发布的 assets 配置。
+     * 兜底索引：assets 读不出来时仍保留 qist/tvbox 首选地址。
      */
     public static SourceIndex fallback() {
         SourceIndex index = new SourceIndex();
         index.local = new ArrayList<>(Arrays.asList(
-                new Entry("内置示例配置（4 个采集站）", "assets://default_config.json")));
+                new Entry("qist/tvbox",
+                        "https://raw.githubusercontent.com/qist/tvbox/master/jsm.json")));
         index.sources = new ArrayList<>();
         index.fillDefaults();
         return index;
@@ -221,7 +221,7 @@ public final class SourceIndex {
 
     // ---------------- 读取 ----------------
 
-    /** 本地内置条目（assets 配置，不依赖网络）。 */
+    /** 随包内置条目（优先于在线仓库发现）。 */
     public List<Entry> localEntries() {
         return local == null ? Collections.<Entry>emptyList() : valid(local);
     }

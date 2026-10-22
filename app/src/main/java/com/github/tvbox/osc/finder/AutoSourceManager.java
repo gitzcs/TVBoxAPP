@@ -4,11 +4,20 @@ import android.content.Context;
 import android.os.Handler;
 import android.os.Looper;
 
+import com.github.tvbox.osc.bean.ConfigBean;
+import com.github.tvbox.osc.event.RefreshEvent;
+import com.github.tvbox.osc.util.ConfigManager;
 import com.github.tvbox.osc.util.LOG;
+
+import org.greenrobot.eventbus.EventBus;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -207,6 +216,7 @@ public final class AutoSourceManager {
      */
     public void start() {
         List<Finding> cached = cache.usable();
+        syncConfigs(cache.load());
         LOG.i("自动找源启动：本地可用源 " + cached.size() + " 个"
                 + (cache.hasAttempted()
                 ? ("，上次尝试 " + (cache.lastAttemptOk() ? "成功" : "失败")
@@ -309,6 +319,7 @@ public final class AutoSourceManager {
                 final Finding finding = finder.verify(url, name, Finding.ORIGIN_MANUAL);
                 if (finding.isUsable()) {
                     cache.upsert(finding);
+                    syncConfigs(cache.load());
                 }
                 main.post(new Runnable() {
                     @Override
@@ -331,6 +342,7 @@ public final class AutoSourceManager {
     /** 从本地缓存删除一条（不处理当前正在使用的配置）。 */
     public void removeCached(String url) {
         cache.remove(url);
+        syncConfigs(cache.load());
         notifyState();
     }
 
@@ -467,6 +479,7 @@ public final class AutoSourceManager {
         List<Finding> usable = report.usable();
         if (!usable.isEmpty()) {
             cache.save(report.all());
+            syncConfigs(report.all());
             cache.markAttempt(true, null);
             LOG.i("源缓存已更新：" + usable.size() + " 个可用源");
             return;
@@ -477,6 +490,100 @@ public final class AutoSourceManager {
         }
         cache.markAttempt(false, why);
         LOG.w("本次没有验证出可用源，保留旧缓存：" + why);
+    }
+
+    /**
+     * 把找源结果同步到用户配置列表。
+     *
+     * <p>自动验证过的不可用地址会从配置中移除；可用地址自动新增或复用，
+     * 排名第一的可用源设为当前主页配置。
+     */
+    private void syncConfigs(List<Finding> findings) {
+        if (findings == null || findings.isEmpty()) {
+            return;
+        }
+        Map<String, Finding> checked = new LinkedHashMap<>();
+        for (Finding finding : findings) {
+            if (finding == null || finding.getUrl() == null) continue;
+            String url = finding.getUrl().trim();
+            if (!url.isEmpty()) checked.put(url, finding);
+        }
+
+        List<Finding> usable = new ArrayList<>();
+        for (Finding finding : SourceFinder.rank(new ArrayList<>(checked.values()))) {
+            if (finding.isUsable()) usable.add(finding);
+        }
+        if (usable.isEmpty()) {
+            return;
+        }
+
+        Set<String> usableUrls = new HashSet<>();
+        for (Finding finding : usable) {
+            usableUrls.add(finding.getUrl().trim());
+        }
+
+        List<ConfigBean> configs = ConfigManager.getConfigs();
+        boolean configsChanged = false;
+        for (int i = configs.size() - 1; i >= 0; i--) {
+            ConfigBean bean = configs.get(i);
+            if (bean == null || bean.apiUrl == null) continue;
+            String url = bean.apiUrl.trim();
+            Finding checkedFinding = checked.get(url);
+            if (checkedFinding == null) continue;
+            if (!bean.autoSource) {
+                bean.autoSource = true;
+                configsChanged = true;
+            }
+            if (!usableUrls.contains(url)) {
+                configs.remove(i);
+                configsChanged = true;
+            }
+        }
+
+        List<ConfigBean> orderedUsable = new ArrayList<>();
+        for (Finding finding : usable) {
+            String url = finding.getUrl().trim();
+            ConfigBean bean = findConfig(configs, url);
+            if (bean == null) {
+                bean = new ConfigBean(finding.getName(), url);
+                bean.autoSource = true;
+                configs.add(bean);
+                configsChanged = true;
+            }
+            if (!bean.autoSource || !bean.enabled) {
+                bean.autoSource = true;
+                bean.enabled = true;
+                configsChanged = true;
+            }
+            orderedUsable.add(bean);
+        }
+        if (orderedUsable.isEmpty()) {
+            return;
+        }
+
+        String oldHomeId = ConfigManager.getHomeConfigId();
+        ConfigBean first = orderedUsable.get(0);
+        boolean homeChanged = !first.id.equals(oldHomeId);
+        if (configsChanged) {
+            ConfigManager.saveConfigs(configs);
+        }
+        ConfigManager.setHomeConfigId(first.id);
+        cache.setAppliedUrl(first.apiUrl);
+
+        LOG.i("自动找源已同步配置：可用 " + orderedUsable.size()
+                + " 个，当前配置 " + first.displayName());
+        if (configsChanged || homeChanged) {
+            EventBus.getDefault().post(new RefreshEvent(RefreshEvent.TYPE_HOME_SOURCE_CHANGE));
+        }
+    }
+
+    private static ConfigBean findConfig(List<ConfigBean> configs, String url) {
+        for (ConfigBean bean : configs) {
+            if (bean != null && bean.apiUrl != null && url.equals(bean.apiUrl.trim())) {
+                return bean;
+            }
+        }
+        return null;
     }
 
     private void notifyState() {

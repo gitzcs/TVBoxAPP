@@ -183,6 +183,20 @@ public class ConfigManager {
         return null;
     }
 
+    /** 按配置地址查找；忽略首尾空白。 */
+    public static ConfigBean findConfigByUrl(String apiUrl) {
+        if (apiUrl == null || apiUrl.trim().isEmpty()) {
+            return null;
+        }
+        String target = apiUrl.trim();
+        for (ConfigBean cb : getConfigs()) {
+            if (cb != null && cb.apiUrl != null && target.equals(cb.apiUrl.trim())) {
+                return cb;
+            }
+        }
+        return null;
+    }
+
     /** 主页配置对象；未设置时返回 null。 */
     public static ConfigBean getHomeConfig() {
         return getConfig(getHomeConfigId());

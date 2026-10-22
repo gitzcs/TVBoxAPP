@@ -1,9 +1,9 @@
 {
   "version": 1,
   "updated": "2026-10-22",
-  "note": "内置索引只声明「去哪里找」（仓库、文件名模式），不内置任何具体影视源地址。App 会逐个下载、解析、抽样验证，只有验证通过的才写入本地缓存并优先使用。",
+  "note": "内置索引优先使用 qist/tvbox，并通过仓库文件树与文件名模式继续发现。App 会逐个下载、解析、抽样验证，只有验证通过的才写入配置并优先使用。",
   "local": [
-    { "name": "内置示例配置（4 个采集站）", "url": "assets://default_config.json" }
+    { "name": "qist/tvbox", "url": "https://raw.githubusercontent.com/qist/tvbox/master/jsm.json" }
   ],
   "sources": [],
   "github": {

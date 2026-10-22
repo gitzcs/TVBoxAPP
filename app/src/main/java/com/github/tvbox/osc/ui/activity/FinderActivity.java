@@ -29,8 +29,8 @@ import java.util.List;
 /**
  * 视频源自动获取。
  *
- * <p>流程：内置索引 + GitHub 在线发现 → 逐个验证 → 验证通过的存本地缓存。
- * 页面本身不改变用户的当前配置，只有点「使用」才会写入配置列表。
+ * <p>流程：内置索引 + GitHub 在线发现 → 逐个验证 → 可用项自动同步到配置列表。
+ * 点「使用」可把某一项立即设为当前配置。
  */
 public class FinderActivity extends BaseActivity implements AutoSourceManager.Listener {
 
@@ -137,9 +137,17 @@ public class FinderActivity extends BaseActivity implements AutoSourceManager.Li
      * 下载并运行远程代码。
      */
     private void useFinding(final Finding finding) {
-        ConfigBean bean = new ConfigBean(finding.getName(), finding.getUrl());
-        ConfigManager.addConfig(bean);
-        Toast.makeText(this, "已添加配置: " + bean.displayName(), Toast.LENGTH_SHORT).show();
+        ConfigBean bean = ConfigManager.findConfigByUrl(finding.getUrl());
+        if (bean == null) {
+            bean = new ConfigBean(finding.getName(), finding.getUrl());
+            bean.autoSource = true;
+            ConfigManager.addConfig(bean);
+        } else {
+            bean.autoSource = true;
+            bean.enabled = true;
+            ConfigManager.updateConfig(bean);
+        }
+        Toast.makeText(this, "已设为当前配置: " + bean.displayName(), Toast.LENGTH_SHORT).show();
         // 顺带设为当前生效配置并刷新首页
         ConfigManager.setHomeConfigId(bean.id);
         EventBus.getDefault().post(new RefreshEvent(RefreshEvent.TYPE_HOME_SOURCE_CHANGE));
