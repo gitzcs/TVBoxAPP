@@ -12,7 +12,7 @@ public class DanmuHelper {
     };
 
     public static boolean isOpen() {
-        return Hawk.get(HawkConfig.DANMU_OPEN, true);
+        return Hawk.get(HawkConfig.DANMU_OPEN, HawkConfig.DEFAULT_DANMU_OPEN);
     }
 
     public static void setOpen(boolean open) {

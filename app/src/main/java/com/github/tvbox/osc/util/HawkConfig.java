@@ -45,6 +45,7 @@ public class HawkConfig {
     public static final String SUBTITLE_EXO_POSITION = "subtitle_exo_position";
     public static final String SOURCES_FOR_SEARCH = "checked_sources_for_search";
     public static final String HOME_REC_STYLE = "home_rec_style";
+    public static final boolean DEFAULT_HOME_REC_STYLE = true;
     public static final String NOW_DATE = "now_date"; //当前日期
     public static final String REMOTE_TVBOX = "remote_tvbox_host";
     public static final String IJK_CACHE_PLAY = "ijk_cache_play";
@@ -62,6 +63,7 @@ public class HawkConfig {
     public static final String DEFAULT_LOAD_LIVE = "DEFAULT_LOAD_LIVE";
     public static final String SEARCH_HISTORY = "search_history";
     public static final String DANMU_OPEN = "danmu_open";
+    public static final boolean DEFAULT_DANMU_OPEN = false;
     public static final String DANMU_MAX_LINE = "danmu_max_line";
     public static final String DANMU_SPEED = "danmu_speed";
     public static final String DANMU_ALPHA = "danmu_alpha";

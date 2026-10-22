@@ -132,7 +132,8 @@ public class ModelSettingFragment extends BaseLazyFragment {
         tvAutoSwitchLineText = findViewById(R.id.autoSwitchLineText);
         tvAutoSwitchLineText.setText(Hawk.get(HawkConfig.AUTO_SWITCH_LINE, true) ? "开启" : "关闭");
         tvRecStyleText = findViewById(R.id.showRecStyleText);
-        tvRecStyleText.setText(Hawk.get(HawkConfig.HOME_REC_STYLE, false) ? "是" : "否");
+        tvRecStyleText.setText(Hawk.get(HawkConfig.HOME_REC_STYLE,
+                HawkConfig.DEFAULT_HOME_REC_STYLE) ? "是" : "否");
         tvShowPreviewText = findViewById(R.id.showPreviewText);
         tvShowPreviewText.setText(Hawk.get(HawkConfig.SHOW_PREVIEW, true) ? "开启" : "关闭");
         tvDebugOpen = findViewById(R.id.tvDebugOpen);
@@ -796,8 +797,10 @@ public class ModelSettingFragment extends BaseLazyFragment {
             @Override
             public void onClick(View v) {
                 FastClickCheckUtil.check(v);
-                Hawk.put(HawkConfig.HOME_REC_STYLE, !Hawk.get(HawkConfig.HOME_REC_STYLE, false));
-                tvRecStyleText.setText(Hawk.get(HawkConfig.HOME_REC_STYLE, false) ? "是" : "否");
+                boolean homeRecStyle = !Hawk.get(HawkConfig.HOME_REC_STYLE,
+                        HawkConfig.DEFAULT_HOME_REC_STYLE);
+                Hawk.put(HawkConfig.HOME_REC_STYLE, homeRecStyle);
+                tvRecStyleText.setText(homeRecStyle ? "是" : "否");
             }
         });
 

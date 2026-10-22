@@ -103,7 +103,7 @@ public class UserFragment extends BaseLazyFragment implements View.OnClickListen
     @Override
     protected void onFragmentResume() {
         super.onFragmentResume();
-        if (Hawk.get(HawkConfig.HOME_REC_STYLE, false)) {
+        if (Hawk.get(HawkConfig.HOME_REC_STYLE, HawkConfig.DEFAULT_HOME_REC_STYLE)) {
             tvHotList.setVisibility(View.VISIBLE);
             tvHotList.setHasFixedSize(true);
             int spanCount = 5;
