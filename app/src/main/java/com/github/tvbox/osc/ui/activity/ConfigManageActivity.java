@@ -13,6 +13,7 @@ import com.github.tvbox.osc.R;
 import com.github.tvbox.osc.base.BaseActivity;
 import com.github.tvbox.osc.bean.ConfigBean;
 import com.github.tvbox.osc.event.RefreshEvent;
+import com.github.tvbox.osc.ui.dialog.ConfigActionDialog;
 import com.github.tvbox.osc.ui.dialog.ConfigEditDialog;
 import com.github.tvbox.osc.ui.dialog.TipDialog;
 import com.github.tvbox.osc.util.ConfigManager;
@@ -44,6 +45,26 @@ public class ConfigManageActivity extends BaseActivity {
         configList.setLayoutManager(new V7LinearLayoutManager(this, 1, false));
         adapter = new ConfigAdapter(ConfigManager.getConfigs());
         configList.setAdapter(adapter);
+        configList.post(new Runnable() {
+            @Override
+            public void run() {
+                if (adapter.getItemCount() > 0) {
+                    if (configList.getSelectedPosition() < 0) {
+                        configList.setSelectedPosition(0);
+                    }
+                    configList.requestDefaultFocus();
+                }
+            }
+        });
+        adapter.setOnItemClickListener(new BaseQuickAdapter.OnItemClickListener() {
+            @Override
+            public void onItemClick(BaseQuickAdapter adapter, View view, int position) {
+                ConfigBean item = ConfigManageActivity.this.adapter.getItem(position);
+                if (item != null) {
+                    showConfigActions(item);
+                }
+            }
+        });
 
         findViewById(R.id.btnAddConfig).setOnClickListener(new View.OnClickListener() {
             @Override
@@ -87,6 +108,33 @@ public class ConfigManageActivity extends BaseActivity {
             }
         });
         dialog.show();
+    }
+
+    private void showConfigActions(final ConfigBean item) {
+        new ConfigActionDialog(this, item, new ConfigActionDialog.OnActionListener() {
+            @Override
+            public void onSetHome() {
+                setHomeConfig(item);
+            }
+
+            @Override
+            public void onEdit() {
+                showEditDialog(item);
+            }
+
+            @Override
+            public void onToggleEnabled() {
+                ConfigManager.toggleEnabled(item.id, !item.enabled);
+                refreshAdapter();
+                Toast.makeText(ConfigManageActivity.this,
+                        item.enabled ? "配置已启用" : "配置已停用", Toast.LENGTH_SHORT).show();
+            }
+
+            @Override
+            public void onDelete() {
+                confirmDelete(item);
+            }
+        }).show();
     }
 
     /** 把该配置设为「主页配置」：主页显示该配置的数据，点击后立即刷新。 */
