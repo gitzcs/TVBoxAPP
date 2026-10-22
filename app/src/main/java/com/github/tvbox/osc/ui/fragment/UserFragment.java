@@ -65,7 +65,6 @@ import java.util.List;
  * @description:
  */
 public class UserFragment extends BaseLazyFragment implements View.OnClickListener {
-    private static final int HOME_PAGE_SIZE = 10;
     private static WeakReference<UserFragment> activeInstance;
 
     private LinearLayout tvLive;
@@ -78,12 +77,6 @@ public class UserFragment extends BaseLazyFragment implements View.OnClickListen
     public static HomeHotVodAdapter homeHotVodAdapter;
     private List<Movie.Video> homeSourceRec;
     public static TvRecyclerView tvHotList;
-    private TextView tvPreviousPage;
-    private TextView tvNextPage;
-    private TextView tvPageIndicator;
-    private List<Movie.Video> allHomeVideos = new ArrayList<>();
-    private int currentPage = 1;
-    private int totalPages = 1;
     private volatile boolean doubanLoading = false;
     private SourceViewModel sourceViewModel;
 
@@ -127,7 +120,8 @@ public class UserFragment extends BaseLazyFragment implements View.OnClickListen
         }
         if (Hawk.get(HawkConfig.HOME_REC, HawkConfig.DEFAULT_HOME_REC) == 2) {
             showHistory();
-        } else if (allHomeVideos.isEmpty() && !doubanLoading) {
+        } else if ((homeHotVodAdapter == null || homeHotVodAdapter.getData().isEmpty())
+                && !doubanLoading) {
             setDouBanData();
         }
     }
@@ -171,9 +165,6 @@ public class UserFragment extends BaseLazyFragment implements View.OnClickListen
         tvHistory = findViewById(R.id.tvHistory);
         tvPush = findViewById(R.id.tvPush);
         tvCache = findViewById(R.id.tvCache);
-        tvPreviousPage = findViewById(R.id.tvPreviousPage);
-        tvNextPage = findViewById(R.id.tvNextPage);
-        tvPageIndicator = findViewById(R.id.tvPageIndicator);
         tvLive.setOnClickListener(this);
         tvSearch.setOnClickListener(this);
         tvSetting.setOnClickListener(this);
@@ -181,8 +172,6 @@ public class UserFragment extends BaseLazyFragment implements View.OnClickListen
         tvPush.setOnClickListener(this);
         tvCollect.setOnClickListener(this);
         tvCache.setOnClickListener(this);
-        tvPreviousPage.setOnClickListener(this);
-        tvNextPage.setOnClickListener(this);
         tvLive.setOnFocusChangeListener(focusChangeListener);
         tvSearch.setOnFocusChangeListener(focusChangeListener);
         tvSetting.setOnFocusChangeListener(focusChangeListener);
@@ -190,8 +179,6 @@ public class UserFragment extends BaseLazyFragment implements View.OnClickListen
         tvPush.setOnFocusChangeListener(focusChangeListener);
         tvCollect.setOnFocusChangeListener(focusChangeListener);
         tvCache.setOnFocusChangeListener(focusChangeListener);
-        tvPreviousPage.setOnFocusChangeListener(focusChangeListener);
-        tvNextPage.setOnFocusChangeListener(focusChangeListener);
         tvHotList = findViewById(R.id.tvHotList);
         if (Hawk.get(HawkConfig.HOME_REC, HawkConfig.DEFAULT_HOME_REC) == 1 && homeSourceRec != null) {
             style = ImgUtil.initStyle();
@@ -292,7 +279,7 @@ public class UserFragment extends BaseLazyFragment implements View.OnClickListen
     private void initHomeHotVod() {
         if (Hawk.get(HawkConfig.HOME_REC, HawkConfig.DEFAULT_HOME_REC) == 1) {
             if (homeSourceRec != null) {
-                showVideos(homeSourceRec, true);
+                showVideos(homeSourceRec);
                 return;
             }
         } else if (Hawk.get(HawkConfig.HOME_REC, HawkConfig.DEFAULT_HOME_REC) == 2) {
@@ -315,7 +302,7 @@ public class UserFragment extends BaseLazyFragment implements View.OnClickListen
             }
             vodList.add(vod);
         }
-        showVideos(vodList, true);
+        showVideos(vodList);
     }
 
     private void setDouBanData() {
@@ -334,7 +321,7 @@ public class UserFragment extends BaseLazyFragment implements View.OnClickListen
                     ArrayList<Movie.Video> hotMovies = loadHots(json);
                     if (hotMovies != null && hotMovies.size() > 0) {
                         doubanLoading = false;
-                        showVideos(hotMovies, true);
+                        showVideos(hotMovies);
                         return;
                     }
                 }
@@ -356,7 +343,7 @@ public class UserFragment extends BaseLazyFragment implements View.OnClickListen
                                 @Override
                                 public void run() {
                                     doubanLoading = false;
-                                    showVideos(loadHots(netJson), true);
+                                    showVideos(loadHots(netJson));
                                 }
                             });
                         }
@@ -388,68 +375,23 @@ public class UserFragment extends BaseLazyFragment implements View.OnClickListen
         });
     }
 
-    private void showVideos(List<Movie.Video> videos, boolean resetPage) {
-        allHomeVideos = new ArrayList<>();
+    private void showVideos(List<Movie.Video> videos) {
+        List<Movie.Video> result = new ArrayList<>();
         if (videos != null) {
             for (Movie.Video video : videos) {
-                if (video != null) allHomeVideos.add(video);
+                if (video != null) result.add(video);
             }
         }
-        totalPages = allHomeVideos.isEmpty() ? 1 : (allHomeVideos.size() + HOME_PAGE_SIZE - 1) / HOME_PAGE_SIZE;
-        if (resetPage) currentPage = 1;
-        if (currentPage > totalPages) currentPage = totalPages;
-        renderCurrentPage();
-    }
-
-    private void renderCurrentPage() {
-        updatePageControls();
-        if (allHomeVideos.isEmpty()) {
-            homeHotVodAdapter.setNewData(new ArrayList<Movie.Video>());
-            return;
-        }
-        int fromIndex = (currentPage - 1) * HOME_PAGE_SIZE;
-        int toIndex = Math.min(fromIndex + HOME_PAGE_SIZE, allHomeVideos.size());
-        homeHotVodAdapter.setNewData(new ArrayList<>(allHomeVideos.subList(fromIndex, toIndex)));
+        homeHotVodAdapter.setNewData(result);
         if (tvHotList.getLayoutManager() != null) {
             tvHotList.scrollToPosition(0);
         }
     }
 
-    private void changePage(int offset) {
-        int targetPage = currentPage + offset;
-        if (targetPage < 1 || targetPage > totalPages || targetPage == currentPage) return;
-        currentPage = targetPage;
-        renderCurrentPage();
-    }
-
-    private void updatePageControls() {
-        if (tvPageIndicator == null) return;
-        int pageCount = allHomeVideos.isEmpty() ? 0 : totalPages;
-        tvPageIndicator.setText(pageCount == 0 ? "0 / 0" : currentPage + " / " + pageCount);
-        boolean previousEnabled = currentPage > 1;
-        boolean nextEnabled = currentPage < totalPages && pageCount > 0;
-        boolean previousFocused = tvPreviousPage.isFocused();
-        boolean nextFocused = tvNextPage.isFocused();
-        setPageButtonEnabled(tvPreviousPage, previousEnabled);
-        setPageButtonEnabled(tvNextPage, nextEnabled);
-        if (previousFocused && !previousEnabled && nextEnabled) {
-            tvNextPage.requestFocus();
-        } else if (nextFocused && !nextEnabled && previousEnabled) {
-            tvPreviousPage.requestFocus();
-        }
-    }
-
-    private void setPageButtonEnabled(TextView button, boolean enabled) {
-        button.setEnabled(enabled);
-        button.setFocusable(enabled);
-        button.setClickable(enabled);
-        button.setAlpha(enabled ? 1.0f : 0.45f);
-    }
-
     public static void updateHomeRecommendations(List<Movie.Video> videos) {
         UserFragment fragment = activeInstance == null ? null : activeInstance.get();
         if (fragment != null) {
-            fragment.showVideos(videos, true);
+            fragment.showVideos(videos);
         } else if (homeHotVodAdapter != null) {
             homeHotVodAdapter.setNewData(videos == null ? new ArrayList<Movie.Video>() : videos);
         }
@@ -494,11 +436,7 @@ public class UserFragment extends BaseLazyFragment implements View.OnClickListen
         HawkConfig.hotVodDelete = false;
 
         FastClickCheckUtil.check(v);
-        if (v.getId() == R.id.tvPreviousPage) {
-            changePage(-1);
-        } else if (v.getId() == R.id.tvNextPage) {
-            changePage(1);
-        } else if (v.getId() == R.id.tvLive) {
+        if (v.getId() == R.id.tvLive) {
             jumpActivity(LivePlayActivity.class);
         } else if (v.getId() == R.id.tvSearch) {
             jumpActivity(SearchActivity.class);

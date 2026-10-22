@@ -46,8 +46,6 @@ public class HomeHotVodAdapter extends BaseQuickAdapter<Movie.Video, BaseViewHol
             tvRateValue = bean != null ? bean.getName() : "";
         }
         tvRate.setText(tvRateValue);
-        helper.itemView.setNextFocusDownId(R.id.tvPreviousPage);
-
         TextView tvNote = helper.getView(R.id.tvNote);
         if (item.note == null || item.note.isEmpty()) {
             tvNote.setVisibility(View.GONE);
