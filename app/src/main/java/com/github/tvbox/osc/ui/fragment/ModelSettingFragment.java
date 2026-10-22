@@ -124,7 +124,7 @@ public class ModelSettingFragment extends BaseLazyFragment {
         tvFastSearchText = findViewById(R.id.showFastSearchText);
         tvFastSearchText.setText(Hawk.get(HawkConfig.FAST_SEARCH_MODE, true) ? "开启" : "关闭");
         tvm3u8AdText = findViewById(R.id.m3u8AdText);
-        tvm3u8AdText.setText(Hawk.get(HawkConfig.M3U8_PURIFY, false) ? "开启" : "关闭");
+        tvm3u8AdText.setText(Hawk.get(HawkConfig.M3U8_PURIFY, HawkConfig.DEFAULT_M3U8_PURIFY) ? "开启" : "关闭");
         tvDanmuOpenText = findViewById(R.id.danmuOpenText);
         tvDanmuOpenText.setText(DanmuHelper.isOpen() ? "开启" : "关闭");
         tvDanmuApiText = findViewById(R.id.danmuApiText);
@@ -754,7 +754,7 @@ public class ModelSettingFragment extends BaseLazyFragment {
             @Override
             public void onClick(View v) {
                 FastClickCheckUtil.check(v);
-                boolean is_purify=Hawk.get(HawkConfig.M3U8_PURIFY, false);
+                boolean is_purify=Hawk.get(HawkConfig.M3U8_PURIFY, HawkConfig.DEFAULT_M3U8_PURIFY);
                 Hawk.put(HawkConfig.M3U8_PURIFY, !is_purify);
                 tvm3u8AdText.setText(!is_purify ? "开启" : "关闭");
             }
