@@ -1236,7 +1236,7 @@ public class DetailActivity extends BaseActivity {
             return;
         }
 
-        for (SourceBean bean : ApiConfig.get().getSourceBeanList()) {
+        for (SourceBean bean : ApiConfig.get().getDedupedSourceBeanList()) {
             if (bean.isSearchable() && bean.isChangeable() && !TextUtils.equals(bean.getKey(), detailFallbackExcludedSourceKey) && !isDetailFallbackSourceUsed(bean.getKey())) {
                 detailFallbackSourceOrder.add(bean.getKey());
             }
@@ -1781,7 +1781,7 @@ public class DetailActivity extends BaseActivity {
         }
         searchExecutorService = Executors.newFixedThreadPool(5);
         List<SourceBean> searchRequestList = new ArrayList<>();
-        searchRequestList.addAll(ApiConfig.get().getSourceBeanList());
+        searchRequestList.addAll(ApiConfig.get().getDedupedSourceBeanList());
         SourceBean home = ApiConfig.get().getHomeSourceBean();
         searchRequestList.remove(home);
         searchRequestList.add(0, home);

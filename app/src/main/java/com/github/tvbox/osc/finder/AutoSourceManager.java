@@ -414,12 +414,26 @@ public final class AutoSourceManager {
         }
     }
 
-    /** 配置列表里没有合并源就加一条；有就保持用户的启停状态不变。 */
+    /** 配置列表里没有合并源就在最前面加一条；有就保持用户的启停状态不变，并确保它排在第一位。 */
     private ConfigBean ensureMergedConfig() {
         ConfigBean bean = ConfigManager.findConfigByUrl(LocalSourceStore.MERGED_URL);
+        List<ConfigBean> configs = ConfigManager.getConfigs();
         if (bean == null) {
             bean = new ConfigBean(LocalSourceStore.MERGED_NAME, LocalSourceStore.MERGED_URL);
-            ConfigManager.addConfig(bean);
+            configs.add(0, bean);
+            ConfigManager.saveConfigs(configs);
+            return bean;
+        }
+        for (int i = 0; i < configs.size(); i++) {
+            ConfigBean exist = configs.get(i);
+            if (exist != null && bean.id.equals(exist.id)) {
+                if (i > 0) {
+                    configs.remove(i);
+                    configs.add(0, exist);
+                    ConfigManager.saveConfigs(configs);
+                }
+                break;
+            }
         }
         return bean;
     }
@@ -441,8 +455,28 @@ public final class AutoSourceManager {
             LOG.w((existed ? "自动重建合并源失败，保留旧文件：" : "自动合并失败：") + outcome.message);
             return;
         }
-        ensureMergedConfig();
+        ConfigBean bean = ensureMergedConfig();
+        promoteMergedConfig(bean);
         LOG.i("自动合并完成：" + outcome.message);
+    }
+
+    /**
+     * 把本地合并源设为当前主页配置（相当于把它作为默认源）。
+     *
+     * <p>已经是当前配置时不做任何事，避免每次刷新都让首页重载；
+     * 用户在配置管理里把它停用时也尊重用户的选择，不再自动切过去。
+     */
+    private void promoteMergedConfig(ConfigBean bean) {
+        if (bean == null || !bean.enabled) {
+            return;
+        }
+        String oldHomeId = ConfigManager.getHomeConfigId();
+        if (bean.id.equals(oldHomeId)) {
+            return;
+        }
+        ConfigManager.setHomeConfigId(bean.id);
+        LOG.i("已把「" + LocalSourceStore.MERGED_NAME + "」设为当前配置");
+        EventBus.getDefault().post(new RefreshEvent(RefreshEvent.TYPE_HOME_SOURCE_CHANGE));
     }
 
     /** 缓存文件在设备上的路径，设置页/找源页用来告诉用户「存哪了」。 */

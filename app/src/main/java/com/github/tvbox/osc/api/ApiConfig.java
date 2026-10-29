@@ -1749,12 +1749,17 @@ public class ApiConfig {
     public List<SourceBean> getSourceBeanList() {
         return new ArrayList<>(sourceBeanList.values());
     }
+
+    /**
+     * 按「后端」去重后的站点列表，规则见 {@link com.github.tvbox.osc.util.SourceDedupe}。
+     * 搜索、换源、首页站源切换都用这份列表，避免同一采集站被重复请求。
+     */
+    public List<SourceBean> getDedupedSourceBeanList() {
+        return com.github.tvbox.osc.util.SourceDedupe.dedupe(new ArrayList<>(sourceBeanList.values()));
+    }
+
     public List<SourceBean> getSwitchSourceBeanList() {
-        List<SourceBean> filteredList = new ArrayList<>();
-        for (SourceBean bean : sourceBeanList.values()) {
-            filteredList.add(bean);
-        }
-        return filteredList;
+        return getDedupedSourceBeanList();
     }
 
     private List<SourceBean> searchSourceBeanList;
@@ -1762,7 +1767,7 @@ public class ApiConfig {
         if(searchSourceBeanList.isEmpty()){
             LOG.i("echo-第一次getSearchSourceBeanList");
             searchSourceBeanList = new ArrayList<>();
-            for (SourceBean bean : sourceBeanList.values()) {
+            for (SourceBean bean : getDedupedSourceBeanList()) {
                 if (bean.isSearchable()) {
                     searchSourceBeanList.add(bean);
                 }
