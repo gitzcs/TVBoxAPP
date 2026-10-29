@@ -24,6 +24,7 @@ import com.github.tvbox.osc.bean.LiveSettingItem;
 import com.github.tvbox.osc.bean.ParseBean;
 import com.github.tvbox.osc.bean.ProxyRule;
 import com.github.tvbox.osc.bean.SourceBean;
+import com.github.tvbox.osc.finder.LocalSourceStore;
 import com.github.tvbox.osc.server.ControlManager;
 import com.github.tvbox.osc.util.AES;
 import com.github.tvbox.osc.util.AdBlocker;
@@ -172,7 +173,7 @@ public class ApiConfig {
         TempKey = null;
         String configUrl = "", pk = ";pk;";
         apiUrl=apiUrl.replace("file://", "clan://localhost/");
-        if (apiUrl.startsWith("assets://")) {
+        if (apiUrl.startsWith("assets://") || LocalSourceStore.isLocal(apiUrl)) {
             configUrl = apiUrl;
         } else if (apiUrl.contains(pk)) {
             String[] a = apiUrl.split(pk);
@@ -199,7 +200,8 @@ public class ApiConfig {
             callback.error("-1");
             return;
         }
-        boolean builtIn = apiUrl.startsWith("assets://");
+        // 内置和本地合并源本身就在设备上，不再额外写一份缓存
+        boolean builtIn = apiUrl.startsWith("assets://") || LocalSourceStore.isLocal(apiUrl);
         File cache = new File(App.getInstance().getFilesDir().getAbsolutePath() + "/" + MD5.encode(apiUrl));
         if (!builtIn && useCache && cache.exists()) {
             try {
@@ -383,6 +385,11 @@ public class ApiConfig {
                         result = readAsset(requestUrl.substring("assets://".length()));
                         if (TextUtils.isEmpty(result)) {
                             error = "读取内置配置失败";
+                        }
+                    } else if (LocalSourceStore.isLocal(requestUrl)) {
+                        result = LocalSourceStore.read(App.getInstance(), requestUrl);
+                        if (TextUtils.isEmpty(result)) {
+                            error = "读取本地合并源失败，请在「视频源自动获取」重新合并";
                         }
                     } else {
                         okhttp3.Request request = new okhttp3.Request.Builder()

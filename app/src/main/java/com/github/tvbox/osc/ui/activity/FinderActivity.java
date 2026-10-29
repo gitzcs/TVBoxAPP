@@ -38,6 +38,8 @@ public class FinderActivity extends BaseActivity implements AutoSourceManager.Li
     private TextView tvStatus;
     private TextView tvPolicy;
     private TextView btnRefresh;
+    private TextView btnMerge;
+    private boolean mergingNow;
     private FinderAdapter adapter;
     private final Handler handler = new Handler(Looper.getMainLooper());
     private String lastSig = "";
@@ -72,6 +74,14 @@ public class FinderActivity extends BaseActivity implements AutoSourceManager.Li
                     return;
                 }
                 AutoSourceManager.get(FinderActivity.this).refreshAsync(true);
+            }
+        });
+
+        btnMerge = (TextView) findViewById(R.id.btnMerge);
+        btnMerge.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                mergeToLocal();
             }
         });
     }
@@ -129,6 +139,63 @@ public class FinderActivity extends BaseActivity implements AutoSourceManager.Li
     }
 
     // ---------------- 导入 ----------------
+
+    /** 把所有可用源里的视频源合并成一个本地源。 */
+    private void mergeToLocal() {
+        AutoSourceManager manager = AutoSourceManager.get(this);
+        if (mergingNow) {
+            Toast.makeText(this, "正在合并，请稍候…", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        if (manager.usableCached().isEmpty()) {
+            Toast.makeText(this, "还没有可用源，先等自动找源完成", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        mergingNow = true;
+        btnMerge.setText("合并中…");
+        btnMerge.setAlpha(0.45f);
+        manager.mergeToLocalAsync(new AutoSourceManager.MergeCallback() {
+            @Override
+            public void onDone(boolean ok, String message, ConfigBean config, int spiderSiteCount) {
+                mergingNow = false;
+                if (isFinishing()) return;
+                btnMerge.setText("合并到本地");
+                btnMerge.setAlpha(1.0f);
+                if (!ok || config == null) {
+                    Toast.makeText(FinderActivity.this, message, Toast.LENGTH_LONG).show();
+                    return;
+                }
+                confirmUseMerged(message, config, spiderSiteCount);
+            }
+        });
+    }
+
+    private void confirmUseMerged(String message, final ConfigBean config, int spiderSiteCount) {
+        String tip = message + "\n\n已保存为配置「" + config.displayName() + "」，现在切换过去？";
+        if (spiderSiteCount > 0) {
+            tip = tip + "\n\n⚠ 其中包含 " + spiderSiteCount + " 个爬虫站，"
+                    + "使用时会从远程下载并执行其代码。";
+        }
+        new TipDialog(this, tip, "切换", "稍后", new TipDialog.OnListener() {
+            @Override
+            public void left() {
+                config.enabled = true;
+                ConfigManager.updateConfig(config);
+                ConfigManager.setHomeConfigId(config.id);
+                EventBus.getDefault().post(new RefreshEvent(RefreshEvent.TYPE_HOME_SOURCE_CHANGE));
+                Toast.makeText(FinderActivity.this, "已设为当前配置: " + config.displayName(),
+                        Toast.LENGTH_SHORT).show();
+            }
+
+            @Override
+            public void right() {
+            }
+
+            @Override
+            public void cancel() {
+            }
+        }).show();
+    }
 
     /**
      * 「使用」这个源：写入配置列表。

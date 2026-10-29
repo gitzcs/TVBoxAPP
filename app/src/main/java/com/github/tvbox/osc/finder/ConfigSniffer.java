@@ -191,7 +191,7 @@ public final class ConfigSniffer {
     }
 
     /** 去掉 markdown 代码围栏和 BOM。 */
-    private static String stripFence(String text) {
+    static String stripFence(String text) {
         String s = text;
         if (s.length() > 0 && s.charAt(0) == '\uFEFF') {
             s = s.substring(1);

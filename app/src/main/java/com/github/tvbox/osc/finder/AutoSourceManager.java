@@ -129,7 +129,7 @@ public final class AutoSourceManager {
 
         /** 一句话状态，可直接丢给 UI。 */
         public String describe() {
-            if (refreshing) {
+            if (refreshing || stage != null) {
                 return stage == null ? "正在自动找源…" : stage;
             }
             if (usableCount <= 0) {
@@ -346,6 +346,88 @@ public final class AutoSourceManager {
         notifyState();
     }
 
+    // ---------------- 本地合并源 ----------------
+
+    /** 合并完成回调（主线程）。 */
+    public interface MergeCallback {
+        void onDone(boolean ok, String message, ConfigBean config, int spiderSiteCount);
+    }
+
+    /** 本地合并源文件是否已生成。 */
+    public boolean hasMergedSource() {
+        return LocalSourceStore.mergedFile(appContext).isFile();
+    }
+
+    /**
+     * 把所有可用源里的视频源合并成一个本地源，并写入配置列表（不切换当前配置）。
+     * 跑在调度线程上，和自动找源串行，不会读到写了一半的缓存。
+     */
+    public void mergeToLocalAsync(final MergeCallback callback) {
+        ensureScheduler();
+        scheduler.execute(new Runnable() {
+            @Override
+            public void run() {
+                final LocalSourceBuilder.Outcome outcome = buildMerged();
+                final ConfigBean bean = outcome.ok ? ensureMergedConfig() : null;
+                main.post(new Runnable() {
+                    @Override
+                    public void run() {
+                        if (callback != null) {
+                            callback.onDone(outcome.ok, outcome.message, bean,
+                                    outcome.result == null ? 0 : outcome.result.spiderSiteCount);
+                        }
+                    }
+                });
+            }
+        });
+    }
+
+    private LocalSourceBuilder.Outcome buildMerged() {
+        stage = "正在合并视频源…";
+        notifyState();
+        try {
+            return new LocalSourceBuilder(appContext).build(cache.usable(),
+                    new LocalSourceBuilder.Progress() {
+                        @Override
+                        public void onStep(String message) {
+                            stage = message;
+                            notifyState();
+                        }
+                    });
+        } catch (Throwable t) {
+            LOG.e("合并视频源异常", t);
+            return new LocalSourceBuilder.Outcome(false,
+                    "合并失败：" + t.getClass().getSimpleName(), null);
+        } finally {
+            stage = null;
+            notifyState();
+        }
+    }
+
+    /** 配置列表里没有合并源就加一条；有就保持用户的启停状态不变。 */
+    private ConfigBean ensureMergedConfig() {
+        ConfigBean bean = ConfigManager.findConfigByUrl(LocalSourceStore.MERGED_URL);
+        if (bean == null) {
+            bean = new ConfigBean(LocalSourceStore.MERGED_NAME, LocalSourceStore.MERGED_URL);
+            ConfigManager.addConfig(bean);
+        }
+        return bean;
+    }
+
+    /**
+     * 自动刷新成功后，若用户已经生成过合并源，就顺带重建一次，让它跟上最新的可用源。
+     * 不发首页刷新事件：用户可能正在播放，新内容在下次加载配置时生效。
+     */
+    private void rebuildMergedIfPresent() {
+        if (!hasMergedSource()) {
+            return;
+        }
+        LocalSourceBuilder.Outcome outcome = buildMerged();
+        if (!outcome.ok) {
+            LOG.w("自动重建合并源失败，保留旧文件：" + outcome.message);
+        }
+    }
+
     /** 缓存文件在设备上的路径，设置页/找源页用来告诉用户「存哪了」。 */
     public String cacheFilePath() {
         return appContext.getFilesDir() + "/finder/sources.json";
@@ -398,6 +480,9 @@ public final class AutoSourceManager {
         boolean includeGithub = cache.includeGithub();
         try {
             doRefresh(includeGithub);
+            if (cache.lastAttemptOk()) {
+                rebuildMergedIfPresent();
+            }
         } catch (Throwable t) {
             LOG.e("自动找源异常", t);
             cache.markAttempt(false, t.getClass().getSimpleName() + ": " + t.getMessage());
