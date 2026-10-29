@@ -233,6 +233,16 @@ public final class AutoSourceManager {
         long delay = nextDelayMs();
         LOG.i("下次自动找源：" + (delay <= 0 ? "立即" : (delay / 1000) + "s 后"));
         scheduleRefresh(delay);
+        // 立刻要联网刷新时不必抢跑（刷新成功后本来就会合并）；只有还要等很久、
+        // 而合并源又不存在时，才先用缓存里的可用源生成一份
+        if (delay > 0 && !cached.isEmpty() && !hasMergedSource()) {
+            scheduler.execute(new Runnable() {
+                @Override
+                public void run() {
+                    autoMergeToLocal();
+                }
+            });
+        }
     }
 
     public void stop() {
@@ -415,17 +425,24 @@ public final class AutoSourceManager {
     }
 
     /**
-     * 自动刷新成功后，若用户已经生成过合并源，就顺带重建一次，让它跟上最新的可用源。
-     * 不发首页刷新事件：用户可能正在播放，新内容在下次加载配置时生效。
+     * 自动合并：只要缓存里有可用源，就把它们合并成本地合并源并写入配置列表。
+     *
+     * <p>首次也会自动生成（不要求用户先点过「合并到本地」）；已有合并源时顺带重建，
+     * 让它跟上最新的可用源。不切换当前配置、不发首页刷新事件：用户可能正在播放，
+     * 新内容在下次加载配置时生效。只能在调度线程上调用（和找源、手动合并串行）。
      */
-    private void rebuildMergedIfPresent() {
-        if (!hasMergedSource()) {
+    private void autoMergeToLocal() {
+        if (cache.usable().isEmpty()) {
             return;
         }
+        boolean existed = hasMergedSource();
         LocalSourceBuilder.Outcome outcome = buildMerged();
         if (!outcome.ok) {
-            LOG.w("自动重建合并源失败，保留旧文件：" + outcome.message);
+            LOG.w((existed ? "自动重建合并源失败，保留旧文件：" : "自动合并失败：") + outcome.message);
+            return;
         }
+        ensureMergedConfig();
+        LOG.i("自动合并完成：" + outcome.message);
     }
 
     /** 缓存文件在设备上的路径，设置页/找源页用来告诉用户「存哪了」。 */
@@ -481,7 +498,7 @@ public final class AutoSourceManager {
         try {
             doRefresh(includeGithub);
             if (cache.lastAttemptOk()) {
-                rebuildMergedIfPresent();
+                autoMergeToLocal();
             }
         } catch (Throwable t) {
             LOG.e("自动找源异常", t);
@@ -719,6 +736,7 @@ public final class AutoSourceManager {
     /** 供 UI 展示：当前策略的可读描述。 */
     public static String describePolicy() {
         return "启动即用本地缓存；每 " + (REFRESH_INTERVAL_MS / 60000) + " 分钟联网刷新一次；"
-                + "失败后每 " + (RETRY_INTERVAL_MS / 60000) + " 分钟重试，直到恢复";
+                + "失败后每 " + (RETRY_INTERVAL_MS / 60000) + " 分钟重试，直到恢复；"
+                + "找源成功后自动合并为「本地合并源」";
     }
 }

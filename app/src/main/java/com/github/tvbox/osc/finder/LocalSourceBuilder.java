@@ -75,7 +75,7 @@ final class LocalSourceBuilder {
         String msg = "已合并 " + result.sourceCount + " 个配置、" + result.siteCount + " 个视频源"
                 + (result.duplicateCount > 0 ? "，去掉重复 " + result.duplicateCount + " 个" : "")
                 + (failed > 0 ? "，" + failed + " 个配置读取失败已跳过" : "");
-        LOG.i(msg);
+        // 不在这里打日志：手动合并把 msg 弹窗展示，自动合并由调用方带「自动」前缀记录
         return new Outcome(true, msg, result);
     }
 
