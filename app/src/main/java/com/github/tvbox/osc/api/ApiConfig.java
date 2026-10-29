@@ -63,6 +63,7 @@ import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -77,6 +78,7 @@ import java.util.regex.Pattern;
 public class ApiConfig {
     private static ApiConfig instance;
     private final LinkedHashMap<String, SourceBean> sourceBeanList;
+    private static final Random RANDOM = new Random();
     private SourceBean mHomeSource;
     private ParseBean mDefaultParse;
     private final List<LiveChannelGroup> liveChannelGroupList;
@@ -1786,6 +1788,31 @@ public class ApiConfig {
 
     public SourceBean getHomeSourceBean() {
         return mHomeSource == null ? emptyHome : mHomeSource;
+    }
+
+    /**
+     * 随机挑一个直连采集站（type 0/1）作为主页源候选。
+     *
+     * <p>只在去重后的直连站里挑：这些站不需要加载 jar，首页内容稳定可出；
+     * 爬虫站首切要下载 jar，慢且容易超时，不适合随机落点。
+     * {@code excludeKey} 为当前站 key（可为 null），避免随机到原站点。
+     * 没有候选时返回 null。
+     */
+    public SourceBean getRandomDirectSourceBean(String excludeKey) {
+        ArrayList<SourceBean> candidates = new ArrayList<>();
+        for (SourceBean bean : getDedupedSourceBeanList()) {
+            if (bean.getType() != 0 && bean.getType() != 1) {
+                continue;
+            }
+            if (excludeKey != null && excludeKey.equals(bean.getKey())) {
+                continue;
+            }
+            candidates.add(bean);
+        }
+        if (candidates.isEmpty()) {
+            return null;
+        }
+        return candidates.get(RANDOM.nextInt(candidates.size()));
     }
 
     public List<LiveChannelGroup> getChannelGroupList() {

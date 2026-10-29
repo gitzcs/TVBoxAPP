@@ -337,7 +337,11 @@ public class HomeActivity extends BaseActivity {
                 if (absXml != null && absXml.sourceKey != null && loadingSourceKey != null && !loadingSourceKey.equals(absXml.sourceKey)) {
                     return;
                 }
-                if (!homeSortLoading && !hasHomeContent(absXml) && switchToNextConfigAfterFailure()) {
+                if (!homeSortLoading && !hasHomeContent(absXml)) {
+                    if (maybeRerollEmptyRandomHome()) return;
+                    if (switchToNextConfigAfterFailure()) return;
+                }
+                if (homeSortLoading && !hasHomeContent(absXml) && maybeRerollEmptyRandomHome()) {
                     return;
                 }
                 SourceBean home = ApiConfig.get().getHomeSourceBean();
@@ -358,6 +362,8 @@ public class HomeActivity extends BaseActivity {
                 loadingSourceKey = null;
                 previousHomeName = null;
                 previousHomeSource = null;
+                randomHomeActive = false;
+                randomHomeRetryCount = 0;
             }
         });
     }
@@ -369,6 +375,7 @@ public class HomeActivity extends BaseActivity {
 
     private void initData() {
         if (dataInitOk && jarInitOk) {
+            maybeRandomizeHomeSourceOnce();
             loadHomeSort(false);
             if (hasPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE)) {
                 LOG.e("有");
@@ -917,6 +924,7 @@ public class HomeActivity extends BaseActivity {
             public void click(SourceBean value, int pos) {
                 dismissSiteSwitchDialog();
                 previousHomeSource = ApiConfig.get().getHomeSourceBean();
+                randomHomeActive = false;
                 ApiConfig.get().setSourceBean(value);
                 refreshHome(false);
             }
@@ -990,6 +998,76 @@ public class HomeActivity extends BaseActivity {
 
     private boolean isActivityUnavailable() {
         return isFinishing() || (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.JELLY_BEAN_MR1 && isDestroyed());
+    }
+
+    /**
+     * 每个进程只随机一次主页源：本次打开应用后第一次配置加载成功时，
+     * 从直连采集站里随机换一个主页源。配置切换/首页刷新事件不会再触发。
+     */
+    private static boolean sRandomHomePending = true;
+
+    /** 当前主页源来自随机选择；其首页内容为空时允许自动换下一个。 */
+    private boolean randomHomeActive = false;
+    private int randomHomeRetryCount = 0;
+    private static final int RANDOM_HOME_MAX_RETRY = 5;
+
+    private void maybeRandomizeHomeSourceOnce() {
+        if (!sRandomHomePending) {
+            return;
+        }
+        sRandomHomePending = false;
+        SourceBean current = ApiConfig.get().getHomeSourceBean();
+        SourceBean random = ApiConfig.get().getRandomDirectSourceBean(current == null ? null : current.getKey());
+        if (random == null || current == null || random.getKey().equals(current.getKey())) {
+            return;
+        }
+        LOG.i("本次打开随机主页源：" + random.getName());
+        randomHomeActive = true;
+        randomHomeRetryCount = 0;
+        ApiConfig.get().setSourceBean(random);
+    }
+
+    /**
+     * 随机选中的主页源首页内容为空（站点失效）时，自动换下一个随机直连站重试。
+     * 重试次数用完或没有候选时返回 false，交回原有流程（手动切源显示空页/坏配置切兜底配置）。
+     */
+    private boolean maybeRerollEmptyRandomHome() {
+        if (!randomHomeActive || randomHomeRetryCount >= RANDOM_HOME_MAX_RETRY) {
+            randomHomeActive = false;
+            return false;
+        }
+        SourceBean current = ApiConfig.get().getHomeSourceBean();
+        SourceBean next = ApiConfig.get().getRandomDirectSourceBean(current == null ? null : current.getKey());
+        if (next == null) {
+            randomHomeActive = false;
+            return false;
+        }
+        randomHomeRetryCount++;
+        LOG.i("随机主页源无内容，自动换下一个：" + next.getName());
+        ApiConfig.get().setSourceBean(next);
+        loadHomeSort(false);
+        return true;
+    }
+
+    /**
+     * 「刷新」按钮：随机换一个主页视频源并立即加载。
+     * 换到的源若首页无内容，会自动再换（见 {@link #maybeRerollEmptyRandomHome()}）。
+     */
+    public void randomSwitchHomeSource() {
+        if (isActivityUnavailable()) return;
+        SourceBean current = ApiConfig.get().getHomeSourceBean();
+        SourceBean next = ApiConfig.get().getRandomDirectSourceBean(current == null ? null : current.getKey());
+        if (next == null) {
+            Toast.makeText(this, "没有可随机切换的视频源", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        LOG.i("随机切换主页源：" + (current == null ? "无" : current.getName()) + " → " + next.getName());
+        randomHomeActive = true;
+        randomHomeRetryCount = 0;
+        previousHomeSource = current;
+        ApiConfig.get().setSourceBean(next);
+        refreshHome(false);
+        Toast.makeText(this, "已随机切换：" + next.getName(), Toast.LENGTH_SHORT).show();
     }
 
     private void dismissHomeDialogs() {
