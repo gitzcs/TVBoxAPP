@@ -215,6 +215,21 @@ public class ModelSettingFragment extends BaseLazyFragment {
                 dialog.show();
             }
         });
+        findViewById(R.id.llCheckUpdate).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                FastClickCheckUtil.check(v);
+                com.github.tvbox.osc.update.UpdateManager.checkManually(mActivity);
+            }
+        });
+        findViewById(R.id.llCheckUpdate).setOnLongClickListener(new View.OnLongClickListener() {
+            @Override
+            public boolean onLongClick(View v) {
+                FastClickCheckUtil.check(v);
+                com.github.tvbox.osc.update.UpdateManager.editUpdateUrl(mActivity, null);
+                return true;
+            }
+        });
         findViewById(R.id.llWp).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {

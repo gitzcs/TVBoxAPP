@@ -54,6 +54,10 @@ public class HawkConfig {
     public static final String LIVE_GROUP_INDEX = "live_group_index";
     public static final String LIVE_GROUP_LIST = "live_group_list";
     public static final String LIVE_API_URL = "live_api_url";
+    /** 自动更新的 update.json 地址；空串表示未配置、不检查更新 */
+    public static final String UPDATE_URL = "update_url";
+    /** 上次静默检查更新的时间戳（毫秒），用于 24 小时节流 */
+    public static final String UPDATE_LAST_CHECK = "update_last_check";
     public static final String M3U8_PURIFY = "m3u8_purify";
     /** 去广告（m3u8 净化）默认开启；用户手动关闭后以 Hawk 存储值为准 */
     public static final boolean DEFAULT_M3U8_PURIFY = true;

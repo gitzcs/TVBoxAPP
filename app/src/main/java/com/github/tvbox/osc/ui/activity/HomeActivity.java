@@ -316,6 +316,15 @@ public class HomeActivity extends BaseActivity {
             }
         });
         setLoadSir(this.contentLayout);
+        // 启动 10 秒后静默检查一次更新（24 小时节流；未配置更新源时是空操作）
+        mHandler.postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                if (!isActivityUnavailable()) {
+                    com.github.tvbox.osc.update.UpdateManager.checkSilently(HomeActivity.this);
+                }
+            }
+        }, 10_000);
         //mHandler.postDelayed(mFindFocus, 500);
     }
 
