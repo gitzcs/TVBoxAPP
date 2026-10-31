@@ -241,14 +241,12 @@ public final class SourceIndex {
     }
 
     /**
-     * 兜底索引：assets 读不出来时仍保留 qist/tvbox 首选地址。
+     * 兜底索引：assets 读不出来时给一个空索引，
+     * 找源仍会走 GitHub / GitLab / Gitee 的默认发现配置。
      */
     public static SourceIndex fallback() {
         SourceIndex index = new SourceIndex();
-        index.local = new ArrayList<>(Arrays.asList(
-                new Entry("qist/tvbox 可用内置源", "assets://qist_tvbox.json"),
-                new Entry("noimank/tvbox GitLab 多仓",
-                        "assets://noimank_tvboxmuti.json")));
+        index.local = new ArrayList<>();
         index.sources = new ArrayList<>();
         index.fillDefaults();
         return index;

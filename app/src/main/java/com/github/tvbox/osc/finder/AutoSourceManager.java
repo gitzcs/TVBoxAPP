@@ -639,6 +639,7 @@ public final class AutoSourceManager {
      * 当前主页配置仍在列表中时保持不变，否则才使用排名第一的可用源。
      */
     private void syncConfigs(List<Finding> findings) {
+        purgeRemovedBuiltInConfigs();
         if (findings == null || findings.isEmpty()) {
             return;
         }
@@ -717,6 +718,27 @@ public final class AutoSourceManager {
                 + " 个，当前配置 " + applied.displayName());
         if (homeChanged) {
             EventBus.getDefault().post(new RefreshEvent(RefreshEvent.TYPE_HOME_SOURCE_CHANGE));
+        }
+    }
+
+    /**
+     * 随包内置源已移除（source_index.json 的 local 已清空、assets 配置已删除），
+     * 老版本升级后配置列表里可能还残留 assets:// 条目，这里顺手清掉。
+     * 当前主页配置恰好是被清的内置源时，由 {@link #selectConfigToApply} 重新挑选。
+     */
+    private static void purgeRemovedBuiltInConfigs() {
+        List<ConfigBean> configs = ConfigManager.getConfigs();
+        boolean changed = false;
+        for (int i = configs.size() - 1; i >= 0; i--) {
+            ConfigBean bean = configs.get(i);
+            if (bean != null && bean.apiUrl != null && bean.apiUrl.trim().startsWith("assets://")) {
+                configs.remove(i);
+                changed = true;
+            }
+        }
+        if (changed) {
+            ConfigManager.saveConfigs(configs);
+            LOG.i("已清理随包内置源残留的配置项");
         }
     }
 

@@ -1,11 +1,8 @@
 {
   "version": 1,
-  "updated": "2026-10-22",
-  "note": "内置 qist/tvbox 可用采集源与 noimank 多仓索引，并在 GitHub、GitLab、Gitee 中发现更多配置。只有验证通过的源才写入配置。",
-  "local": [
-    { "name": "qist/tvbox 可用内置源", "url": "assets://qist_tvbox.json" },
-    { "name": "noimank/tvbox GitLab 多仓", "url": "assets://noimank_tvboxmuti.json" }
-  ],
+  "updated": "2026-10-31",
+  "note": "不再随包内置采集源，全部从 GitHub、GitLab、Gitee 中发现；验证通过后自动合并为本地合并源。只有验证通过的源才写入配置。",
+  "local": [],
   "sources": [],
   "github": {
     "enabled": true,

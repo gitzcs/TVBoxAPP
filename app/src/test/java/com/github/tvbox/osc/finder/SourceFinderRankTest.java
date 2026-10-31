@@ -64,16 +64,15 @@ public class SourceFinderRankTest {
     }
 
     @Test
-    public void bundledAssetWinsOverEquivalentRemoteConfig() {
+    public void assetUrlWinsOverEquivalentRemoteConfig() {
         Finding remote = make("https://example.com/qist.json", true, true, 3, 15);
-        Finding builtIn = make("assets://qist_tvbox.json", true, true, 3, 10);
-        builtIn.setOrigin(Finding.ORIGIN_LOCAL);
+        Finding asset = make("assets://qist.json", true, true, 3, 10);
 
         List<Finding> list = new ArrayList<>();
         list.add(remote);
-        list.add(builtIn);
+        list.add(asset);
 
-        assertEquals("assets://qist_tvbox.json", SourceFinder.rank(list).get(0).getUrl());
+        assertEquals("assets://qist.json", SourceFinder.rank(list).get(0).getUrl());
     }
 
     @Test
@@ -111,12 +110,8 @@ public class SourceFinderRankTest {
         String json = readBundledSourceIndex();
         SourceIndex index = SourceIndex.parse(json);
 
-        // 内置本地源必须存在（断网兜底）
-        assertFalse("asset 索引应含本地内置源", index.localEntries().isEmpty());
-        assertTrue("qist/tvbox 应作为首选内置源",
-                index.localEntries().get(0).getUrl().equals("assets://qist_tvbox.json"));
-        assertTrue("noimank GitLab 多仓应内置",
-                index.localEntries().get(1).getUrl().equals("assets://noimank_tvboxmuti.json"));
+        // 内置本地源已移除：索引的 local 必须为空，找源只走在线发现
+        assertTrue("asset 索引不应再含本地内置源", index.localEntries().isEmpty());
         assertTrue("GitLab 搜索应启用", index.gitlab().isEnabled());
         assertFalse("GitLab 搜索应含种子仓库", index.gitlab().getRepos().isEmpty());
         assertTrue("Gitee 搜索应启用", index.gitee().isEnabled());
@@ -169,9 +164,8 @@ public class SourceFinderRankTest {
     public void indexFallsBackOnGarbage() {
         for (String bad : new String[]{"", "   ", "not json", "[1,2,3]", "null", "\"str\""}) {
             SourceIndex index = SourceIndex.parse(bad);
-            assertTrue("坏输入应回落到兜底索引：" + bad, index.localEntries().size() >= 1);
-            assertTrue("兜底索引也应优先 qist/tvbox",
-                    index.localEntries().get(0).getUrl().equals("assets://qist_tvbox.json"));
+            assertTrue("坏输入应回落到兜底索引（本地为空，只走在线发现）：" + bad,
+                    index.localEntries().isEmpty());
         }
     }
 
