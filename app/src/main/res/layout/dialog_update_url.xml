@@ -37,7 +37,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="@dimen/vs_10"
             android:lineSpacingExtra="@dimen/vs_5"
-            android:text="指向一份 update.json（含 versionCode、更新说明与 APK 下载地址），推荐托管在 GitHub 仓库或 Release 上，留空则不检查更新。"
+            android:text="指向一份 update.json(含 versionCode、更新说明与 APK 下载地址)。多个地址用英文逗号分隔,依次尝试;清空则恢复内置默认(gitzcs/TVBoxApp-release)。"
             android:textColor="@color/dialog_text_primary"
             android:textSize="@dimen/ts_20" />
 

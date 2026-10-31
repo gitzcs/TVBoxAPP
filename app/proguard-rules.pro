@@ -171,6 +171,10 @@
 -keepclassmembers class com.github.tvbox.osc.bean.AbsSortJson$* {
   <fields>;
 }
+# Gson 按字段名反序列化应用内更新的 update.json（release 混淆曾重命名字段导致解析失败）。
+-keep class com.github.tvbox.osc.update.UpdateInfo {
+  <fields>;
+}
 -keep,allowobfuscation,allowoptimization class * extends com.google.gson.reflect.TypeToken
 #xstream
 -keep class com.thoughtworks.xstream.converters.extended.SubjectConverter { *; }

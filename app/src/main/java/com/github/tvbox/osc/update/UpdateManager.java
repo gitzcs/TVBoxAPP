@@ -60,6 +60,17 @@ public final class UpdateManager {
     /** 静默检查的最小间隔：24 小时。 */
     private static final long SILENT_CHECK_INTERVAL_MS = 24L * 60L * 60L * 1000L;
 
+    /**
+     * 内置默认检查地址（逗号分隔，依次尝试）。
+     *
+     * <p>指向 gitzcs/TVBoxApp-release 仓库根目录的 update.json；
+     * 镜像在前（国内可达性更好），官方 raw 兜底。用户在设置里自定义后以自定义为准，
+     * 清空自定义则回到这份默认。
+     */
+    private static final String DEFAULT_UPDATE_URLS =
+            "https://gh-proxy.com/https://raw.githubusercontent.com/gitzcs/TVBoxApp-release/main/update.json"
+                    + ",https://raw.githubusercontent.com/gitzcs/TVBoxApp-release/main/update.json";
+
     /** 下载用的临时文件名（先写 .tmp 再改名，避免半截包被装）。 */
     private static final String APK_TMP = "update.apk.tmp";
     private static final String APK_FILE = "update.apk";
@@ -85,31 +96,12 @@ public final class UpdateManager {
 
     /** 静默检查：24 小时最多一次；没有更新或出错时完全不打扰。 */
     public static void checkSilently(Activity activity) {
-        String url = Hawk.get(HawkConfig.UPDATE_URL, "");
-        if (TextUtils.isEmpty(url)) {
-            return;
-        }
-        long last = Hawk.get(HawkConfig.UPDATE_LAST_CHECK, 0L);
-        if (System.currentTimeMillis() - last < SILENT_CHECK_INTERVAL_MS) {
-            return;
-        }
+        Hawk.put(HawkConfig.UPDATE_LAST_CHECK, System.currentTimeMillis());
         doCheck(activity, true);
     }
 
-    /** 手动检查：未配置地址先弹输入框；结果无论如何都给提示。 */
+    /** 手动检查：结果无论如何都给提示。 */
     public static void checkManually(final Activity activity) {
-        String url = Hawk.get(HawkConfig.UPDATE_URL, "");
-        if (TextUtils.isEmpty(url)) {
-            editUpdateUrl(activity, new Runnable() {
-                @Override
-                public void run() {
-                    if (!TextUtils.isEmpty(Hawk.get(HawkConfig.UPDATE_URL, ""))) {
-                        doCheck(activity, false);
-                    }
-                }
-            });
-            return;
-        }
         doCheck(activity, false);
     }
 
@@ -132,9 +124,7 @@ public final class UpdateManager {
         EXECUTOR.execute(new Runnable() {
             @Override
             public void run() {
-                String url = Hawk.get(HawkConfig.UPDATE_URL, "").trim();
-                FinderResult result = FinderHttp.get(url);
-                final UpdateInfo info = result.isOk() ? UpdateInfo.parse(result.getData()) : null;
+                final UpdateInfo info = fetchUpdateInfo();
                 MAIN.post(new Runnable() {
                     @Override
                     public void run() {
@@ -158,6 +148,31 @@ public final class UpdateManager {
                 });
             }
         });
+    }
+
+    /**
+     * 拉取并解析 update.json：设置里的地址优先；多个地址（英文逗号分隔）依次尝试，
+     * 全部失败返回 null。跑在调度线程上。
+     */
+    private static UpdateInfo fetchUpdateInfo() {
+        String config = Hawk.get(HawkConfig.UPDATE_URL, "");
+        if (TextUtils.isEmpty(config.trim())) {
+            config = DEFAULT_UPDATE_URLS;
+        }
+        for (String url : config.split(",")) {
+            url = url.trim();
+            if (url.isEmpty()) {
+                continue;
+            }
+            FinderResult result = FinderHttp.get(url);
+            UpdateInfo info = result.isOk() ? UpdateInfo.parse(result.getData()) : null;
+            if (info != null) {
+                return info;
+            }
+            LOG.w("检查更新地址失败，换下一个：" + url
+                    + (result.isOk() ? "" : " - " + result.getMessage()));
+        }
+        return null;
     }
 
     /** 发现新版本的确认弹窗。 */
