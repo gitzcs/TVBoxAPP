@@ -35,6 +35,7 @@ import com.github.tvbox.osc.api.ApiConfig;
 import com.github.tvbox.osc.base.BaseActivity;
 import com.github.tvbox.osc.base.BaseLazyFragment;
 import com.github.tvbox.osc.bean.AbsSortXml;
+import com.github.tvbox.osc.bean.ConfigBean;
 import com.github.tvbox.osc.bean.Movie;
 import com.github.tvbox.osc.bean.MovieSort;
 import com.github.tvbox.osc.bean.SourceBean;
@@ -52,6 +53,7 @@ import com.github.tvbox.osc.ui.tv.widget.FixedSpeedScroller;
 import com.github.tvbox.osc.ui.tv.widget.NoScrollViewPager;
 import com.github.tvbox.osc.ui.tv.widget.ViewObj;
 import com.github.tvbox.osc.util.AppManager;
+import com.github.tvbox.osc.util.ConfigManager;
 import com.github.tvbox.osc.util.DefaultConfig;
 import com.github.tvbox.osc.util.FastClickCheckUtil;
 import com.github.tvbox.osc.util.FileUtils;
@@ -74,9 +76,11 @@ import java.lang.reflect.Field;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
+import java.util.Set;
 
 import me.jessyan.autosize.utils.AutoSizeUtils;
 
@@ -102,6 +106,7 @@ public class HomeActivity extends BaseActivity {
     private SourceBean previousHomeSource;
     private boolean homeSortLoading = false;
     private boolean refreshHomeRec = false;
+    private final Set<String> attemptedConfigIds = new LinkedHashSet<>();
     private final Handler mHandler = new Handler();
     private long mExitTime = 0;
     private boolean eventBusRegistered = false;
@@ -311,6 +316,15 @@ public class HomeActivity extends BaseActivity {
             }
         });
         setLoadSir(this.contentLayout);
+        // 启动 10 秒后静默检查一次更新（24 小时节流；未配置更新源时是空操作）
+        mHandler.postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                if (!isActivityUnavailable()) {
+                    com.github.tvbox.osc.update.UpdateManager.checkSilently(HomeActivity.this);
+                }
+            }
+        }, 10_000);
         //mHandler.postDelayed(mFindFocus, 500);
     }
 
@@ -332,6 +346,13 @@ public class HomeActivity extends BaseActivity {
                 if (absXml != null && absXml.sourceKey != null && loadingSourceKey != null && !loadingSourceKey.equals(absXml.sourceKey)) {
                     return;
                 }
+                if (!homeSortLoading && !hasHomeContent(absXml)) {
+                    if (maybeRerollEmptyRandomHome()) return;
+                    if (switchToNextConfigAfterFailure()) return;
+                }
+                if (homeSortLoading && !hasHomeContent(absXml) && maybeRerollEmptyRandomHome()) {
+                    return;
+                }
                 SourceBean home = ApiConfig.get().getHomeSourceBean();
                 showSuccess();
                 clearHomePages();
@@ -350,6 +371,8 @@ public class HomeActivity extends BaseActivity {
                 loadingSourceKey = null;
                 previousHomeName = null;
                 previousHomeSource = null;
+                randomHomeActive = false;
+                randomHomeRetryCount = 0;
             }
         });
     }
@@ -361,6 +384,7 @@ public class HomeActivity extends BaseActivity {
 
     private void initData() {
         if (dataInitOk && jarInitOk) {
+            maybeRandomizeHomeSourceOnce();
             loadHomeSort(false);
             if (hasPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE)) {
                 LOG.e("有");
@@ -417,6 +441,7 @@ public class HomeActivity extends BaseActivity {
             }
             return;
         }
+        recordCurrentConfigAttempt();
         ApiConfig.get().loadConfig(useCacheConfig, new ApiConfig.LoadConfigCallback() {
             @Override
             public void notice(String msg) {
@@ -445,67 +470,113 @@ public class HomeActivity extends BaseActivity {
             @Override
             public void error(String msg) {
                 if (msg.equalsIgnoreCase("-1")) {
-                    mHandler.post(new Runnable() {
-                        @Override
-                        public void run() {
-                            dataInitOk = true;
-                            jarInitOk = true;
-                            initData();
-                        }
-                    });
+                    if (switchToNextConfigAfterFailure()) return;
+                    showConfigError(msg);
                     return;
                 }
-                mHandler.post(new Runnable() {
-                    @Override
-                    public void run() {
-                        if (isActivityUnavailable()) {
-                            return;
-                        }
-                        if (mConfigErrorDialog == null)
-                            mConfigErrorDialog = new TipDialog(HomeActivity.this, msg, "重试", "取消", new TipDialog.OnListener() {
-                                @Override
-                                public void left() {
-                                    mHandler.post(new Runnable() {
-                                        @Override
-                                        public void run() {
-                                            dismissConfigErrorDialog();
-                                            initData();
-                                        }
-                                    });
-                                }
-
-                                @Override
-                                public void right() {
-                                    dataInitOk = true;
-                                    jarInitOk = true;
-                                    mHandler.post(new Runnable() {
-                                        @Override
-                                        public void run() {
-                                            dismissConfigErrorDialog();
-                                            initData();
-                                        }
-                                    });
-                                }
-
-                                @Override
-                                public void cancel() {
-                                    dataInitOk = true;
-                                    jarInitOk = true;
-                                    mHandler.post(new Runnable() {
-                                        @Override
-                                        public void run() {
-                                            dismissConfigErrorDialog();
-                                            initData();
-                                        }
-                                    });
-                                }
-                            });
-                        if (!mConfigErrorDialog.isShowing())
-                            mConfigErrorDialog.show();
-                    }
-                });
+                if (switchToNextConfigAfterFailure()) return;
+                showConfigError(msg);
             }
         }, this);
+    }
+
+    private boolean hasHomeContent(AbsSortXml absXml) {
+        if (absXml == null) return false;
+        if (absXml.classes != null && absXml.classes.sortList != null
+                && !absXml.classes.sortList.isEmpty()) {
+            return true;
+        }
+        if (absXml.videoList != null && !absXml.videoList.isEmpty()) {
+            return true;
+        }
+        return absXml.list != null && absXml.list.videoList != null
+                && !absXml.list.videoList.isEmpty();
+    }
+
+    private void recordCurrentConfigAttempt() {
+        ConfigBean current = ConfigManager.getHomeConfig();
+        if (current == null) {
+            current = ConfigManager.findConfigByUrl(Hawk.get(HawkConfig.API_URL, ""));
+        }
+        if (current != null && current.id != null && !current.id.isEmpty()) {
+            attemptedConfigIds.add(current.id);
+        }
+    }
+
+    private boolean switchToNextConfigAfterFailure() {
+        recordCurrentConfigAttempt();
+        for (ConfigBean candidate : ConfigManager.getEnabledConfigs()) {
+            if (candidate == null || candidate.id == null || candidate.id.isEmpty()
+                    || attemptedConfigIds.contains(candidate.id)) {
+                continue;
+            }
+            attemptedConfigIds.add(candidate.id);
+            ConfigManager.setHomeConfigId(candidate.id);
+            SourceViewModel.clearRuntimeCache();
+            ApiConfig.get().clearLoader();
+            dataInitOk = false;
+            jarInitOk = false;
+            homeSortLoading = false;
+            loadingSourceKey = null;
+            previousHomeName = null;
+            previousHomeSource = null;
+            dismissConfigErrorDialog();
+            showLoading();
+            LOG.i("首页配置加载失败，自动切换配置：" + candidate.displayName());
+            Toast.makeText(this, "当前源加载失败，切换到：" + candidate.displayName(),
+                    Toast.LENGTH_SHORT).show();
+            mHandler.post(new Runnable() {
+                @Override
+                public void run() {
+                    initData();
+                }
+            });
+            return true;
+        }
+        return false;
+    }
+
+    private void showConfigError(final String message) {
+        final String dialogMessage = message == null || message.trim().isEmpty()
+                || "-1".equals(message.trim())
+                ? "所有配置均加载失败，请检查网络或配置地址" : message;
+        mHandler.post(new Runnable() {
+            @Override
+            public void run() {
+                if (isActivityUnavailable()) return;
+                if (mConfigErrorDialog == null) {
+                    mConfigErrorDialog = new TipDialog(HomeActivity.this, dialogMessage,
+                            "重试", "取消", new TipDialog.OnListener() {
+                        @Override
+                        public void left() {
+                            dismissConfigErrorDialog();
+                            attemptedConfigIds.clear();
+                            dataInitOk = false;
+                            jarInitOk = false;
+                            initData();
+                        }
+
+                        @Override
+                        public void right() {
+                            hideConfigLoading();
+                        }
+
+                        @Override
+                        public void cancel() {
+                            hideConfigLoading();
+                        }
+                    });
+                }
+                if (!mConfigErrorDialog.isShowing()) mConfigErrorDialog.show();
+            }
+        });
+    }
+
+    private void hideConfigLoading() {
+        dismissConfigErrorDialog();
+        dataInitOk = false;
+        jarInitOk = false;
+        showSuccess();
     }
 
     private void warmSearchSpidersOnce() {
@@ -714,7 +785,8 @@ public class HomeActivity extends BaseActivity {
                 showFilterIcon((int) event.obj);
             }
         } else if (event.type == RefreshEvent.TYPE_HOME_SOURCE_CHANGE) {
-            refreshHome(false);
+            SourceViewModel.clearRuntimeCache();
+            refreshHome(true);
         }
     }
 
@@ -861,6 +933,7 @@ public class HomeActivity extends BaseActivity {
             public void click(SourceBean value, int pos) {
                 dismissSiteSwitchDialog();
                 previousHomeSource = ApiConfig.get().getHomeSourceBean();
+                randomHomeActive = false;
                 ApiConfig.get().setSourceBean(value);
                 refreshHome(false);
             }
@@ -889,9 +962,7 @@ public class HomeActivity extends BaseActivity {
 
     private void refreshHomeSort() {
         refreshHomeRec = true;
-        if (UserFragment.homeHotVodAdapter != null) {
-            UserFragment.homeHotVodAdapter.setNewData(new ArrayList<Movie.Video>());
-        }
+        UserFragment.updateHomeRecommendations(new ArrayList<Movie.Video>());
         SourceBean home = ApiConfig.get().getHomeSourceBean();
         if (home != null) {
             SourceViewModel.clearSortCache(home.getKey());
@@ -904,7 +975,7 @@ public class HomeActivity extends BaseActivity {
         refreshHomeRec = false;
         if (Hawk.get(HawkConfig.HOME_REC, HawkConfig.DEFAULT_HOME_REC) != 1) return;
         if (absXml == null || absXml.videoList == null || UserFragment.homeHotVodAdapter == null) return;
-        UserFragment.homeHotVodAdapter.setNewData(absXml.videoList);
+        UserFragment.updateHomeRecommendations(absXml.videoList);
     }
 
     private void refreshHome(final boolean restart)
@@ -936,6 +1007,76 @@ public class HomeActivity extends BaseActivity {
 
     private boolean isActivityUnavailable() {
         return isFinishing() || (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.JELLY_BEAN_MR1 && isDestroyed());
+    }
+
+    /**
+     * 每个进程只随机一次主页源：本次打开应用后第一次配置加载成功时，
+     * 从直连采集站里随机换一个主页源。配置切换/首页刷新事件不会再触发。
+     */
+    private static boolean sRandomHomePending = true;
+
+    /** 当前主页源来自随机选择；其首页内容为空时允许自动换下一个。 */
+    private boolean randomHomeActive = false;
+    private int randomHomeRetryCount = 0;
+    private static final int RANDOM_HOME_MAX_RETRY = 5;
+
+    private void maybeRandomizeHomeSourceOnce() {
+        if (!sRandomHomePending) {
+            return;
+        }
+        sRandomHomePending = false;
+        SourceBean current = ApiConfig.get().getHomeSourceBean();
+        SourceBean random = ApiConfig.get().getRandomDirectSourceBean(current == null ? null : current.getKey());
+        if (random == null || current == null || random.getKey().equals(current.getKey())) {
+            return;
+        }
+        LOG.i("本次打开随机主页源：" + random.getName());
+        randomHomeActive = true;
+        randomHomeRetryCount = 0;
+        ApiConfig.get().setSourceBean(random);
+    }
+
+    /**
+     * 随机选中的主页源首页内容为空（站点失效）时，自动换下一个随机直连站重试。
+     * 重试次数用完或没有候选时返回 false，交回原有流程（手动切源显示空页/坏配置切兜底配置）。
+     */
+    private boolean maybeRerollEmptyRandomHome() {
+        if (!randomHomeActive || randomHomeRetryCount >= RANDOM_HOME_MAX_RETRY) {
+            randomHomeActive = false;
+            return false;
+        }
+        SourceBean current = ApiConfig.get().getHomeSourceBean();
+        SourceBean next = ApiConfig.get().getRandomDirectSourceBean(current == null ? null : current.getKey());
+        if (next == null) {
+            randomHomeActive = false;
+            return false;
+        }
+        randomHomeRetryCount++;
+        LOG.i("随机主页源无内容，自动换下一个：" + next.getName());
+        ApiConfig.get().setSourceBean(next);
+        loadHomeSort(false);
+        return true;
+    }
+
+    /**
+     * 「刷新」按钮：随机换一个主页视频源并立即加载。
+     * 换到的源若首页无内容，会自动再换（见 {@link #maybeRerollEmptyRandomHome()}）。
+     */
+    public void randomSwitchHomeSource() {
+        if (isActivityUnavailable()) return;
+        SourceBean current = ApiConfig.get().getHomeSourceBean();
+        SourceBean next = ApiConfig.get().getRandomDirectSourceBean(current == null ? null : current.getKey());
+        if (next == null) {
+            Toast.makeText(this, "没有可随机切换的视频源", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        LOG.i("随机切换主页源：" + (current == null ? "无" : current.getName()) + " → " + next.getName());
+        randomHomeActive = true;
+        randomHomeRetryCount = 0;
+        previousHomeSource = current;
+        ApiConfig.get().setSourceBean(next);
+        refreshHome(false);
+        Toast.makeText(this, "已随机切换：" + next.getName(), Toast.LENGTH_SHORT).show();
     }
 
     private void dismissHomeDialogs() {

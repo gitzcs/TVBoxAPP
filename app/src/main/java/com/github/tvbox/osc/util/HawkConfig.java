@@ -45,6 +45,7 @@ public class HawkConfig {
     public static final String SUBTITLE_EXO_POSITION = "subtitle_exo_position";
     public static final String SOURCES_FOR_SEARCH = "checked_sources_for_search";
     public static final String HOME_REC_STYLE = "home_rec_style";
+    public static final boolean DEFAULT_HOME_REC_STYLE = true;
     public static final String NOW_DATE = "now_date"; //当前日期
     public static final String REMOTE_TVBOX = "remote_tvbox_host";
     public static final String IJK_CACHE_PLAY = "ijk_cache_play";
@@ -53,13 +54,20 @@ public class HawkConfig {
     public static final String LIVE_GROUP_INDEX = "live_group_index";
     public static final String LIVE_GROUP_LIST = "live_group_list";
     public static final String LIVE_API_URL = "live_api_url";
+    /** 自动更新的 update.json 地址；空串表示未配置、不检查更新 */
+    public static final String UPDATE_URL = "update_url";
+    /** 上次静默检查更新的时间戳（毫秒），用于 24 小时节流 */
+    public static final String UPDATE_LAST_CHECK = "update_last_check";
     public static final String M3U8_PURIFY = "m3u8_purify";
+    /** 去广告（m3u8 净化）默认开启；用户手动关闭后以 Hawk 存储值为准 */
+    public static final boolean DEFAULT_M3U8_PURIFY = true;
     public static final String AUTO_SWITCH_LINE = "auto_switch_line";
     public static final String SCREEN_DISPLAY = "screen_display";
     public static final String LIVE_WEB_HEADER = "live_web_header";
     public static final String DEFAULT_LOAD_LIVE = "DEFAULT_LOAD_LIVE";
     public static final String SEARCH_HISTORY = "search_history";
     public static final String DANMU_OPEN = "danmu_open";
+    public static final boolean DEFAULT_DANMU_OPEN = false;
     public static final String DANMU_MAX_LINE = "danmu_max_line";
     public static final String DANMU_SPEED = "danmu_speed";
     public static final String DANMU_ALPHA = "danmu_alpha";

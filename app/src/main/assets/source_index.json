@@ -1,0 +1,62 @@
+{
+  "version": 1,
+  "updated": "2026-10-31",
+  "note": "不再随包内置采集源，全部从 GitHub、GitLab、Gitee 中发现；验证通过后自动合并为本地合并源。只有验证通过的源才写入配置。",
+  "local": [],
+  "sources": [],
+  "github": {
+    "enabled": true,
+    "repos": [
+      "qist/tvbox@master",
+      "gaotianliuyun/gao@master"
+    ],
+    "queries": [
+      "tvbox config in:name,description",
+      "tvbox 接口 in:name,description",
+      "tvbox json in:name,description",
+      "catvod config in:name,description"
+    ],
+    "maxRepos": 8,
+    "maxFilesPerRepo": 8,
+    "guessFilenames": [
+      "jsm.json",
+      "0821.json",
+      "0825.json",
+      "0827.json",
+      "dianshi.json",
+      "config.json",
+      "api.json",
+      "tvbox.json",
+      "single.json",
+      "main.json",
+      "tvbox_config.json",
+      "json/config.json",
+      "json/jsm.json",
+      "color.json"
+    ],
+    "readmeCandidates": ["README.md", "readme.md", "README.txt"]
+  },
+  "gitlab": {
+    "enabled": true,
+    "repos": ["noimank/tvbox@main"],
+    "queries": ["tvbox", "tvbox config"],
+    "maxRepos": 3,
+    "maxFilesPerRepo": 5,
+    "guessFilenames": ["tvboxmuti.json", "tvbox.json", "config.json", "api.json", "jsm.json"],
+    "readmeCandidates": ["README.md", "readme.md", "README.txt"]
+  },
+  "gitee": {
+    "enabled": true,
+    "repos": [],
+    "queries": ["tvbox", "tvbox config", "电视盒子"],
+    "maxRepos": 3,
+    "maxFilesPerRepo": 5,
+    "guessFilenames": ["tvbox.json", "config.json", "api.json", "jsm.json", "single.json"],
+    "readmeCandidates": ["README.md", "readme.md", "README.txt"]
+  },
+  "probe": {
+    "maxSitesPerConfig": 3,
+    "budgetMs": 25000,
+    "requestTimeoutSeconds": 8
+  }
+}

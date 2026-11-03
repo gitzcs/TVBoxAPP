@@ -807,7 +807,7 @@ public class SearchActivity extends BaseActivity {
             searchPaused = false;
         }
         List<SourceBean> searchRequestList = new ArrayList<>();
-        searchRequestList.addAll(ApiConfig.get().getSourceBeanList());
+        searchRequestList.addAll(ApiConfig.get().getDedupedSourceBeanList());
         SourceBean home = ApiConfig.get().getHomeSourceBean();
         searchRequestList.remove(home);
         searchRequestList.add(0, home);

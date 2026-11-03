@@ -1,0 +1,84 @@
+# ==========================================================
+#  TVApp · .gitattributes
+#
+#  目标：仓库内**一律 LF**，检出时也不做平台转换（eol=lf）。
+#  这样 Windows / macOS / Linux 上的 diff、行号、脚本执行行为完全一致，
+#  也避免 gradlew 被写成 CRLF 后在 Linux/macOS 上 "bad interpreter"。
+# ==========================================================
+
+# ---------- 默认规则：文本文件全部 LF ----------
+* text=auto eol=lf
+
+# ---------- 源码 / 配置（显式声明，便于自查）----------
+*.java         text eol=lf
+*.kt           text eol=lf
+*.gradle       text eol=lf
+*.gradle.kts   text eol=lf
+*.properties   text eol=lf
+*.pro          text eol=lf
+*.xml          text eol=lf
+*.json         text eol=lf
+*.yml          text eol=lf
+*.yaml         text eol=lf
+*.md           text eol=lf
+*.txt          text eol=lf
+*.sh           text eol=lf
+*.html         text eol=lf
+*.css          text eol=lf
+*.js           text eol=lf
+
+# ---------- Gradle Wrapper ----------
+# gradlew 必须 LF，否则 Linux/macOS 执行报错；gradlew.bat 必须 CRLF
+gradlew        text eol=lf
+gradlew.bat    text eol=crlf
+
+# ---------- Windows 批处理 ----------
+*.bat          text eol=crlf
+*.cmd          text eol=crlf
+
+# ---------- 二进制：禁止任何换行/编码转换 ----------
+*.jar          binary
+*.war          binary
+*.aar          binary
+*.so           binary
+*.dylib        binary
+*.dll          binary
+*.dex          binary
+*.apk          binary
+*.aab          binary
+*.zip          binary
+*.gz           binary
+*.7z           binary
+*.png          binary
+*.jpg          binary
+*.jpeg         binary
+*.gif          binary
+*.webp          binary
+*.bmp          binary
+*.ico          binary
+*.ttf          binary
+*.otf          binary
+*.woff         binary
+*.woff2        binary
+*.mp3          binary
+*.mp4          binary
+*.m4a          binary
+*.wav          binary
+*.jks          binary
+*.keystore     binary
+*.p12          binary
+*.pem          binary
+*.hprof        binary
+*.prof         binary
+*.profm        binary
+
+# ---------- 合并策略 ----------
+# 生成物（若将来入库）冲突时以本分支为准，不要人工合并
+*CHANGELOG.md  merge=union
+gradle.lockfile merge=ours
+
+# ---------- 语言统计（GitHub Linguist）----------
+# 让仓库主语言正确显示为 Java，而不是把 assets/JSON 算进去
+config/src/main/assets/*.json  linguist-documentation
+docs/*.md                      linguist-documentation
+*.json                         linguist-language=JSON

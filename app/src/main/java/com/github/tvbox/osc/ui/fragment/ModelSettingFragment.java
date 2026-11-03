@@ -25,6 +25,7 @@ import com.github.tvbox.osc.base.BaseLazyFragment;
 import com.github.tvbox.osc.bean.IJKCode;
 import com.github.tvbox.osc.bean.SourceBean;
 import com.github.tvbox.osc.event.RefreshEvent;
+import com.github.tvbox.osc.ui.activity.ConfigManageActivity;
 import com.github.tvbox.osc.ui.activity.LocalFileActivity;
 import com.github.tvbox.osc.ui.activity.SettingActivity;
 import com.github.tvbox.osc.ui.adapter.ApiHistoryDialogAdapter;
@@ -37,6 +38,8 @@ import com.github.tvbox.osc.ui.dialog.DanmuApiDialog;
 import com.github.tvbox.osc.ui.dialog.SearchRemoteTvDialog;
 import com.github.tvbox.osc.ui.dialog.SelectDialog;
 import com.github.tvbox.osc.ui.dialog.XWalkInitDialog;
+import com.github.tvbox.osc.bean.ConfigBean;
+import com.github.tvbox.osc.util.ConfigManager;
 import com.github.tvbox.osc.util.DanmuHelper;
 import com.github.tvbox.osc.util.FastClickCheckUtil;
 import com.github.tvbox.osc.util.FileUtils;
@@ -121,7 +124,7 @@ public class ModelSettingFragment extends BaseLazyFragment {
         tvFastSearchText = findViewById(R.id.showFastSearchText);
         tvFastSearchText.setText(Hawk.get(HawkConfig.FAST_SEARCH_MODE, true) ? "开启" : "关闭");
         tvm3u8AdText = findViewById(R.id.m3u8AdText);
-        tvm3u8AdText.setText(Hawk.get(HawkConfig.M3U8_PURIFY, false) ? "开启" : "关闭");
+        tvm3u8AdText.setText(Hawk.get(HawkConfig.M3U8_PURIFY, HawkConfig.DEFAULT_M3U8_PURIFY) ? "开启" : "关闭");
         tvDanmuOpenText = findViewById(R.id.danmuOpenText);
         tvDanmuOpenText.setText(DanmuHelper.isOpen() ? "开启" : "关闭");
         tvDanmuApiText = findViewById(R.id.danmuApiText);
@@ -129,7 +132,8 @@ public class ModelSettingFragment extends BaseLazyFragment {
         tvAutoSwitchLineText = findViewById(R.id.autoSwitchLineText);
         tvAutoSwitchLineText.setText(Hawk.get(HawkConfig.AUTO_SWITCH_LINE, true) ? "开启" : "关闭");
         tvRecStyleText = findViewById(R.id.showRecStyleText);
-        tvRecStyleText.setText(Hawk.get(HawkConfig.HOME_REC_STYLE, false) ? "是" : "否");
+        tvRecStyleText.setText(Hawk.get(HawkConfig.HOME_REC_STYLE,
+                HawkConfig.DEFAULT_HOME_REC_STYLE) ? "是" : "否");
         tvShowPreviewText = findViewById(R.id.showPreviewText);
         tvShowPreviewText.setText(Hawk.get(HawkConfig.SHOW_PREVIEW, true) ? "开启" : "关闭");
         tvDebugOpen = findViewById(R.id.tvDebugOpen);
@@ -153,7 +157,7 @@ public class ModelSettingFragment extends BaseLazyFragment {
         tvMediaCodec.setText(Hawk.get(HawkConfig.IJK_CODEC, "硬解码"));
         tvDebugOpen.setText(Hawk.get(HawkConfig.DEBUG_OPEN, false) ? "已打开" : "已关闭");
         tvParseWebView.setText(Hawk.get(HawkConfig.PARSE_WEBVIEW, true) ? "系统自带" : "XWalkView");
-        tvApi.setText(Hawk.get(HawkConfig.API_URL, ""));
+        tvApi.setText(getCurrentConfigLabel());
         refreshApiLineText();
 
         tvDns.setText(OkGoHelper.dnsHttpsList.get(Hawk.get(HawkConfig.DOH_URL, 0)));
@@ -209,6 +213,21 @@ public class ModelSettingFragment extends BaseLazyFragment {
                 FastClickCheckUtil.check(v);
                 AboutDialog dialog = new AboutDialog(mActivity);
                 dialog.show();
+            }
+        });
+        findViewById(R.id.llCheckUpdate).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                FastClickCheckUtil.check(v);
+                com.github.tvbox.osc.update.UpdateManager.checkManually(mActivity);
+            }
+        });
+        findViewById(R.id.llCheckUpdate).setOnLongClickListener(new View.OnLongClickListener() {
+            @Override
+            public boolean onLongClick(View v) {
+                FastClickCheckUtil.check(v);
+                com.github.tvbox.osc.update.UpdateManager.editUpdateUrl(mActivity, null);
+                return true;
             }
         });
         findViewById(R.id.llWp).setOnClickListener(new View.OnClickListener() {
@@ -320,6 +339,16 @@ public class ModelSettingFragment extends BaseLazyFragment {
             }
         });
         findViewById(R.id.llApi).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                FastClickCheckUtil.check(v);
+                // 多配置管理：新增/编辑/启停/设主页源
+                ((BaseActivity) mActivity).jumpActivity(ConfigManageActivity.class);
+            }
+        });
+
+        // 保留旧入口：临时直接换一个地址（不进入多配置列表）
+        findViewById(R.id.llApiQuick).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 FastClickCheckUtil.check(v);
@@ -741,7 +770,7 @@ public class ModelSettingFragment extends BaseLazyFragment {
             @Override
             public void onClick(View v) {
                 FastClickCheckUtil.check(v);
-                boolean is_purify=Hawk.get(HawkConfig.M3U8_PURIFY, false);
+                boolean is_purify=Hawk.get(HawkConfig.M3U8_PURIFY, HawkConfig.DEFAULT_M3U8_PURIFY);
                 Hawk.put(HawkConfig.M3U8_PURIFY, !is_purify);
                 tvm3u8AdText.setText(!is_purify ? "开启" : "关闭");
             }
@@ -783,8 +812,10 @@ public class ModelSettingFragment extends BaseLazyFragment {
             @Override
             public void onClick(View v) {
                 FastClickCheckUtil.check(v);
-                Hawk.put(HawkConfig.HOME_REC_STYLE, !Hawk.get(HawkConfig.HOME_REC_STYLE, false));
-                tvRecStyleText.setText(Hawk.get(HawkConfig.HOME_REC_STYLE, false) ? "是" : "否");
+                boolean homeRecStyle = !Hawk.get(HawkConfig.HOME_REC_STYLE,
+                        HawkConfig.DEFAULT_HOME_REC_STYLE);
+                Hawk.put(HawkConfig.HOME_REC_STYLE, homeRecStyle);
+                tvRecStyleText.setText(homeRecStyle ? "是" : "否");
             }
         });
 
@@ -846,6 +877,27 @@ public class ModelSettingFragment extends BaseLazyFragment {
         }, 2500);
     }
 
+    /**
+     * 「配置地址」一栏显示的内容。
+     *
+     * <p>有主页配置时显示它的名字，否则退回当前生效地址。
+     */
+    private String getCurrentConfigLabel() {
+        ConfigBean home = ConfigManager.getHomeConfig();
+        if (home != null) {
+            return home.displayName();
+        }
+        return Hawk.get(HawkConfig.API_URL, "");
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        // 从「配置地址管理」返回后刷新显示
+        if (tvApi != null) {
+            tvApi.setText(getCurrentConfigLabel());
+        }
+    }
     private void refreshApiLineText() {
         if (tvApiLine == null) return;
         ArrayList<String> apiLines = Hawk.get(HawkConfig.API_LINE_LIST, new ArrayList<String>());

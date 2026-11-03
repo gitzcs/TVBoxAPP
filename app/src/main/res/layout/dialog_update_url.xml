@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <LinearLayout
+        android:layout_width="@dimen/vs_600"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:background="@drawable/shape_danmu_setting_bg"
+        android:orientation="vertical"
+        android:padding="@dimen/vs_30">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:text="更新源地址"
+            android:textColor="@color/dialog_text_primary"
+            android:textSize="@dimen/ts_24" />
+
+        <EditText
+            android:id="@+id/updateUrlInput"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/vs_20"
+            android:hint="https://…/update.json"
+            android:imeOptions="actionDone"
+            android:inputType="textUri"
+            android:singleLine="true"
+            android:textColor="@color/dialog_text_primary"
+            android:textColorHint="@color/color_CCFFFFFF"
+            android:textSize="@dimen/ts_22" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/vs_10"
+            android:lineSpacingExtra="@dimen/vs_5"
+            android:text="指向一份 update.json(含 versionCode、更新说明与 APK 下载地址)。多个地址用英文逗号分隔,依次尝试;清空则恢复内置默认(gitzcs/TVBoxApp-release)。"
+            android:textColor="@color/dialog_text_primary"
+            android:textSize="@dimen/ts_20" />
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:layout_marginTop="@dimen/vs_30"
+            android:orientation="horizontal">
+
+            <TextView
+                android:id="@+id/updateOkBtn"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:layout_marginRight="@dimen/vs_5"
+                android:background="@drawable/button_danmu_setting"
+                android:focusable="true"
+                android:gravity="center"
+                android:padding="@dimen/vs_10"
+                android:text="保存并检查"
+                android:textColor="@color/dialog_text_primary"
+                android:textSize="@dimen/ts_22" />
+
+            <TextView
+                android:id="@+id/updateCancelBtn"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:layout_marginLeft="@dimen/vs_5"
+                android:background="@drawable/button_danmu_setting"
+                android:focusable="true"
+                android:gravity="center"
+                android:padding="@dimen/vs_10"
+                android:text="取消"
+                android:textColor="@color/dialog_text_primary"
+                android:textSize="@dimen/ts_22" />
+        </LinearLayout>
+    </LinearLayout>
+</FrameLayout>

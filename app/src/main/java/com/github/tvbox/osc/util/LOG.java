@@ -15,8 +15,21 @@ public class LOG {
         Log.e(TAG, "" + msg);
     }
 
+    /** 打印错误并附带异常堆栈。 */
+    public static void e(String msg, Throwable th) {
+        Log.e(TAG, "" + msg, th);
+    }
+
     public static void i(String msg) {
         Log.i(TAG, "" + msg);
+    }
+
+    public static void w(String msg) {
+        Log.w(TAG, "" + msg);
+    }
+
+    public static void d(String msg) {
+        Log.d(TAG, "" + msg);
     }
 
     public static void longI(String prefix, String msg) {

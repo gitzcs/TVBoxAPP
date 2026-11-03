@@ -24,6 +24,7 @@ import com.github.tvbox.osc.bean.LiveSettingItem;
 import com.github.tvbox.osc.bean.ParseBean;
 import com.github.tvbox.osc.bean.ProxyRule;
 import com.github.tvbox.osc.bean.SourceBean;
+import com.github.tvbox.osc.finder.LocalSourceStore;
 import com.github.tvbox.osc.server.ControlManager;
 import com.github.tvbox.osc.util.AES;
 import com.github.tvbox.osc.util.AdBlocker;
@@ -47,6 +48,7 @@ import com.orhanobut.hawk.Hawk;
 import org.json.JSONObject;
 
 import java.io.BufferedReader;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -61,6 +63,7 @@ import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -75,6 +78,7 @@ import java.util.regex.Pattern;
 public class ApiConfig {
     private static ApiConfig instance;
     private final LinkedHashMap<String, SourceBean> sourceBeanList;
+    private static final Random RANDOM = new Random();
     private SourceBean mHomeSource;
     private ParseBean mDefaultParse;
     private final List<LiveChannelGroup> liveChannelGroupList;
@@ -171,7 +175,9 @@ public class ApiConfig {
         TempKey = null;
         String configUrl = "", pk = ";pk;";
         apiUrl=apiUrl.replace("file://", "clan://localhost/");
-        if (apiUrl.contains(pk)) {
+        if (apiUrl.startsWith("assets://") || LocalSourceStore.isLocal(apiUrl)) {
+            configUrl = apiUrl;
+        } else if (apiUrl.contains(pk)) {
             String[] a = apiUrl.split(pk);
             TempKey = a[1];
             if (apiUrl.startsWith("clan")){
@@ -196,8 +202,10 @@ public class ApiConfig {
             callback.error("-1");
             return;
         }
+        // 内置和本地合并源本身就在设备上，不再额外写一份缓存
+        boolean builtIn = apiUrl.startsWith("assets://") || LocalSourceStore.isLocal(apiUrl);
         File cache = new File(App.getInstance().getFilesDir().getAbsolutePath() + "/" + MD5.encode(apiUrl));
-        if (useCache && cache.exists()) {
+        if (!builtIn && useCache && cache.exists()) {
             try {
                 String json = readConfigFile(cache);
                 if (switchApiCollectionIfNeeded(apiUrl, json)) {
@@ -222,13 +230,13 @@ public class ApiConfig {
                 try {
 //                            LOG.longI("echo-ConfigJson", json);
                     if (switchApiCollectionIfNeeded(apiUrl, json)) {
-                        FileUtils.saveCache(cache,json);
+                        if (!builtIn) FileUtils.saveCache(cache,json);
                         loadConfig(false, callback, activity);
                         return;
                     }
                     clearApiLinesIfUnmatched(apiUrl);
                     parseJson(apiUrl, json);
-                    FileUtils.saveCache(cache,json);
+                    if (!builtIn) FileUtils.saveCache(cache,json);
                     callback.success();
                 } catch (Throwable th) {
                     th.printStackTrace();
@@ -375,22 +383,34 @@ public class ApiConfig {
                 String error = "";
                 okhttp3.Response response = null;
                 try {
-                    okhttp3.Request request = new okhttp3.Request.Builder()
-                            .url(requestUrl)
-                            .build();
-                    okhttp3.OkHttpClient client = OkGoHelper.getDefaultClient();
-                    if (client == null) client = com.github.catvod.net.OkHttp.client();
-                    response = client.newCall(request).execute();
-                    if (!response.isSuccessful()) {
-                        error = "HTTP " + response.code();
-                    } else if (response.body() == null) {
-                        error = "empty body";
-                    } else {
-                        result = FindResult(response.body().string(), configKey);
-                        if (apiUrl.startsWith("clan")) {
-                            result = clanContentFix(clanToAddress(apiUrl), result);
+                    if (requestUrl.startsWith("assets://")) {
+                        result = readAsset(requestUrl.substring("assets://".length()));
+                        if (TextUtils.isEmpty(result)) {
+                            error = "读取内置配置失败";
                         }
-                        result = fixContentPath(apiUrl, result);
+                    } else if (LocalSourceStore.isLocal(requestUrl)) {
+                        result = LocalSourceStore.read(App.getInstance(), requestUrl);
+                        if (TextUtils.isEmpty(result)) {
+                            error = "读取本地合并源失败，请在「视频源自动获取」重新合并";
+                        }
+                    } else {
+                        okhttp3.Request request = new okhttp3.Request.Builder()
+                                .url(requestUrl)
+                                .build();
+                        okhttp3.OkHttpClient client = OkGoHelper.getDefaultClient();
+                        if (client == null) client = com.github.catvod.net.OkHttp.client();
+                        response = client.newCall(request).execute();
+                        if (!response.isSuccessful()) {
+                            error = "HTTP " + response.code();
+                        } else if (response.body() == null) {
+                            error = "empty body";
+                        } else {
+                            result = FindResult(response.body().string(), configKey);
+                            if (apiUrl.startsWith("clan")) {
+                                result = clanContentFix(clanToAddress(apiUrl), result);
+                            }
+                            result = fixContentPath(apiUrl, result);
+                        }
                     }
                 } catch (Throwable th) {
                     error = th.getMessage();
@@ -1507,6 +1527,22 @@ public class ApiConfig {
         });
     }
 
+    private String readAsset(String path) {
+        if (TextUtils.isEmpty(path)) return null;
+        try (InputStream in = App.getInstance().getAssets().open(path)) {
+            ByteArrayOutputStream out = new ByteArrayOutputStream();
+            byte[] buffer = new byte[8192];
+            int length;
+            while ((length = in.read(buffer)) != -1) {
+                out.write(buffer, 0, length);
+            }
+            return out.toString("UTF-8");
+        } catch (Throwable th) {
+            LOG.e("读取内置配置失败: " + path, th);
+            return null;
+        }
+    }
+
     public Spider getPyCSP(String url) {
         currentLivePyKey = MD5.string2MD5(url);
         currentLiveSpider = url;
@@ -1715,12 +1751,17 @@ public class ApiConfig {
     public List<SourceBean> getSourceBeanList() {
         return new ArrayList<>(sourceBeanList.values());
     }
+
+    /**
+     * 按「后端」去重后的站点列表，规则见 {@link com.github.tvbox.osc.util.SourceDedupe}。
+     * 搜索、换源、首页站源切换都用这份列表，避免同一采集站被重复请求。
+     */
+    public List<SourceBean> getDedupedSourceBeanList() {
+        return com.github.tvbox.osc.util.SourceDedupe.dedupe(new ArrayList<>(sourceBeanList.values()));
+    }
+
     public List<SourceBean> getSwitchSourceBeanList() {
-        List<SourceBean> filteredList = new ArrayList<>();
-        for (SourceBean bean : sourceBeanList.values()) {
-            filteredList.add(bean);
-        }
-        return filteredList;
+        return getDedupedSourceBeanList();
     }
 
     private List<SourceBean> searchSourceBeanList;
@@ -1728,7 +1769,7 @@ public class ApiConfig {
         if(searchSourceBeanList.isEmpty()){
             LOG.i("echo-第一次getSearchSourceBeanList");
             searchSourceBeanList = new ArrayList<>();
-            for (SourceBean bean : sourceBeanList.values()) {
+            for (SourceBean bean : getDedupedSourceBeanList()) {
                 if (bean.isSearchable()) {
                     searchSourceBeanList.add(bean);
                 }
@@ -1747,6 +1788,31 @@ public class ApiConfig {
 
     public SourceBean getHomeSourceBean() {
         return mHomeSource == null ? emptyHome : mHomeSource;
+    }
+
+    /**
+     * 随机挑一个直连采集站（type 0/1）作为主页源候选。
+     *
+     * <p>只在去重后的直连站里挑：这些站不需要加载 jar，首页内容稳定可出；
+     * 爬虫站首切要下载 jar，慢且容易超时，不适合随机落点。
+     * {@code excludeKey} 为当前站 key（可为 null），避免随机到原站点。
+     * 没有候选时返回 null。
+     */
+    public SourceBean getRandomDirectSourceBean(String excludeKey) {
+        ArrayList<SourceBean> candidates = new ArrayList<>();
+        for (SourceBean bean : getDedupedSourceBeanList()) {
+            if (bean.getType() != 0 && bean.getType() != 1) {
+                continue;
+            }
+            if (excludeKey != null && excludeKey.equals(bean.getKey())) {
+                continue;
+            }
+            candidates.add(bean);
+        }
+        if (candidates.isEmpty()) {
+            return null;
+        }
+        return candidates.get(RANDOM.nextInt(candidates.size()));
     }
 
     public List<LiveChannelGroup> getChannelGroupList() {

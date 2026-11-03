@@ -959,7 +959,7 @@ public class PlayFragment extends BaseLazyFragment {
         startSwitchLinePlayTimeout();
         url = attachProxySiteKey(url);
         if(!url.startsWith("data:application"))EventBus.getDefault().post(new RefreshEvent(RefreshEvent.TYPE_REFRESH, url));//更新播放地址
-        if (!Hawk.get(HawkConfig.M3U8_PURIFY, false)) {
+        if (!Hawk.get(HawkConfig.M3U8_PURIFY, HawkConfig.DEFAULT_M3U8_PURIFY)) {
             goPlayUrl(url,headers);
             return;
         }

@@ -15,6 +15,7 @@ import android.graphics.drawable.Drawable;
 import android.os.Build;
 import android.os.Handler;
 import android.os.Message;
+import android.text.TextUtils;
 import android.view.KeyEvent;
 import android.view.MotionEvent;
 import android.view.View;
@@ -1966,7 +1967,16 @@ public class VodController extends BaseController {
             LOG.i("echo-m3u8内容解析：未检测到广告");
             listener.startPlayUrl(url, headers);
         } else {
-            String proxyUrl = ControlManager.get().getAddress(true) + "proxyM3u8";
+            String proxyAddress = ControlManager.get().getAddress(true);
+            if (TextUtils.isEmpty(proxyAddress)) {
+                // 本地服务起不来（端口耗尽等）时不能把净化结果交给播放器，
+                // 否则 proxyUrl 会退化成裸路径 "proxyM3u8" 直接播放失败。
+                LOG.e("echo-m3u8内容解析：本地代理不可用，放弃去广告直接播放");
+                RemoteServer.m3u8Content = null;
+                listener.startPlayUrl(url, headers);
+                return;
+            }
+            String proxyUrl = proxyAddress + "proxyM3u8";
             listener.onM3u8ProxyUrl(proxyUrl, url);
             listener.startPlayUrl(proxyUrl, headers);
             Toast.makeText(getContext(), "已移除视频广告 "+M3u8.currentAdCount+" 条", Toast.LENGTH_SHORT).show();

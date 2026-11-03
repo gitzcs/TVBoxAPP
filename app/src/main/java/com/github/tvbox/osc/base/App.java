@@ -9,6 +9,8 @@ import com.github.tvbox.osc.callback.LoadingCallback;
 import com.github.tvbox.osc.data.AppDataManager;
 import com.github.tvbox.osc.server.ControlManager;
 import com.github.tvbox.osc.util.AppManager;
+import com.github.tvbox.osc.finder.AutoSourceManager;
+import com.github.tvbox.osc.util.ConfigManager;
 import com.github.tvbox.osc.util.EpgUtil;
 import com.github.tvbox.osc.util.FileUtils;
 import com.github.tvbox.osc.util.HawkConfig;
@@ -59,6 +61,11 @@ public class App extends MultiDexApplication {
         PlayerHelper.init();
         QuickJSLoader.init();
         FileUtils.cleanPlayerCache();
+        // 旧版单一配置地址 → 多配置列表（首次启动时执行一次）
+        ConfigManager.migrateFromLegacy();
+        // 视频源自动获取：启动即用本地缓存，后台定时联网刷新。
+        // 必须放在 OkGoHelper.init() 之后——探针要用已初始化的 OkHttp 客户端。
+        AutoSourceManager.get(this).start();
     }
 
     private void initParams() {

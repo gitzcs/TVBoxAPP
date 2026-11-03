@@ -40,6 +40,20 @@
         <item name="android:windowFullscreen">true</item>
     </style>
 
+    <style name="ConfigActionButton">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_marginTop">@dimen/vs_10</item>
+        <item name="android:background">@drawable/button_danmu_setting</item>
+        <item name="android:clickable">true</item>
+        <item name="android:focusable">true</item>
+        <item name="android:gravity">center</item>
+        <item name="android:minHeight">@dimen/vs_50</item>
+        <item name="android:padding">@dimen/vs_10</item>
+        <item name="android:textColor">@color/dialog_text_primary</item>
+        <item name="android:textSize">@dimen/ts_22</item>
+    </style>
+
     <style name="epg_window_btn">
         <item name="android:gravity">center</item>
         <item name="android:background">@drawable/item_bg_selector_right</item>
