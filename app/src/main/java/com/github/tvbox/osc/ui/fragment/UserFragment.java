@@ -13,6 +13,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.lifecycle.Observer;
 import androidx.lifecycle.ViewModelProvider;
+import androidx.recyclerview.widget.RecyclerView;
 
 import com.chad.library.adapter.base.BaseQuickAdapter;
 import com.github.tvbox.osc.R;
@@ -388,9 +389,24 @@ public class UserFragment extends BaseLazyFragment implements View.OnClickListen
             }
         }
         homeHotVodAdapter.setNewData(result);
-        if (tvHotList.getLayoutManager() != null) {
+        RecyclerView.LayoutManager lm = tvHotList.getLayoutManager();
+        if (lm == null) {
+            return;
+        }
+        // 「主页」标签上按“上”会清空并重载本列表；TvRecyclerView 的 scrollToPosition
+        // 会被「选中项居中」逻辑带偏，实测表现为列表上方出现整屏空白、海报被顶出屏幕。
+        // 这里临时关掉居中，用 offset 硬锚定回顶部并复位选中位置，再恢复原设置。
+        boolean centered = tvHotList.isSelectedItemCentered();
+        tvHotList.setSelectedItemAtCentered(false);
+        if (lm instanceof androidx.recyclerview.widget.GridLayoutManager) {
+            ((androidx.recyclerview.widget.GridLayoutManager) lm).scrollToPositionWithOffset(0, 0);
+        } else if (lm instanceof androidx.recyclerview.widget.LinearLayoutManager) {
+            ((androidx.recyclerview.widget.LinearLayoutManager) lm).scrollToPositionWithOffset(0, 0);
+        } else {
             tvHotList.scrollToPosition(0);
         }
+        tvHotList.setSelectedPosition(0);
+        tvHotList.setSelectedItemAtCentered(centered);
     }
 
     public static void updateHomeRecommendations(List<Movie.Video> videos) {
