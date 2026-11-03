@@ -25,6 +25,7 @@ import com.github.tvbox.osc.bean.ParseBean;
 import com.github.tvbox.osc.bean.ProxyRule;
 import com.github.tvbox.osc.bean.SourceBean;
 import com.github.tvbox.osc.finder.LocalSourceStore;
+import com.github.tvbox.osc.finder.SourceFinder;
 import com.github.tvbox.osc.server.ControlManager;
 import com.github.tvbox.osc.util.AES;
 import com.github.tvbox.osc.util.AdBlocker;
@@ -455,6 +456,35 @@ public class ApiConfig {
         });
     }
 
+    /** 依次尝试主地址与镜像地址下载 jar；全部失败后把结果交回上层（走原有缓存/重试逻辑）。 */
+    private void downloadJarWithMirrors(final String url, final List<String> mirrors, final boolean isJarInImg,
+                                        final File cache, final JarDownloadCallback callback) {
+        downloadMirrorAttempt(url, mirrors, 0, isJarInImg, cache, callback);
+    }
+
+    private void downloadMirrorAttempt(final String url, final List<String> mirrors, final int index,
+                                       final boolean isJarInImg, final File cache,
+                                       final JarDownloadCallback callback) {
+        final String attempt = index == 0 ? url : mirrors.get(index - 1);
+        if (index > 0) {
+            LOG.i("echo-load jar mirror:" + attempt);
+        }
+        downloadJarAsync(attempt, isJarInImg, cache, new JarDownloadCallback() {
+            @Override
+            public void complete(File file, String error) {
+                if (file != null && file.exists()) {
+                    callback.complete(file, error);
+                    return;
+                }
+                if (index < mirrors.size()) {
+                    downloadMirrorAttempt(url, mirrors, index + 1, isJarInImg, cache, callback);
+                    return;
+                }
+                callback.complete(file, error);
+            }
+        });
+    }
+
     private void downloadJarAsync(String url, boolean isJarInImg, File cache, JarDownloadCallback callback) {
         jarLoadExecutor.execute(new Runnable() {
             @Override
@@ -600,7 +630,9 @@ public class ApiConfig {
         jarUrl = jarUrl.replace("img+", "");
         LOG.i("echo-load jar start:"+jarUrl);
         final String requestUrl = jarUrl;
-        downloadJarAsync(requestUrl, isJarInImg, cache, new JarDownloadCallback() {
+        // GitHub raw 在部分网络环境不可达：主地址失败时依次尝试 jsDelivr / gitmirror 镜像
+        final List<String> jarMirrors = SourceFinder.mirrorsFor(requestUrl);
+        downloadJarWithMirrors(requestUrl, jarMirrors, isJarInImg, cache, new JarDownloadCallback() {
             private boolean retryLoad(String reason) {
                 if (retryCount >= LOAD_JAR_MAX_RETRY) return false;
                 if (cache.exists() && !cache.delete()) {
