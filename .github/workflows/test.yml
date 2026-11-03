@@ -92,10 +92,12 @@ jobs:
           sed -i '$a\RELEASE_KEY_PASSWORD=${{ secrets.RELEASE_KEY_PASSWORD }}'   ./gradle.properties
           sed -i 's/^#\(org.gradle.jvmargs=.*\)/\1/'        ./gradle.properties
       - uses: actions/setup-java@v4
-        if: ${{ matrix.java_ver }}
         with:
           distribution: temurin
-          java-version: ${{ matrix.java_ver }}
+          # 固定 JDK 版本：ubuntu-latest 已迁移到 Ubuntu 26.04（默认 Java 25），
+          # 上游 Gradle 7.5 最高只支持 Java 18，不固定会导致构建启动即失败。
+          # 矩阵项可显式提供 java_ver 覆盖默认值。
+          java-version: ${{ matrix.java_ver || 17 }}
       - uses: gradle/actions/setup-gradle@v4
         if: ${{ env.commit }}
       - name: Build With Gradle
