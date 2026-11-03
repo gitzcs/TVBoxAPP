@@ -142,17 +142,31 @@ public final class RepoScanner {
      * 探测仓库默认分支：先试 {@code main}，再试 {@code master}。
      *
      * <p>只在种子仓库没写分支时才调用。用 raw 上的 README 探路（不走 API、不消耗配额），
-     * 两次请求都失败就回落到 {@code main}。
+     * raw 不可达时（部分网络屏蔽 GitHub）改走 jsDelivr 镜像；两次请求都失败就回落到 {@code main}。
      */
     public static String detectBranch(String fullName) {
         for (String branch : new String[]{"main", "master"}) {
-            FinderResult r = FinderHttp.get(rawUrl(fullName, branch, "README.md"), null,
-                    FinderHttp.PROBE_TIMEOUT_SECONDS);
-            if (r.isOk()) {
+            if (branchReachable(fullName, branch)) {
                 return branch;
             }
         }
         return "main";
+    }
+
+    /** 用 README 探测分支是否存在；raw 不通时走镜像，404 说明分支确实不存在。 */
+    private static boolean branchReachable(String fullName, String branch) {
+        String[] urls = {rawUrl(fullName, branch, "README.md"),
+                mirrorUrl(fullName, branch, "README.md")};
+        for (String url : urls) {
+            FinderResult r = FinderHttp.get(url, null, FinderHttp.PROBE_TIMEOUT_SECONDS);
+            if (r.isOk()) {
+                return true;
+            }
+            if (r.isNotFound()) {
+                return false;
+            }
+        }
+        return false;
     }
 
     /** 一次扫描的结果。 */
@@ -408,12 +422,22 @@ public final class RepoScanner {
     private List<String> readmeUrls(String fullName, String branch) {
         List<String> out = new ArrayList<>();
         for (String file : cfg.getReadmeCandidates()) {
-            FinderResult r = FinderHttp.get(rawUrl(fullName, branch, file), null);
-            if (!r.isOk()) {
-                continue;
+            // raw 与 jsDelivr 镜像各试一次：部分网络屏蔽 raw.githubusercontent.com
+            String[] urls = {rawUrl(fullName, branch, file), mirrorUrl(fullName, branch, file)};
+            for (String url : urls) {
+                FinderResult r = FinderHttp.get(url, null);
+                if (!r.isOk()) {
+                    if (r.isNotFound()) {
+                        break; // 文件确定不存在，镜像也不必再试
+                    }
+                    continue;
+                }
+                out.addAll(extractConfigUrls(r.getData()));
+                break; // 读到第一个就够
             }
-            out.addAll(extractConfigUrls(r.getData()));
-            break; // 读到第一个就够
+            if (!out.isEmpty()) {
+                break;
+            }
         }
         return out;
     }

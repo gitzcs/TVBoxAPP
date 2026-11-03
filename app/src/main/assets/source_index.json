@@ -47,7 +47,7 @@
   },
   "gitee": {
     "enabled": true,
-    "repos": [],
+    "repos": ["gaoops404/tvbox-config@main"],
     "queries": ["tvbox", "tvbox config", "电视盒子"],
     "maxRepos": 3,
     "maxFilesPerRepo": 5,
