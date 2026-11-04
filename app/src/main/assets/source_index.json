@@ -1,7 +1,7 @@
 {
-  "version": 1,
-  "updated": "2026-10-31",
-  "note": "不再随包内置采集源，全部从 GitHub、GitLab、Gitee 中发现；验证通过后自动合并为本地合并源。只有验证通过的源才写入配置。",
+  "version": 2,
+  "updated": "2026-11-04",
+  "note": "不再随包内置采集源，从 bdnb.cn 索引站、GitHub、GitLab、Gitee 中发现；验证通过后自动合并为本地合并源。只有验证通过的源才写入配置。",
   "local": [],
   "sources": [],
   "github": {
@@ -36,6 +36,24 @@
     ],
     "readmeCandidates": ["README.md", "readme.md", "README.txt"]
   },
+  "indexSites": [
+    {
+      "enabled": true,
+      "name": "bdnb.cn",
+      "baseUrl": "https://bdnb.cn",
+      "queries": [
+        "tvbox config in:name,description",
+        "tvbox 接口 in:name,description",
+        "tvbox json in:name,description",
+        "影视仓"
+      ],
+      "maxRepos": 8,
+      "perPage": 12,
+      "timeoutSeconds": 10,
+      "sort": "updated",
+      "order": "desc"
+    }
+  ],
   "gitlab": {
     "enabled": true,
     "repos": ["noimank/tvbox@main"],

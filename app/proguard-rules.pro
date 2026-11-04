@@ -256,7 +256,7 @@
 # ---- Sprint 1~3 新增模块: 持久化模型的混淆规则 ----
 # 下列类通过 Gson(SourceIndex / Finding) 或 Java 序列化(Hawk: CacheTask / ConfigBean)
 # 持久化, 类名与字段名会作为 JSON key 或写进对象流。默认 minify 会重命名它们, 导致:
-#   1) release 包读 assets/source_index.json 时字段全部落空 —— Github.queries 变空,
+  #   1) release 包读 assets/source_index.json 时字段全部落空 —— Github.queries / IndexSite 变空,
 #      自动找源静默失效(parse() 用 fillDefaults() 兜底, 不抛异常, 日志还显示"已加载");
 #   2) 跨版本升级时旧缓存 / 多配置反序列化失败(隐式 serialVersionUID 随类名与字段签名变化)。
 # debug 包 minifyEnabled false, 故只在 release 暴露; 已用 java32Release 的 mapping.txt 核实。

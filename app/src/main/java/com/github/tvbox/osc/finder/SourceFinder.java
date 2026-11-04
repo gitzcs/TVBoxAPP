@@ -24,9 +24,9 @@ import java.util.regex.Pattern;
  *
  * <p>两个通道：
  * <ol>
- *     <li><b>内置索引</b>（{@code assets/source_index.json}）——首选通道，
- *         随包声明 qist/tvbox 等优先验证地址，不依赖 GitHub 仓库搜索</li>
- *     <li><b>GitHub 在线发现</b>——搜索仓库 → 扫描仓库 → 得到候选地址</li>
+ *     <li><b>内置索引</b>（{@code assets/source_index.json}）——随包声明搜索参数、
+ *         种子仓库和第三方索引站，不内置具体配置</li>
+ *     <li><b>GitHub 在线发现</b>——索引站或 GitHub 搜索仓库 → 扫描仓库 → 得到候选地址</li>
  * </ol>
  *
  * <p>所有候选都交给 {@link FinderProbe} 逐个验证，验证通过的才叫「可用」。
@@ -187,7 +187,7 @@ public final class SourceFinder {
             collectCodeHost(CodeHostScanner.Platform.GITEE, index.gitee(),
                     giteeCandidates, note, listener);
         } else if (!includeGithub) {
-            note.append("已跳过 GitHub/GitLab/Gitee 在线发现（仅用内置索引）");
+            note.append("已跳过 GitHub/索引站/GitLab/Gitee 在线发现（仅用内置索引）");
         }
         List<Candidate> onlineCandidates = new ArrayList<>();
         mergePlatformCandidates(onlineCandidates, githubCandidates, gitlabCandidates, giteeCandidates);
@@ -333,11 +333,56 @@ public final class SourceFinder {
         }
         int seedCount = repos.size();
 
-        // 通道 B：Search API 填满剩余名额（最容易被限流的一环，放后面）
+        // 通道 B：第三方索引站优先，GitHub Search API 兜底。
+        // 国内网络下 api.github.com 经常超时或 403，索引站能稳定返回同样的仓库元数据。
         if (repos.size() < maxRepos) {
-            List<String> queries = gh.getQueries();
+            List<SourceIndex.IndexSite> indexSites = index.indexSites();
+            Set<String> failedIndexSites = new LinkedHashSet<>();
+            for (SourceIndex.IndexSite site : indexSites) {
+                if (repos.size() >= maxRepos) {
+                    break;
+                }
+                List<String> siteQueries = site.getQueries();
+                if (siteQueries.isEmpty()) {
+                    siteQueries = gh.getQueries();
+                }
+                int queryLimit = Math.min(4, siteQueries.size());
+                int siteAdded = 0;
+                for (int i = 0; i < queryLimit && repos.size() < maxRepos; i++) {
+                    String q = siteQueries.get(i);
+                    int remainingSlots = maxRepos - repos.size();
+                    int remainingQueries = queryLimit - i;
+                    int siteSlots = site.getMaxRepos() - siteAdded;
+                    int requestMax = Math.min(siteSlots,
+                            Math.max(1, (remainingSlots + remainingQueries - 1) / remainingQueries));
+                    if (requestMax <= 0) {
+                        break;
+                    }
+
+                    stage(listener, "搜索 " + site.getName() + "（索引站）：" + q);
+                    SearchIndexScanner.Result result = SearchIndexScanner.search(site, q, requestMax);
+                    if (!result.isOk()) {
+                        if (failedIndexSites.add(site.getBaseUrl())) {
+                            appendNote(note, site.getName() + " 搜索不可用："
+                                    + (result.message() == null ? "未知错误" : result.message()));
+                        }
+                        break;
+                    }
+                    for (RepoScanner.Repo r : result.repos()) {
+                        if (repos.size() >= maxRepos) {
+                            break;
+                        }
+                        if (seenRepos.add(r.fullName())) {
+                            repos.add(r);
+                            siteAdded++;
+                        }
+                    }
+                }
+            }
+
+            // 索引站填不满时再访问 GitHub Search，避免每次都在坏网络上先等 15 秒。
             int tried = 0;
-            for (String q : queries) {
+            for (String q : gh.getQueries()) {
                 if (tried >= 3 || repos.size() >= maxRepos) {
                     break;
                 }
@@ -346,7 +391,9 @@ public final class SourceFinder {
                 List<RepoScanner.Repo> found = RepoScanner.searchRepos(q, maxRepos);
                 if (found.isEmpty()) {
                     appendNote(note, "GitHub 搜索无结果或被限流"
-                            + (seedCount > 0 ? "，本次只扫种子仓库" : "，已降级为仅用内置索引"));
+                            + (repos.size() > seedCount
+                            ? "，继续使用索引站和种子仓库结果"
+                            : seedCount > 0 ? "，本次只扫种子仓库" : "，已降级为仅用内置索引"));
                     break;
                 }
                 for (RepoScanner.Repo r : found) {

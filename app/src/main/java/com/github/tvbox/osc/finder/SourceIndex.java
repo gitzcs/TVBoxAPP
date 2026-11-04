@@ -17,8 +17,8 @@ import java.util.List;
 /**
  * 内置源索引（{@code assets/source_index.json}）。
  *
- * <p>这是「自动找源」的离线基石：即使 GitHub 完全访问不通，
- * 也总有本地内置的配置可用，并且内置的公开地址可以逐个验证。
+ * <p>这是「自动找源」的配置基石：它声明搜索关键词、索引站、种子仓库和验证参数。
+ * 具体配置不在安装包内写死，发现结果仍要逐条联网验证。
  *
  * <p>索引文件而不是代码里写死，是为了以后不改代码就能换地址。
  */
@@ -65,6 +65,7 @@ public final class SourceIndex {
     private Github github;
     private Gitlab gitlab;
     private Gitee gitee;
+    private List<IndexSite> indexSites;
     private Probe probe;
 
     /** GitLab / Gitee 等代码托管平台的通用发现参数。 */
@@ -112,6 +113,68 @@ public final class SourceIndex {
     }
 
     public static final class Gitee extends CodeHost {
+    }
+
+    /**
+     * 第三方 GitHub 搜索索引站。
+     *
+     * <p>只负责返回仓库元数据，配置仍由 {@link RepoScanner} 扫描并经
+     * {@link FinderProbe} 实际验证。GitHub Search API 在不稳定网络下容易超时或被限流，
+     * 因此索引站是搜索通道的优先降级项，而不是配置内容的可信来源。
+     */
+    public static final class IndexSite {
+        private boolean enabled = true;
+        private String name;
+        private String baseUrl;
+        private List<String> queries;
+        private int maxRepos = 6;
+        private int perPage = 12;
+        private int timeoutSeconds = 10;
+        private String sort = "updated";
+        private String order = "desc";
+
+        public boolean isEnabled() {
+            return enabled;
+        }
+
+        public String getName() {
+            return name == null || name.trim().isEmpty() ? getBaseUrl() : name.trim();
+        }
+
+        public String getBaseUrl() {
+            if (baseUrl == null) {
+                return "";
+            }
+            String value = baseUrl.trim();
+            while (value.endsWith("/")) {
+                value = value.substring(0, value.length() - 1);
+            }
+            return value;
+        }
+
+        public List<String> getQueries() {
+            return queries == null ? Collections.<String>emptyList() : queries;
+        }
+
+        public int getMaxRepos() {
+            return maxRepos <= 0 ? 6 : maxRepos;
+        }
+
+        public int getPerPage() {
+            return perPage <= 0 ? 12 : Math.min(perPage, 30);
+        }
+
+        public int getTimeoutSeconds() {
+            return timeoutSeconds <= 0 ? 10 : Math.min(timeoutSeconds, 30);
+        }
+
+        public String getSort() {
+            return sort == null || sort.trim().isEmpty() ? "updated" : sort.trim();
+        }
+
+        public String getOrder() {
+            return order == null || order.trim().isEmpty() ? "desc" : order.trim();
+        }
     }
 
     /** GitHub 发现参数。 */
@@ -268,6 +331,9 @@ public final class SourceIndex {
         if (gitee == null) {
             gitee = new Gitee();
         }
+        if (indexSites == null) {
+            indexSites = new ArrayList<>();
+        }
         if (probe == null) {
             probe = new Probe();
         }
@@ -295,6 +361,20 @@ public final class SourceIndex {
 
     public Gitee gitee() {
         return gitee == null ? (gitee = new Gitee()) : gitee;
+    }
+
+    public List<IndexSite> indexSites() {
+        if (indexSites == null) {
+            indexSites = new ArrayList<>();
+        }
+        List<IndexSite> out = new ArrayList<>();
+        for (IndexSite site : indexSites) {
+            if (site != null && site.isEnabled()
+                    && site.getBaseUrl().startsWith("https://")) {
+                out.add(site);
+            }
+        }
+        return out;
     }
 
     public Probe probe() {

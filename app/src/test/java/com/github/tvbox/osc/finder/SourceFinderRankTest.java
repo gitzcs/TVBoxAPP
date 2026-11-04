@@ -116,6 +116,11 @@ public class SourceFinderRankTest {
         assertFalse("GitLab 搜索应含种子仓库", index.gitlab().getRepos().isEmpty());
         assertTrue("Gitee 搜索应启用", index.gitee().isEnabled());
         assertFalse("Gitee 搜索应含查询词", index.gitee().getQueries().isEmpty());
+        assertFalse("GitHub 搜索索引站不能为空", index.indexSites().isEmpty());
+        SourceIndex.IndexSite site = index.indexSites().get(0);
+        assertTrue("索引站必须使用 HTTPS", site.getBaseUrl().startsWith("https://"));
+        assertFalse("索引站搜索关键词不能为空", site.getQueries().isEmpty());
+        assertEquals("bdnb.cn", site.getName());
 
         // 核心：queries 不能为空 —— 这正是 release 混淆曾静默清空的字段
         assertTrue("github.enabled 应为 true", index.github().isEnabled());

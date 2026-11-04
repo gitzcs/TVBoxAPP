@@ -38,7 +38,7 @@ import java.util.regex.Pattern;
 
 /**
  * 合并源导出工具（产物不入库，仅代码入库）：在本机 JVM 上用项目真实的扫描/解密/合并代码，
- * 从 GitHub/GitLab/Gitee 找出当前可用配置并生成「合并后的本地源」同格式文件，
+ * 从 GitHub 索引站/GitHub/GitLab/Gitee 找出当前可用配置并生成「合并后的本地源」同格式文件，
  * 用于托管到 Gitee 等国内可达位置（用法见 docs/合并源导出工具.md）。
  *
  * <p>运行：{@code gradlew :app:testJavaDebugUnitTest --tests "com.github.tvbox.osc.finder.MergedSourceExportTest"}
@@ -205,6 +205,36 @@ public class MergedSourceExportTest {
             RepoScanner.Repo seed = RepoScanner.parseSeed(spec);
             if (seed != null && seen.add(seed.fullName())) repos.add(seed);
         }
+        for (SourceIndex.IndexSite site : index.indexSites()) {
+            if (repos.size() >= gh.getMaxRepos()) break;
+            List<String> siteQueries = site.getQueries();
+            if (siteQueries.isEmpty()) siteQueries = gh.getQueries();
+            int queryLimit = Math.min(4, siteQueries.size());
+            int siteAdded = 0;
+            for (int i = 0; i < queryLimit && repos.size() < gh.getMaxRepos(); i++) {
+                String q = siteQueries.get(i);
+                int remainingSlots = gh.getMaxRepos() - repos.size();
+                int remainingQueries = queryLimit - i;
+                int siteSlots = site.getMaxRepos() - siteAdded;
+                int requestMax = Math.min(siteSlots,
+                        Math.max(1, (remainingSlots + remainingQueries - 1) / remainingQueries));
+                if (requestMax <= 0) break;
+                SearchIndexScanner.Result result = SearchIndexScanner.search(site, q, requestMax);
+                if (!result.isOk()) {
+                    System.out.println("[export] 索引站搜索失败（" + site.getName() + "）："
+                            + result.message());
+                    break;
+                }
+                for (RepoScanner.Repo r : result.repos()) {
+                    if (repos.size() >= gh.getMaxRepos()) break;
+                    if (seen.add(r.fullName())) {
+                        repos.add(r);
+                        siteAdded++;
+                    }
+                }
+            }
+        }
+
         int tried = 0;
         for (String q : gh.getQueries()) {
             if (tried >= 2 || repos.size() >= gh.getMaxRepos()) break;
