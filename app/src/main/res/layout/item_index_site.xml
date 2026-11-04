@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 搜索索引站列表项 -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginBottom="@dimen/vs_8"
+    android:background="@drawable/shape_setting_model_focus"
+    android:clickable="true"
+    android:focusable="true"
+    android:gravity="center_vertical"
+    android:orientation="horizontal"
+    android:padding="@dimen/vs_15">
+
+    <TextView
+        android:id="@+id/tvIndexSiteEnabled"
+        android:layout_width="@dimen/vs_50"
+        android:layout_height="@dimen/vs_50"
+        android:background="@drawable/button_dialog_vod"
+        android:gravity="center"
+        android:text="✓"
+        android:textColor="@android:color/white"
+        android:textSize="@dimen/ts_24"
+        android:textStyle="bold" />
+
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginLeft="@dimen/vs_15"
+        android:layout_marginStart="@dimen/vs_15"
+        android:layout_marginRight="@dimen/vs_15"
+        android:layout_marginEnd="@dimen/vs_15"
+        android:layout_weight="1"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/tvIndexSiteName"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:ellipsize="marquee"
+            android:singleLine="true"
+            android:textColor="@android:color/white"
+            android:textSize="@dimen/ts_22"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/tvIndexSiteUrl"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:ellipsize="marquee"
+            android:singleLine="true"
+            android:textColor="@color/color_FFFFFF_70"
+            android:textSize="@dimen/ts_16" />
+
+        <TextView
+            android:id="@+id/tvIndexSiteInfo"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:ellipsize="marquee"
+            android:singleLine="true"
+            android:textColor="@color/color_FFFFFF_70"
+            android:textSize="@dimen/ts_16" />
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/btnIndexSiteEdit"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:background="@drawable/button_dialog_main"
+        android:clickable="true"
+        android:focusable="false"
+        android:padding="@dimen/vs_10"
+        android:text="编辑"
+        android:textColor="@android:color/white"
+        android:textSize="@dimen/ts_20" />
+
+    <TextView
+        android:id="@+id/btnIndexSiteDelete"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginLeft="@dimen/vs_20"
+        android:layout_marginStart="@dimen/vs_20"
+        android:background="@drawable/button_dialog_vod"
+        android:clickable="true"
+        android:focusable="false"
+        android:padding="@dimen/vs_10"
+        android:text="删除"
+        android:textColor="@color/color_FFB800"
+        android:textSize="@dimen/ts_20" />
+</LinearLayout>

@@ -12,6 +12,7 @@
         android:padding="@dimen/vs_30">
 
         <TextView
+            android:id="@+id/tvActionTitle"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:gravity="center"

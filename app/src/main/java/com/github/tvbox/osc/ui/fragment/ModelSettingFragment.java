@@ -25,7 +25,10 @@ import com.github.tvbox.osc.base.BaseLazyFragment;
 import com.github.tvbox.osc.bean.IJKCode;
 import com.github.tvbox.osc.bean.SourceBean;
 import com.github.tvbox.osc.event.RefreshEvent;
+import com.github.tvbox.osc.finder.IndexSiteStore;
+import com.github.tvbox.osc.finder.SourceIndex;
 import com.github.tvbox.osc.ui.activity.ConfigManageActivity;
+import com.github.tvbox.osc.ui.activity.IndexSiteManageActivity;
 import com.github.tvbox.osc.ui.activity.LocalFileActivity;
 import com.github.tvbox.osc.ui.activity.SettingActivity;
 import com.github.tvbox.osc.ui.adapter.ApiHistoryDialogAdapter;
@@ -84,6 +87,7 @@ public class ModelSettingFragment extends BaseLazyFragment {
     private TextView tvRender;
     private TextView tvScale;
     private TextView tvApi;
+    private TextView tvIndexSite;
     private TextView tvApiLine;
     private View llApi;
     private View llApiHistory;
@@ -146,6 +150,7 @@ public class ModelSettingFragment extends BaseLazyFragment {
         llApiHistory = findViewById(R.id.llApiHistory);
         llApiLine = findViewById(R.id.llApiLine);
         tvApi = findViewById(R.id.tvApi);
+        tvIndexSite = findViewById(R.id.tvIndexSite);
         tvApiLine = findViewById(R.id.tvApiLine);
         tvHomeApi = findViewById(R.id.tvHomeApi);
         tvDns = findViewById(R.id.tvDns);
@@ -346,6 +351,14 @@ public class ModelSettingFragment extends BaseLazyFragment {
                 ((BaseActivity) mActivity).jumpActivity(ConfigManageActivity.class);
             }
         });
+        findViewById(R.id.llIndexSite).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                FastClickCheckUtil.check(v);
+                ((BaseActivity) mActivity).jumpActivity(IndexSiteManageActivity.class);
+            }
+        });
+        refreshIndexSiteText();
 
         // 保留旧入口：临时直接换一个地址（不进入多配置列表）
         findViewById(R.id.llApiQuick).setOnClickListener(new View.OnClickListener() {
@@ -897,7 +910,17 @@ public class ModelSettingFragment extends BaseLazyFragment {
         if (tvApi != null) {
             tvApi.setText(getCurrentConfigLabel());
         }
+        refreshIndexSiteText();
     }
+
+    private void refreshIndexSiteText() {
+        if (tvIndexSite == null || mContext == null) return;
+        SourceIndex index = SourceIndex.fromAssets(mContext);
+        List<SourceIndex.IndexSite> sites =
+                new IndexSiteStore(mContext).load(index.indexSites());
+        tvIndexSite.setText(IndexSiteStore.summary(sites));
+    }
+
     private void refreshApiLineText() {
         if (tvApiLine == null) return;
         ArrayList<String> apiLines = Hawk.get(HawkConfig.API_LINE_LIST, new ArrayList<String>());

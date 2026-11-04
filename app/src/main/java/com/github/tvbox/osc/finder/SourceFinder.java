@@ -131,18 +131,35 @@ public final class SourceFinder {
         }
     }
 
-    private final SourceIndex index;
-    private final FinderProbe probe;
+    private final Context appContext;
+    private volatile SourceIndex index;
+    private volatile FinderProbe probe;
 
     private volatile ExecutorService pool;
 
     public SourceFinder(Context context) {
-        this(context, SourceIndex.fromAssets(context));
+        this.appContext = context == null ? null : context.getApplicationContext();
+        SourceIndex loaded = SourceIndex.fromAssets(context);
+        new IndexSiteStore(context).apply(loaded);
+        this.index = loaded;
+        this.probe = new FinderProbe(loaded.probe());
     }
 
     public SourceFinder(Context context, SourceIndex index) {
+        this.appContext = context == null ? null : context.getApplicationContext();
         this.index = index == null ? SourceIndex.fallback() : index;
         this.probe = new FinderProbe(this.index.probe());
+    }
+
+    /** 在每轮自动找源开始前重新读取用户自定义索引站。 */
+    public synchronized void reloadIndex() {
+        if (appContext == null) {
+            return;
+        }
+        SourceIndex loaded = SourceIndex.fromAssets(appContext);
+        new IndexSiteStore(appContext).apply(loaded);
+        this.index = loaded;
+        this.probe = new FinderProbe(loaded.probe());
     }
 
     public SourceIndex index() {
@@ -338,10 +355,15 @@ public final class SourceFinder {
         if (repos.size() < maxRepos) {
             List<SourceIndex.IndexSite> indexSites = index.indexSites();
             Set<String> failedIndexSites = new LinkedHashSet<>();
-            for (SourceIndex.IndexSite site : indexSites) {
+            for (int s = 0; s < indexSites.size(); s++) {
                 if (repos.size() >= maxRepos) {
                     break;
                 }
+                SourceIndex.IndexSite site = indexSites.get(s);
+                int remainingSites = indexSites.size() - s;
+                int siteBudget = Math.min(site.getMaxRepos(),
+                        Math.max(1, (maxRepos - repos.size() + remainingSites - 1)
+                                / remainingSites));
                 List<String> siteQueries = site.getQueries();
                 if (siteQueries.isEmpty()) {
                     siteQueries = gh.getQueries();
@@ -352,7 +374,7 @@ public final class SourceFinder {
                     String q = siteQueries.get(i);
                     int remainingSlots = maxRepos - repos.size();
                     int remainingQueries = queryLimit - i;
-                    int siteSlots = site.getMaxRepos() - siteAdded;
+                    int siteSlots = siteBudget - siteAdded;
                     int requestMax = Math.min(siteSlots,
                             Math.max(1, (remainingSlots + remainingQueries - 1) / remainingQueries));
                     if (requestMax <= 0) {

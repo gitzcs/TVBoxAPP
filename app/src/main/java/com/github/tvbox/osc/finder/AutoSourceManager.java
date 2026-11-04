@@ -309,6 +309,7 @@ public final class AutoSourceManager {
 
     /** 同步刷新（阻塞，自己找后台线程调用）。 */
     public SourceFinder.Report refreshSync(boolean includeGithub) {
+        finder.reloadIndex();
         cache.setIncludeGithub(includeGithub);
         return doRefresh(includeGithub);
     }
@@ -528,6 +529,7 @@ public final class AutoSourceManager {
 
     /** 一次刷新 + 决定下次什么时候再来。 */
     private void runCycle() {
+        finder.reloadIndex();
         boolean includeGithub = cache.includeGithub();
         try {
             doRefresh(includeGithub);

@@ -65,7 +65,7 @@ public final class SourceIndex {
     private Github github;
     private Gitlab gitlab;
     private Gitee gitee;
-    private List<IndexSite> indexSites;
+    private volatile List<IndexSite> indexSites;
     private Probe probe;
 
     /** GitLab / Gitee 等代码托管平台的通用发现参数。 */
@@ -133,12 +133,30 @@ public final class SourceIndex {
         private String sort = "updated";
         private String order = "desc";
 
+        public IndexSite() {
+        }
+
+        public IndexSite(String name, String baseUrl, List<String> queries, boolean enabled) {
+            this.name = name;
+            this.baseUrl = baseUrl;
+            this.queries = queries;
+            this.enabled = enabled;
+        }
+
         public boolean isEnabled() {
             return enabled;
         }
 
+        public void setEnabled(boolean enabled) {
+            this.enabled = enabled;
+        }
+
         public String getName() {
             return name == null || name.trim().isEmpty() ? getBaseUrl() : name.trim();
+        }
+
+        public void setName(String name) {
+            this.name = name;
         }
 
         public String getBaseUrl() {
@@ -152,8 +170,16 @@ public final class SourceIndex {
             return value;
         }
 
+        public void setBaseUrl(String baseUrl) {
+            this.baseUrl = baseUrl;
+        }
+
         public List<String> getQueries() {
             return queries == null ? Collections.<String>emptyList() : queries;
+        }
+
+        public void setQueries(List<String> queries) {
+            this.queries = queries;
         }
 
         public int getMaxRepos() {
@@ -174,6 +200,17 @@ public final class SourceIndex {
 
         public String getOrder() {
             return order == null || order.trim().isEmpty() ? "desc" : order.trim();
+        }
+
+        public IndexSite copy() {
+            IndexSite copy = new IndexSite(name, baseUrl,
+                    new ArrayList<>(getQueries()), enabled);
+            copy.maxRepos = maxRepos;
+            copy.perPage = perPage;
+            copy.timeoutSeconds = timeoutSeconds;
+            copy.sort = sort;
+            copy.order = order;
+            return copy;
         }
     }
 
@@ -375,6 +412,11 @@ public final class SourceIndex {
             }
         }
         return out;
+    }
+
+    /** 替换索引站列表；空列表表示明确关闭全部索引站。 */
+    public synchronized void setIndexSites(List<IndexSite> sites) {
+        indexSites = sites == null ? new ArrayList<IndexSite>() : new ArrayList<>(sites);
     }
 
     public Probe probe() {

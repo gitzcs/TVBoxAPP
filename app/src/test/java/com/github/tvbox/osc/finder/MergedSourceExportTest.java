@@ -205,8 +205,14 @@ public class MergedSourceExportTest {
             RepoScanner.Repo seed = RepoScanner.parseSeed(spec);
             if (seed != null && seen.add(seed.fullName())) repos.add(seed);
         }
-        for (SourceIndex.IndexSite site : index.indexSites()) {
+        List<SourceIndex.IndexSite> indexSites = index.indexSites();
+        for (int s = 0; s < indexSites.size(); s++) {
             if (repos.size() >= gh.getMaxRepos()) break;
+            SourceIndex.IndexSite site = indexSites.get(s);
+            int remainingSites = indexSites.size() - s;
+            int siteBudget = Math.min(site.getMaxRepos(),
+                    Math.max(1, (gh.getMaxRepos() - repos.size() + remainingSites - 1)
+                            / remainingSites));
             List<String> siteQueries = site.getQueries();
             if (siteQueries.isEmpty()) siteQueries = gh.getQueries();
             int queryLimit = Math.min(4, siteQueries.size());
@@ -215,7 +221,7 @@ public class MergedSourceExportTest {
                 String q = siteQueries.get(i);
                 int remainingSlots = gh.getMaxRepos() - repos.size();
                 int remainingQueries = queryLimit - i;
-                int siteSlots = site.getMaxRepos() - siteAdded;
+                int siteSlots = siteBudget - siteAdded;
                 int requestMax = Math.min(siteSlots,
                         Math.max(1, (remainingSlots + remainingQueries - 1) / remainingQueries));
                 if (requestMax <= 0) break;
