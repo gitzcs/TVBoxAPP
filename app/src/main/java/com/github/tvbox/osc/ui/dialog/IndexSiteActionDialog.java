@@ -34,6 +34,8 @@ public class IndexSiteActionDialog extends BaseDialog {
 
         TextView toggleEnabled = findViewById(R.id.btnActionToggleEnabled);
         toggleEnabled.setText(site.isEnabled() ? "停用站点" : "启用站点");
+        ((TextView) findViewById(R.id.btnActionEdit)).setText("编辑站点");
+        ((TextView) findViewById(R.id.btnActionDelete)).setText("删除站点");
 
         firstAction = findViewById(R.id.btnActionEdit);
         bindAction(firstAction, new Runnable() {
